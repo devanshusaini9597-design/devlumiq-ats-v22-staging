@@ -1,0 +1,95 @@
+import { vi } from 'vitest';
+import '@testing-library/jest-dom';
+
+// Mock Next.js headers
+vi.mock('next/headers', () => ({
+  headers: vi.fn(() => new Map()),
+  cookies: vi.fn(() => new Map()),
+}));
+
+// Mock Next.js request
+vi.mock('next/server', () => ({
+  NextRequest: class NextRequest {
+    constructor(input: string | URL, init?: RequestInit) {
+      return new Request(input, init) as any;
+    }
+  },
+  NextResponse: {
+    json: (data: any, init?: ResponseInit) => new Response(JSON.stringify(data), {
+      ...init,
+      headers: { 'Content-Type': 'application/json', ...init?.headers },
+    }),
+    redirect: (url: string | URL, init?: ResponseInit) => new Response(null, {
+      status: 302,
+      headers: { Location: url.toString(), ...init?.headers },
+    }),
+  },
+}));
+
+// Mock Prisma
+vi.mock('@/lib/prisma', () => ({
+  prisma: {
+    user: {
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
+    candidate: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+    },
+    backgroundCheck: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
+    eSignatureRequest: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
+    integration: {
+      findFirst: vi.fn(),
+      upsert: vi.fn(),
+    },
+    integrationAuth: {
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      delete: vi.fn(),
+    },
+    notification: {
+      create: vi.fn(),
+    },
+    webhookEvent: {
+      create: vi.fn(),
+    },
+  },
+}));
+
+// Environment variables for testing
+process.env.JWT_SECRET = 'test-secret-key-for-testing-only';
+process.env.CHECKR_API_KEY = '';
+process.env.DOCUSIGN_CLIENT_ID = '';
+process.env.DOCUSIGN_CLIENT_SECRET = '';
+process.env.GOOGLE_CLIENT_ID = '';
+process.env.GOOGLE_CLIENT_SECRET = '';
+process.env.ZAPIER_WEBHOOK_URL = '';
+
+// Global test utilities
+global.fetch = vi.fn();
+
+// Suppress console errors in tests unless explicitly testing them
+const originalConsoleError = console.error;
+console.error = (...args: any[]) => {
+  if (
+    typeof args[0] === 'string' &&
+    args[0].includes('Warning:')
+  ) {
+    return;
+  }
+  originalConsoleError.apply(console, args);
+};
