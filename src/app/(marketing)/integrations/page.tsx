@@ -3,10 +3,9 @@
 import { motion, useInView } from 'framer-motion';
 import Link from 'next/link';
 import {
-  Plug, Zap, Linkedin, Slack, Calendar, Mail, Video, FileText,
-  Database, Shield, CheckCircle2, ArrowRight, ArrowUpRight,
-  Globe, Code, Cloud, Server, RefreshCw, Lock, Workflow,
-  MessageSquare, Github, Chrome, Filter, ExternalLink,
+  Plug, Zap, Linkedin, Slack, Calendar, Mail, FileText,
+  Shield, CheckCircle2, ArrowRight, ArrowUpRight,
+  Globe, Code, RefreshCw, Lock, MessageSquare, Chrome, Filter,
   Sparkles, Terminal, Copy, Check
 } from 'lucide-react';
 import { useState } from 'react';
@@ -40,51 +39,39 @@ interface Integration {
 }
 
 const integrations: Integration[] = [
-  { name: 'LinkedIn', desc: 'Post jobs & source candidates', icon: Linkedin, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: false, category: 'jobboards', setupTime: '2 min' },
-  { name: 'Indeed', desc: 'Reach 350M+ monthly visitors', icon: Globe, color: 'text-orange-400', bg: 'bg-orange-500/15', connected: false, category: 'jobboards', setupTime: '3 min' },
-  { name: 'Glassdoor', desc: 'Build your employer brand', icon: Shield, color: 'text-green-400', bg: 'bg-green-500/15', connected: false, category: 'jobboards', setupTime: '2 min' },
-  { name: 'ZipRecruiter', desc: 'Smart matching', icon: Zap, color: 'text-purple-400', bg: 'bg-purple-500/15', connected: false, category: 'jobboards', setupTime: '5 min' },
-  { name: 'Stack Overflow', desc: 'Target developers directly', icon: Code, color: 'text-amber-400', bg: 'bg-amber-500/15', connected: false, category: 'jobboards', setupTime: '3 min' },
-  { name: 'Slack', desc: 'Team notifications & alerts', icon: Slack, color: 'text-violet-400', bg: 'bg-violet-500/15', connected: false, category: 'communication', setupTime: '1 min' },
-  { name: 'Microsoft Teams', desc: 'Collaborate on hiring', icon: MessageSquare, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: false, category: 'communication', setupTime: '2 min' },
-  { name: 'Gmail', desc: 'Email candidates seamlessly', icon: Mail, color: 'text-red-400', bg: 'bg-red-500/15', connected: true, category: 'communication', setupTime: '1 min' },
-  { name: 'Outlook', desc: 'Microsoft mail integration', icon: Mail, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: false, category: 'communication', setupTime: '2 min' },
-  { name: 'Zoom', desc: 'Auto-generate video links', icon: Video, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: false, category: 'communication', setupTime: '2 min' },
-  { name: 'Google Calendar', desc: 'Sync interview schedules', icon: Calendar, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: false, category: 'calendar', setupTime: '1 min' },
-  { name: 'Outlook Calendar', desc: 'Office 365 calendar sync', icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-600/15', connected: false, category: 'calendar', setupTime: '2 min' },
-  { name: 'Calendly', desc: 'Self-schedule interviews', icon: Calendar, color: 'text-teal-400', bg: 'bg-teal-500/15', connected: false, category: 'calendar', setupTime: '3 min' },
-  { name: 'Workday', desc: 'Enterprise HR management', icon: Cloud, color: 'text-amber-400', bg: 'bg-amber-500/15', connected: false, category: 'hr', setupTime: '15 min' },
-  { name: 'BambooHR', desc: 'People-first HR platform', icon: Server, color: 'text-green-400', bg: 'bg-green-500/15', connected: false, category: 'hr', setupTime: '10 min' },
-  { name: 'SAP SuccessFactors', desc: 'Global HR suite', icon: Database, color: 'text-blue-400', bg: 'bg-blue-700/15', connected: false, category: 'hr', setupTime: '30 min' },
-  { name: 'Greenhouse', desc: 'Recruiting software sync', icon: Server, color: 'text-green-400', bg: 'bg-green-600/15', connected: false, category: 'hr', setupTime: '20 min' },
-  { name: 'Checkr', desc: 'Fast background checks', icon: Shield, color: 'text-blue-400', bg: 'bg-blue-600/15', connected: true, category: 'background', setupTime: '5 min' },
-  { name: 'GoodHire', desc: 'FCRA-compliant checks', icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-500/15', connected: false, category: 'background', setupTime: '5 min' },
-  { name: 'Sterling', desc: 'Enterprise verification', icon: Shield, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: false, category: 'background', setupTime: '15 min' },
-  { name: 'Onfido', desc: 'Identity verification', icon: Lock, color: 'text-purple-400', bg: 'bg-purple-500/15', connected: false, category: 'background', setupTime: '10 min' },
-  { name: 'Zapier', desc: 'Connect 5,000+ apps', icon: Zap, color: 'text-orange-400', bg: 'bg-orange-500/15', connected: true, category: 'productivity', setupTime: '2 min' },
-  { name: 'Chrome Extension', desc: 'Source from anywhere', icon: Chrome, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: true, category: 'productivity', setupTime: '1 min' },
-  { name: 'GitHub', desc: 'Source developer talent', icon: Github, color: 'text-white', bg: 'bg-stone-700/30', connected: false, category: 'productivity', setupTime: '3 min' },
-  { name: 'Zapier Webhooks', desc: 'Real-time event push', icon: Workflow, color: 'text-pink-400', bg: 'bg-pink-500/15', connected: false, category: 'productivity', setupTime: '5 min' },
-  { name: 'DocuSign', desc: 'e-Sign offer letters (stub — bring your own key)', icon: FileText, color: 'text-amber-400', bg: 'bg-amber-500/15', connected: false, category: 'productivity', setupTime: '3 min' },
-  { name: 'REST API', desc: 'Full CRUD API access', icon: Code, color: 'text-teal-400', bg: 'bg-teal-500/15', connected: true, category: 'productivity', setupTime: 'Custom' },
-  { name: 'Webhooks', desc: 'Real-time event stream', icon: RefreshCw, color: 'text-brand-400', bg: 'bg-brand-500/15', connected: true, category: 'productivity', setupTime: 'Custom' },
+  { name: 'LinkedIn', desc: 'Post jobs when org credentials are configured', icon: Linkedin, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: true, category: 'jobboards', setupTime: 'Credentials' },
+  { name: 'Indeed', desc: 'Post jobs when org credentials are configured', icon: Globe, color: 'text-orange-400', bg: 'bg-orange-500/15', connected: true, category: 'jobboards', setupTime: 'Credentials' },
+  { name: 'Glassdoor', desc: 'Post jobs when org credentials are configured', icon: Shield, color: 'text-green-400', bg: 'bg-green-500/15', connected: true, category: 'jobboards', setupTime: 'Credentials' },
+  { name: 'SMTP Email', desc: 'Nodemailer — configure SMTP in .env', icon: Mail, color: 'text-red-400', bg: 'bg-red-500/15', connected: true, category: 'communication', setupTime: 'Env' },
+  { name: 'WhatsApp', desc: 'Business API candidate messaging', icon: MessageSquare, color: 'text-green-400', bg: 'bg-green-500/15', connected: true, category: 'communication', setupTime: 'API key' },
+  { name: 'Slack', desc: 'Planned — not connected yet', icon: Slack, color: 'text-violet-400', bg: 'bg-violet-500/15', connected: false, category: 'communication', setupTime: 'Planned' },
+  { name: 'Outlook', desc: 'Planned — not connected yet', icon: Mail, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: false, category: 'communication', setupTime: 'Planned' },
+  { name: 'Google Calendar', desc: 'Local events by default; OAuth sync optional', icon: Calendar, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: false, category: 'calendar', setupTime: 'Optional' },
+  { name: 'Checkr', desc: 'Background checks via Checkr API', icon: Shield, color: 'text-blue-400', bg: 'bg-blue-600/15', connected: true, category: 'background', setupTime: 'API key' },
+  { name: 'Zapier', desc: 'Webhook-based automation', icon: Zap, color: 'text-orange-400', bg: 'bg-orange-500/15', connected: true, category: 'productivity', setupTime: 'Webhooks' },
+  { name: 'Chrome Extension', desc: 'LinkedIn one-click import', icon: Chrome, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: true, category: 'productivity', setupTime: 'Token' },
+  { name: 'OpenAI', desc: 'Optional AI parse, rank, screen, JD, email', icon: Sparkles, color: 'text-emerald-400', bg: 'bg-emerald-500/15', connected: true, category: 'productivity', setupTime: 'Optional' },
+  { name: 'SSO / SAML', desc: 'Opt-in enterprise authentication', icon: Lock, color: 'text-cyan-400', bg: 'bg-cyan-500/15', connected: true, category: 'hr', setupTime: 'Opt-in' },
+  { name: 'DocuSign', desc: 'Stub — workflow ready, bring your own SDK', icon: FileText, color: 'text-amber-400', bg: 'bg-amber-500/15', connected: false, category: 'productivity', setupTime: 'Stub' },
+  { name: 'REST API', desc: 'App API routes for candidates, jobs, and more', icon: Code, color: 'text-teal-400', bg: 'bg-teal-500/15', connected: true, category: 'productivity', setupTime: 'Built-in' },
+  { name: 'Webhooks', desc: 'Event push for automation', icon: RefreshCw, color: 'text-brand-400', bg: 'bg-brand-500/15', connected: true, category: 'productivity', setupTime: 'Built-in' },
 ];
 
 const tabKeys: TabKey[] = ['all', 'jobboards', 'communication', 'calendar', 'hr', 'background', 'productivity'];
 
-const codeSnippet = `// Fetch candidates via REST API
+const codeSnippet = `// Example: list candidates from your deployed app
 const res = await fetch(
-  'https://api.hiresmart.io/v2/candidates',
+  'https://your-ats.example.com/api/candidates',
   {
     headers: {
-      'Authorization': 'Bearer YOUR_API_KEY',
+      'Cookie': 'session=...', // JWT httpOnly cookie auth
       'Content-Type': 'application/json',
     }
   }
 );
 
-const { data, meta } = await res.json();
-// { data: [...candidates], meta: { total: 1240 } }`;
+const data = await res.json();
+// Returns candidates from your PostgreSQL database`;
 
 function CodeWindow({ copied, onCopy }: { copied: boolean; onCopy: () => void }) {
   return (
@@ -143,10 +130,10 @@ export default function IntegrationsPage() {
   };
 
   const stats = [
-    { value: '15+', label: t('integrations.stat1.label') },
+    { value: `${integrations.length}`, label: t('integrations.stat1.label') },
     { value: `${connectedCount}`, label: t('integrations.connected') },
-    { value: 'High', label: t('integrations.stat2.label') },
-    { value: '<100ms', label: t('integrations.stat3.label') },
+    { value: 'You host', label: t('integrations.stat2.label') },
+    { value: 'Your infra', label: t('integrations.stat3.label') },
   ];
 
   const apiFeaturesKeys = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6'];

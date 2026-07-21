@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     default: 'Devlumiq ATS - Applicant Tracking System',
     template: '%s | Devlumiq ATS',
   },
-  description: 'Devlumiq ATS - Modern applicant tracking system for HR teams. Candidate management, pipeline workflows, Kanban boards, analytics, and more. Start your free trial today.',
+  description: 'Devlumiq ATS — self-hostable applicant tracking system for HR teams. Candidates, Kanban pipeline, jobs, calendar, analytics, careers portal, and optional AI tools. Full source code included.',
   keywords: ['ATS', 'applicant tracking', 'recruitment software', 'HR software', 'hiring software', 'candidate management', 'job posting', 'recruitment CRM'],
   authors: [{ name: 'Devlumiq ATS' }],
   creator: 'Devlumiq ATS',

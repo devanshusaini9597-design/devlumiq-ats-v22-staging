@@ -12,60 +12,60 @@ import { useLocale } from '@/components/providers/LocaleProvider';
 
 const companyData = [
   {
-    company: 'Tech Startup',
-    logo: 'TS',
+    company: 'In-house HR',
+    logo: 'HR',
     industryKey: 'customers.cs1.industry',
-    size: '50–200',
+    size: 'Product teams',
     quoteKey: 'customers.cs1.quote',
-    author: 'Beta User',
+    author: 'Use case',
     roleKey: 'customers.cs1.role',
     color: 'from-blue-500 to-cyan-600',
     glow: 'group-hover:shadow-blue-500/20',
     metrics: [
-      { value: 'Faster', labelKey: 'customers.cs1.m1', bar: 60 },
-      { value: 'More', labelKey: 'customers.cs1.m2', bar: 75 },
-      { value: 'High', labelKey: 'customers.cs1.m3', bar: 85 },
+      { value: 'Yes', labelKey: 'customers.cs1.m1', bar: 90 },
+      { value: 'Yes', labelKey: 'customers.cs1.m2', bar: 85 },
+      { value: 'Yes', labelKey: 'customers.cs1.m3', bar: 95 },
     ],
   },
   {
-    company: 'SaaS Company',
-    logo: 'SC',
+    company: 'Growing startups',
+    logo: 'ST',
     industryKey: 'customers.cs2.industry',
-    size: '100–500',
+    size: 'Lean hiring',
     quoteKey: 'customers.cs2.quote',
-    author: 'Beta User',
+    author: 'Use case',
     roleKey: 'customers.cs2.role',
     color: 'from-teal-500 to-emerald-600',
     glow: 'group-hover:shadow-teal-500/20',
     metrics: [
-      { value: 'Less', labelKey: 'customers.cs2.m1', bar: 75 },
-      { value: 'Lower', labelKey: 'customers.cs2.m2', bar: 40 },
-      { value: 'Great', labelKey: 'customers.cs2.m3', bar: 98 },
+      { value: 'Yes', labelKey: 'customers.cs2.m1', bar: 88 },
+      { value: 'Opt', labelKey: 'customers.cs2.m2', bar: 70 },
+      { value: 'Yes', labelKey: 'customers.cs2.m3', bar: 92 },
     ],
   },
   {
-    company: 'Consulting Firm',
-    logo: 'CF',
+    company: 'Agencies',
+    logo: 'AG',
     industryKey: 'customers.cs3.industry',
-    size: '200–1000',
+    size: 'Multi-role',
     quoteKey: 'customers.cs3.quote',
-    author: 'Beta User',
+    author: 'Use case',
     roleKey: 'customers.cs3.role',
     color: 'from-violet-500 to-purple-600',
     glow: 'group-hover:shadow-violet-500/20',
     metrics: [
-      { value: 'Multi', labelKey: 'customers.cs3.m1', bar: 100 },
-      { value: 'Higher', labelKey: 'customers.cs3.m2', bar: 100 },
-      { value: 'Reliable', labelKey: 'customers.cs3.m3', bar: 99 },
+      { value: 'Yes', labelKey: 'customers.cs3.m1', bar: 90 },
+      { value: 'Yes', labelKey: 'customers.cs3.m2', bar: 85 },
+      { value: 'Yes', labelKey: 'customers.cs3.m3', bar: 100 },
     ],
   },
 ];
 
 const testimonialData = [
-  { quoteKey: 'customers.t1.quote', author: 'Beta User', roleKey: 'customers.t1.role', company: 'Early Adopter', rating: 5 },
-  { quoteKey: 'customers.t2.quote', author: 'Beta User', roleKey: 'customers.t2.role', company: 'Early Adopter', rating: 5 },
-  { quoteKey: 'customers.t3.quote', author: 'Beta User', roleKey: 'customers.t3.role', company: 'Early Adopter', rating: 5 },
-  { quoteKey: 'customers.t4.quote', author: 'Beta User', roleKey: 'customers.t4.role', company: 'Early Adopter', rating: 5 },
+  { quoteKey: 'customers.cs1.quote', author: 'Pipeline & calendar', roleKey: 'customers.cs1.role', company: 'Core ATS', rating: 5 },
+  { quoteKey: 'customers.cs2.quote', author: 'Careers + AI tools', roleKey: 'customers.cs2.role', company: 'Growth teams', rating: 5 },
+  { quoteKey: 'customers.cs3.quote', author: 'Reports & source', roleKey: 'customers.cs3.role', company: 'Agencies', rating: 5 },
+  { quoteKey: 'customers.cs1.quote', author: 'Self-hosted data', roleKey: 'customers.cs1.role', company: 'IT / security', rating: 5 },
 ];
 
 const industryKeys = [
@@ -148,10 +148,10 @@ export default function CustomersPage() {
   const { t } = useLocale();
 
   const heroStats = [
-    { display: '12+', label: t('customers.stat1.label'), Icon: Building2 },
-    { display: '7', label: t('customers.stat2.label'), Icon: Users },
-    { display: 'High', label: t('customers.stat3.label'), Icon: TrendingUp },
-    { display: 'Beta', label: t('customers.stat4.label'), Icon: Star },
+    { display: '10', label: t('customers.stat1.label'), Icon: Globe },
+    { display: '5', label: t('customers.stat2.label'), Icon: Users },
+    { display: 'Yes', label: t('customers.stat3.label'), Icon: Building2 },
+    { display: 'Yes', label: t('customers.stat4.label'), Icon: Star },
   ];
 
   const trustBadges = [
@@ -198,9 +198,9 @@ export default function CustomersPage() {
         />
         <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-stone-50 to-transparent" />
 
-        <ProofCard name="Beta User" company="Early Adopter" score="5.0" xCls="right-12" yCls="top-32" delay={0.7} />
-        <ProofCard name="Beta Tester" company="Startup" score="5.0" xCls="right-8" yCls="bottom-40" delay={0.9} />
-        <ProofCard name="Early User" company="Tech Co" score="5.0" xCls="right-32" yCls="top-56" delay={1.1} />
+        <ProofCard name="Kanban" company="Pipeline" score="Live" xCls="right-12" yCls="top-32" delay={0.7} />
+        <ProofCard name="Careers" company="Apply flow" score="Built-in" xCls="right-8" yCls="bottom-40" delay={0.9} />
+        <ProofCard name="Analytics" company="Reports" score="PDF" xCls="right-32" yCls="top-56" delay={1.1} />
 
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 w-full">
           <motion.div

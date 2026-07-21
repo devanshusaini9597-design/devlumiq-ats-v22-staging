@@ -21,18 +21,18 @@ const plansMeta = [
     iconColor: 'text-slate-600',
     highlighted: false,
     name: 'License Regular',
-    desc: 'Core tools for everyday recruiting workflows',
+    desc: 'Core ATS for everyday recruiting',
     cta: 'Choose Regular',
     badge: null as string | null,
     features: [
-      'Core ATS features',
-      'Team management',
-      'Candidate tracking',
-      'Email support',
+      'Full source code',
+      'Candidates, jobs & Kanban',
+      'Calendar, inbox & analytics',
+      'Documentation included',
     ],
     missing: [
-      'Advanced reporting',
-      'Additional integrations',
+      'Extended commercial rights',
+      'Priority support tier',
     ],
   },
   {
@@ -42,17 +42,17 @@ const plansMeta = [
     iconColor: 'text-brand-600',
     highlighted: true,
     name: 'License Extended',
-    desc: 'More tools for growing teams',
+    desc: 'Broader rights for agencies and resellers',
     cta: 'Choose Extended',
     badge: 'Extended',
     features: [
-      'Expanded automation',
-      'Advanced reporting',
-      'Additional integrations',
-      'Priority support',
+      'Everything in Regular',
+      'Extended license rights',
+      'Priority email support',
+      'White-label ready',
     ],
     missing: [
-      'None included',
+      'None listed',
     ],
   },
 ];
@@ -65,16 +65,16 @@ type ComparisonRow = {
 };
 
 const comparisonRows: ComparisonRow[] = [
-  { feature: 'Team Members', icon: Users, regular: 'Standard', extended: 'Extended' },
-  { feature: 'Active Jobs', icon: Rocket, regular: 'Standard', extended: 'Extended' },
-  { feature: 'Candidates / month', icon: TrendingUp, regular: 'Standard', extended: 'Extended' },
+  { feature: 'Source code access', icon: Users, regular: true, extended: true },
+  { feature: 'Self-hosted deploy', icon: Rocket, regular: true, extended: true },
+  { feature: 'Core ATS modules', icon: TrendingUp, regular: true, extended: true },
 
-  { feature: 'AI Resume Screening', icon: SparklesIcon, regular: true, extended: true },
-  { feature: 'Custom Pipeline Stages', icon: BarChart3, regular: false, extended: true },
+  { feature: 'Optional OpenAI tools', icon: SparklesIcon, regular: true, extended: true },
+  { feature: 'Extended commercial rights', icon: BarChart3, regular: false, extended: true },
 
-  { feature: 'Analytics & Reports', icon: BarChart3, regular: 'Basic', extended: 'Advanced' },
-  { feature: 'API Access', icon: Globe, regular: false, extended: true },
-  { feature: 'Priority Support', icon: HeadphonesIcon, regular: false, extended: true },
+  { feature: 'Priority email support', icon: HeadphonesIcon, regular: false, extended: true },
+  { feature: 'White-label ready', icon: Globe, regular: 'Basic branding', extended: true },
+  { feature: 'REST API & webhooks', icon: Lock, regular: true, extended: true },
 ];
 
 const pricingFaqs = [

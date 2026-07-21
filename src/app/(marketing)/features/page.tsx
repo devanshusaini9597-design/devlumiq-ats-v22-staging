@@ -147,10 +147,10 @@ export default function FeaturesPage() {
             className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3"
           >
             {[
-              { icon: Sparkles, value: '12',   label: 'core features' },
+              { icon: Sparkles, value: '12+',  label: 'feature areas' },
               { icon: Star,     value: '50+',  label: 'db models'     },
               { icon: Globe,    value: '10',   label: 'languages'     },
-              { icon: Clock,    value: '<30m', label: 'to set up'     },
+              { icon: Clock,    value: 'Self', label: 'hosted deploy' },
             ].map(({ icon: Icon, value, label }) => (
               <div key={label} className="flex items-center gap-2">
                 <Icon className="w-3.5 h-3.5 text-teal-400 flex-shrink-0" />

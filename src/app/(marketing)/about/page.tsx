@@ -15,25 +15,25 @@ const valueKeys = [
 ];
 
 const statKeys = [
-  { value: '12+', labelKey: 'about.stat1' },
-  { value: '7', labelKey: 'about.stat2' },
-  { value: '2023', labelKey: 'about.stat3' },
-  { value: '4', labelKey: 'about.stat4' },
+  { value: '10', labelKey: 'about.stat1' },
+  { value: '5', labelKey: 'about.stat2' },
+  { value: 'v2.2', labelKey: 'about.stat3' },
+  { value: 'DB', labelKey: 'about.stat4' },
 ];
 
 const timelineKeys = [
-  { year: '2023', titleKey: 'about.timeline1Title', descKey: 'about.timeline1Desc' },
-  { year: '2023', titleKey: 'about.timeline2Title', descKey: 'about.timeline2Desc' },
-  { year: '2024', titleKey: 'about.timeline3Title', descKey: 'about.timeline3Desc' },
-  { year: '2024', titleKey: 'about.timeline4Title', descKey: 'about.timeline4Desc' },
-  { year: '2025', titleKey: 'about.timeline5Title', descKey: 'about.timeline5Desc' },
+  { year: 'Core', titleKey: 'about.timeline1Title', descKey: 'about.timeline1Desc' },
+  { year: 'Collab', titleKey: 'about.timeline2Title', descKey: 'about.timeline2Desc' },
+  { year: 'AI', titleKey: 'about.timeline3Title', descKey: 'about.timeline3Desc' },
+  { year: 'Secure', titleKey: 'about.timeline4Title', descKey: 'about.timeline4Desc' },
+  { year: 'i18n', titleKey: 'about.timeline5Title', descKey: 'about.timeline5Desc' },
 ];
 
 const teamKeys = [
-  { name: 'Dev Team', roleKey: 'about.team1Role', avatar: 'DT', bioKey: 'about.team1Bio' },
-  { name: 'Design Team', roleKey: 'about.team2Role', avatar: 'UX', bioKey: 'about.team2Bio' },
-  { name: 'Backend Team', roleKey: 'about.team3Role', avatar: 'BE', bioKey: 'about.team3Bio' },
-  { name: 'Support Team', roleKey: 'about.team4Role', avatar: 'CS', bioKey: 'about.team4Bio' },
+  { name: 'Application', roleKey: 'about.team1Role', avatar: 'APP', bioKey: 'about.team1Bio' },
+  { name: 'Experience', roleKey: 'about.team2Role', avatar: 'UX', bioKey: 'about.team2Bio' },
+  { name: 'Data layer', roleKey: 'about.team3Role', avatar: 'DB', bioKey: 'about.team3Bio' },
+  { name: 'Docs', roleKey: 'about.team4Role', avatar: 'DOC', bioKey: 'about.team4Bio' },
 ];
 
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.08 } } };
