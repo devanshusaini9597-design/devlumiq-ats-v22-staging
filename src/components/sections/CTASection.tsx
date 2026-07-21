@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowRight, Zap, Sparkles, CheckCircle2, Shield, Clock } from 'lucide-react';
+import { ArrowRight, Zap, Sparkles, CheckCircle2, Shield, Clock, Users } from 'lucide-react';
 import { useLocale } from '@/components/providers/LocaleProvider';
 
 interface CTASectionProps {
@@ -121,9 +121,9 @@ export default function CTASection({
                   className="flex flex-wrap items-center justify-center gap-2 mt-8"
                 >
                   {[
-                    { icon: Clock, label: 'Self-hosted deploy' },
-                    { icon: CheckCircle2, label: 'Full source code' },
-                    { icon: Shield, label: 'RBAC & audit logs' },
+                    { icon: Clock, label: 'Source code included' },
+                    { icon: CheckCircle2, label: 'Start whenever you’re ready' },
+                    { icon: Shield, label: 'Secure access controls' },
                     { icon: Zap, label: 'Seeded demo included' },
                   ].map(({ icon: Icon, label }) => (
                     <span key={label} className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/15 text-white/85 text-xs font-semibold backdrop-blur-sm">
@@ -170,11 +170,27 @@ export default function CTASection({
                   transition={{ delay: 0.4 }}
                   className="mt-10 pt-8 border-t border-white/10 w-full flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8"
                 >
+                  {/* Avatar stack */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex -space-x-2.5">
+                      {[
+                        'from-brand-400 to-teal-500',
+                        'from-violet-400 to-purple-500',
+                        'from-rose-400 to-pink-500',
+                        'from-amber-400 to-orange-500',
+                        'from-emerald-400 to-teal-500',
+                      ].map((g, i) => (
+                        <div key={i} className={`w-8 h-8 rounded-full bg-gradient-to-br ${g} border-2 border-teal-800 flex-shrink-0 shadow`} />
+                      ))}
+                    </div>
+                    <p className="text-white/70 text-sm"><span className="text-white font-bold">Full</span> source code license</p>
+                  </div>
+                  <div className="hidden sm:block w-px h-6 bg-white/15" />
+                  {/* Neutral stats (no unverifiable claims) */}
                   {[
-                    { value: 'Next.js 15', label: 'App Router' },
-                    { value: 'Prisma', label: 'PostgreSQL' },
-                    { value: '10', label: 'locales + RTL' },
-                    { value: 'RBAC', label: 'built in' },
+                    { value: 'Team-ready', label: 'ATS workflow' },
+                    { value: 'Practical', label: 'day-to-day use' },
+                    { value: 'Secure', label: 'role-based access' },
                   ].map(({ value, label }) => (
                     <div key={label} className="flex items-center gap-2">
                       <span className="text-white font-extrabold text-base">{value}</span>

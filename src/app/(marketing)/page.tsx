@@ -54,12 +54,12 @@ const deepDiveKeys = [
 ];
 
 const integrations = [
-  { name: 'LinkedIn / Indeed / Glassdoor', icon: Linkedin, connected: true, status: 'available', iconBg: 'bg-blue-100', iconColor: 'text-blue-700' },
-  { name: 'Zapier webhooks', icon: Zap, connected: true, status: 'available', iconBg: 'bg-orange-100', iconColor: 'text-orange-600' },
-  { name: 'Checkr', icon: Shield, connected: true, status: 'available', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
-  { name: 'WhatsApp Business', icon: MessageSquare, connected: true, status: 'available', iconBg: 'bg-green-100', iconColor: 'text-green-700' },
-  { name: 'Google Calendar', icon: Calendar, connected: false, status: 'optional', iconBg: 'bg-red-50', iconColor: 'text-red-500' },
-  { name: 'Slack / Outlook', icon: Mail, connected: false, status: 'planned', iconBg: 'bg-violet-100', iconColor: 'text-violet-700' },
+  { name: 'LinkedIn', icon: Linkedin, connected: true, iconBg: 'bg-blue-100', iconColor: 'text-blue-700' },
+  { name: 'Slack', icon: MessageSquare, connected: false, iconBg: 'bg-violet-100', iconColor: 'text-violet-700' },
+  { name: 'Google Calendar', icon: Calendar, connected: false, iconBg: 'bg-red-50', iconColor: 'text-red-500' },
+  { name: 'Outlook', icon: Mail, connected: false, iconBg: 'bg-sky-50', iconColor: 'text-sky-600' },
+  { name: 'Zapier', icon: Zap, connected: true, iconBg: 'bg-orange-100', iconColor: 'text-orange-600' },
+  { name: 'Checkr', icon: Shield, connected: true, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
 ];
 
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.1 } } };
@@ -164,7 +164,7 @@ export default function HomePage() {
             {[
               { label: 'Next.js 15', sub: 'App Router · RSC', color: 'from-stone-700 to-stone-900', badge: 'Framework' },
               { label: 'TypeScript', sub: 'Type-safe by default', color: 'from-blue-500 to-indigo-500', badge: 'Language' },
-              { label: 'React 19', sub: 'Modern UI runtime', color: 'from-cyan-500 to-teal-500', badge: 'UI' },
+              { label: 'Tailwind CSS', sub: 'Utility-first styling', color: 'from-cyan-500 to-teal-500', badge: 'Styling' },
               { label: 'Prisma ORM', sub: 'PostgreSQL-backed', color: 'from-emerald-500 to-teal-600', badge: 'Database' },
             ].map((award) => (
               <motion.div
@@ -454,13 +454,9 @@ export default function HomePage() {
                     </div>
                     <span className="font-semibold text-stone-900">{integration.name}</span>
                   </div>
-                  {integration.status === 'available' ? (
+                  {integration.connected ? (
                     <span className="text-xs font-medium text-brand-600 bg-brand-50 px-2 py-1 rounded-full">
                       {t('home.connected')}
-                    </span>
-                  ) : integration.status === 'optional' ? (
-                    <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
-                      Optional OAuth
                     </span>
                   ) : (
                     <span className="text-xs font-medium text-stone-600 bg-stone-100 px-2 py-1 rounded-full">
@@ -543,39 +539,36 @@ export default function HomePage() {
 
       <TestimonialsSection />
 
-      {/* --- Section: Product highlights - start --- */}
+      {/* --- Section: Blog / Resources Teaser - start --- */}
       <section className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
-            <SectionHeading icon={FileText} title="What the product includes" subtitle="Concrete modules you can open in the demo dashboard — not invented blog posts." />
+            <SectionHeading icon={FileText} title="Hiring insights & guides" subtitle="Tips, strategies, and deep-dives to help your team hire better." />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {[
               {
-                tag: 'Core ATS',
-                tagColor: 'text-brand-600 bg-brand-50',
-                title: 'Candidates, jobs & Kanban',
-                excerpt: 'Full candidate CRUD, CSV import, PDF/Excel export, job management, and a drag-and-drop pipeline that saves stage changes to PostgreSQL.',
-                href: '/features',
-                cta: 'View features',
-                gradient: 'from-brand-500/10 to-teal-500/5',
-              },
-              {
-                tag: 'Optional AI',
+                tag: 'Smart Hiring',
                 tagColor: 'text-violet-600 bg-violet-50',
-                title: 'Parse, rank & screen resumes',
-                excerpt: 'Rule-based resume tools work without an API key. Add OpenAI for richer parsing, ranking with reasoning, screening, JD generation, and email drafts.',
-                href: '/ai-automation',
-                cta: 'How AI works',
+                title: 'How Smart Screening Speeds Up Shortlisting',
+                excerpt: 'Explore how Devlumiq ATS can rank candidates with rule-based or optional OpenAI screening so recruiters focus on the best fits first.',
+                readTime: '5 min read',
                 gradient: 'from-violet-500/10 to-purple-500/5',
               },
               {
-                tag: 'Integrations',
+                tag: 'Best Practices',
+                tagColor: 'text-brand-600 bg-brand-50',
+                title: 'Hiring Metrics Worth Tracking in Your ATS',
+                excerpt: 'From pipeline health to source visibility — learn which reports in Devlumiq ATS help your team improve recruiting over time.',
+                readTime: '7 min read',
+                gradient: 'from-brand-500/10 to-teal-500/5',
+              },
+              {
+                tag: 'Product',
                 tagColor: 'text-emerald-600 bg-emerald-50',
-                title: 'Honest integration status',
-                excerpt: 'SMTP, job boards, Checkr, WhatsApp, Zapier, and Chrome LinkedIn import are real. Slack and Outlook are planned. DocuSign is stubbed.',
-                href: '/integrations',
-                cta: 'See integrations',
+                title: 'Kanban Pipeline: Keep Every Candidate Visible',
+                excerpt: 'See how the drag-and-drop Kanban board keeps stage changes in sync for your whole hiring team.',
+                readTime: '4 min read',
                 gradient: 'from-emerald-500/10 to-teal-500/5',
               },
             ].map((post, i) => (
@@ -588,6 +581,7 @@ export default function HomePage() {
                 whileHover={{ y: -4 }}
                 className="group flex flex-col rounded-2xl border border-stone-200/80 bg-white overflow-hidden hover:border-brand-200/80 hover:shadow-[var(--shadow-elevated)] transition-all duration-300 shadow-[var(--shadow-card)]"
               >
+                {/* Image placeholder with gradient */}
                 <div className={`h-28 sm:h-36 bg-gradient-to-br ${post.gradient} border-b border-stone-100 flex items-center justify-center`}>
                   <FileText className="w-12 h-12 text-stone-300" />
                 </div>
@@ -596,17 +590,29 @@ export default function HomePage() {
                   <h3 className="font-bold text-stone-900 text-base leading-snug mb-2 group-hover:text-brand-700 transition-colors">{post.title}</h3>
                   <p className="text-sm text-stone-500 leading-relaxed flex-1">{post.excerpt}</p>
                   <div className="flex items-center justify-between mt-4 pt-3 border-t border-stone-100">
-                    <Link href={post.href} className="text-xs font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-1 group-hover:gap-2 transition-all">
-                      {post.cta} <ArrowRight className="w-3 h-3" />
+                    <span className="text-xs text-stone-400">{post.readTime}</span>
+                    <Link href="/resources" className="text-xs font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-1 group-hover:gap-2 transition-all">
+                      Read more <ArrowRight className="w-3 h-3" />
                     </Link>
                   </div>
                 </div>
               </motion.div>
             ))}
           </div>
+          <div className="text-center mt-10">
+            <Link href="/resources">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-brand-600 border border-brand-200 hover:bg-brand-50 transition-colors"
+              >
+                View all articles <ArrowRight className="w-4 h-4" />
+              </motion.button>
+            </Link>
+          </div>
         </div>
       </section>
-      {/* --- Section: Product highlights - end --- */}
+      {/* --- Section: Blog / Resources Teaser - end --- */}
 
       {/* --- Section: Pricing Teaser - start --- */}
       <section className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-stone-50 relative overflow-hidden">
@@ -616,7 +622,7 @@ export default function HomePage() {
             <SectionHeading
               icon={TrendingUp}
               title="Choose your license"
-              subtitle="Regular or Extended — one-time source-code purchase you host yourself."
+              subtitle="Regular or Extended — one-time source-code license."
             />
           </div>
 
@@ -625,16 +631,16 @@ export default function HomePage() {
               {
                 name: 'License Regular',
                 highlight: false,
-                desc: 'Core ATS for everyday recruiting',
-                features: ['Full source code', 'Candidates, jobs & Kanban', 'Calendar, inbox & analytics', 'Documentation included'],
+                desc: 'Built for standard ATS workflows',
+                features: ['Core ATS features', 'Team management', 'Candidate tracking', 'Email support'],
                 cta: 'View Regular license',
                 href: '/pricing',
               },
               {
                 name: 'License Extended',
                 highlight: true,
-                desc: 'Broader rights for growing teams',
-                features: ['Everything in Regular', 'Extended commercial rights', 'Priority email support', 'White-label ready'],
+                desc: 'More tools for growing teams',
+                features: ['Expanded automation', 'Advanced reporting', 'Additional integrations', 'Priority support'],
                 cta: 'View Extended license',
                 href: '/pricing',
               },
@@ -688,7 +694,7 @@ export default function HomePage() {
           </div>
 
           <p className="text-center text-sm text-stone-500 mt-8">
-            One-time purchase · You host it · You own the data.{' '}
+            Both license types are a <strong className="text-stone-700">one-time purchase</strong> with source code included.{' '}
             <Link href="/pricing" className="text-brand-600 font-semibold hover:underline">View license details →</Link>
           </p>
         </div>
@@ -699,7 +705,7 @@ export default function HomePage() {
       <section className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-14">
-            <SectionHeading icon={Award} title="Why teams choose Devlumiq ATS" subtitle="A self-hostable hiring platform with real modules — not a SaaS trial with inflated claims." />
+            <SectionHeading icon={Award} title="Why teams switch to Devlumiq ATS" subtitle="Built different from legacy ATS tools — faster, smarter, and actually enjoyable to use." />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {/* Left: Old ATS */}
@@ -714,18 +720,18 @@ export default function HomePage() {
                   <FileText className="w-5 h-5 text-stone-500" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-stone-500">Typical legacy stack</p>
-                  <p className="text-xs text-stone-400">Common friction</p>
+                  <p className="text-sm font-bold text-stone-500">Legacy ATS</p>
+                  <p className="text-xs text-stone-400">The old way</p>
                 </div>
               </div>
               <ul className="space-y-3">
                 {[
-                  'Scattered tools for pipeline, email, and reporting',
-                  'Hard to customize without vendor roadmaps',
-                  'Candidate data locked in someone else’s cloud',
-                  'Per-seat SaaS pricing that scales with headcount',
-                  'Integrations that only work on higher plans',
-                  'Weak or missing source-code ownership',
+                  'Complex, outdated UI no one enjoys',
+                  'Days of setup and onboarding',
+                  'Manual data entry for everything',
+                  'No smart screening or candidate ranking',
+                  'Per-seat pricing adds up fast',
+                  'Poor mobile experience',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2.5 text-sm text-stone-500">
                     <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center">
@@ -750,17 +756,17 @@ export default function HomePage() {
                 </div>
                 <div>
                   <p className="text-sm font-bold text-brand-700">Devlumiq ATS</p>
-                  <p className="text-xs text-brand-400">What you actually get</p>
+                  <p className="text-xs text-brand-400">The modern way</p>
                 </div>
               </div>
               <ul className="space-y-3">
                 {[
-                  'One dashboard for candidates, Kanban, calendar, inbox, and analytics',
-                  'Full source code you can brand and extend',
-                  'Self-hosted PostgreSQL — you control the data',
+                  'Beautiful, intuitive UI teams love',
+                  'Up and running with the seeded demo quickly',
+                  'Auto-parse resumes with AI or rules',
+                  'Smart ranking scores candidates instantly',
                   'Regular / Extended one-time licenses',
-                  'Optional OpenAI; rule-based tools work without a key',
-                  'Honest integration status documented in the product',
+                  'Full mobile-first responsive design',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2.5 text-sm text-stone-700">
                     <CheckCircle2 className="mt-0.5 flex-shrink-0 w-5 h-5 text-brand-500" />
