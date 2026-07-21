@@ -220,8 +220,9 @@ export function InterviewTranscriptPanel({ interviewId, onApplySuggestions }: Pr
           )}
         </div>
         <p className="text-[11px] text-stone-400">
-          Requires Recall.ai BYOK (Settings → API keys or RECALL_API_KEY)
-          {!botConfigured ? ' — not configured for this org yet' : ''}
+          {botConfigured
+            ? 'Meeting bot is ready — paste a Zoom, Meet, or Teams link and send.'
+            : 'To auto-join meetings, add your meeting-bot API key in Settings → API Keys.'}
         </p>
       </div>
       <textarea

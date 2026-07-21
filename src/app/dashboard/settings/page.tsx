@@ -715,7 +715,7 @@ export default function SettingsPage() {
               {tab === 'api-keys' && (
                 <div className="space-y-6">
                   <div className="rounded-2xl border border-stone-200 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
-                    {sectionHd(<Key className="w-5 h-5 text-brand-600" />, 'API Key Vault (BYOK)', 'Store your own provider keys — encrypted with AES-256-GCM')}
+                    {sectionHd(<Key className="w-5 h-5 text-brand-600" />, 'API Keys', 'Connect your own OpenAI, email, background-check, and other provider keys — stored encrypted')}
                     <ApiKeyManager />
                   </div>
                 </div>

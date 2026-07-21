@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Tags, Plus, Search, Loader2, RefreshCw, CheckCircle2, Sparkles, Upload, Download,
+  Tags, Plus, Search, Loader2, RefreshCw, CheckCircle2, Sparkles, Upload, Download, ChevronDown,
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
@@ -206,7 +206,7 @@ export default function SkillsTaxonomyPage() {
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
             >
               {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              Import full catalog (O*NET-style)
+              Import full catalog
             </motion.button>
             <motion.button
               type="button"
@@ -234,16 +234,19 @@ export default function SkillsTaxonomyPage() {
               className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-stone-200 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15"
             />
           </div>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="rounded-xl border border-stone-200 px-3 py-2.5 text-sm bg-white"
-          >
-            <option value="">All categories</option>
-            {categories.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="appearance-none rounded-xl border border-stone-200 bg-stone-50 pl-3 pr-9 py-2.5 text-sm text-stone-700 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 outline-none cursor-pointer"
+            >
+              <option value="">All categories</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400 pointer-events-none" />
+          </div>
           <button
             type="button"
             onClick={() => void load()}
@@ -300,7 +303,7 @@ export default function SkillsTaxonomyPage() {
                 Upload JSON catalog
               </button>
               <p className="text-xs text-stone-500">
-                Array of {'{'} name, category {'}'} — max 5,000. Or use Import full catalog for the bundled O*NET-style set.
+                Upload a skill list (name + category), up to 5,000 rows — or import our ready-made catalog below.
               </p>
             </div>
             {lastImport && (
@@ -325,7 +328,7 @@ export default function SkillsTaxonomyPage() {
           </div>
         ) : skills.length === 0 ? (
           <div className="py-12 text-center space-y-3">
-            <p className="text-stone-600 text-sm">No skills yet. Import the full O*NET-style catalog to get started.</p>
+            <p className="text-stone-600 text-sm">No skills yet. Import the full catalog to get started.</p>
             <PermissionGate permission="MANAGE_SETTINGS">
               <button
                 type="button"
@@ -333,7 +336,7 @@ export default function SkillsTaxonomyPage() {
                 onClick={() => void importBundled()}
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold disabled:opacity-50"
               >
-                <Download className="w-4 h-4" /> Import full catalog (O*NET-style)
+                <Download className="w-4 h-4" /> Import full catalog
               </button>
             </PermissionGate>
           </div>
@@ -364,8 +367,7 @@ export default function SkillsTaxonomyPage() {
         )}
 
         <p className="text-xs text-stone-500 border-t border-stone-100 pt-3">
-          Existing candidate <code className="text-stone-600">skills</code> JSON fields keep working.
-          Assign taxonomy skills on candidates and jobs for match % scoring (separate from AI rank).
+          Skills already on candidate profiles still work. Tag candidates and jobs from this list to see match scores.
         </p>
       </div>
     </div>

@@ -200,9 +200,9 @@ export default function InterviewScoringPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6">
         {/* Left Column - Candidate & Overall */}
-        <div className="space-y-4">
+        <div className="xl:col-span-4 space-y-4">
           {/* Candidate Selector */}
           <div className="p-4 rounded-2xl bg-white border border-stone-200 shadow-sm">
             <h3 className="font-bold text-stone-900 mb-3 text-sm">
@@ -286,7 +286,7 @@ export default function InterviewScoringPage() {
         </div>
 
         {/* Right Column - Scoring Criteria */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="xl:col-span-8 space-y-4">
           <div className="p-4 rounded-2xl bg-white border border-stone-200 shadow-sm">
             <h3 className="font-bold text-stone-900 mb-4 flex items-center gap-2">
               <Award className="w-5 h-5 text-brand-600" />

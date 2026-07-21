@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, Key, Trash2, Save, AlertTriangle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Key, Trash2, Save, AlertTriangle, CheckCircle2, Eye, EyeOff, ChevronDown } from 'lucide-react';
 
 interface KeyRecord {
   id: string;
@@ -135,16 +135,19 @@ export default function ApiKeyManager() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-stone-700 mb-1.5">Provider</label>
-              <select
-                value={selectedProvider}
-                onChange={(e) => { setSelectedProvider(e.target.value); setError(''); }}
-                className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-brand-500/15 outline-none font-medium text-stone-900 text-sm"
-              >
-                <option value="">Select provider…</option>
-                {availableProviders.map((p) => (
-                  <option key={p} value={p}>{providerLabel(p)}</option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={selectedProvider}
+                  onChange={(e) => { setSelectedProvider(e.target.value); setError(''); }}
+                  className="w-full appearance-none pl-4 pr-10 py-3 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 outline-none font-medium text-stone-900 text-sm cursor-pointer transition-all"
+                >
+                  <option value="">Select provider…</option>
+                  {availableProviders.map((p) => (
+                    <option key={p} value={p}>{providerLabel(p)}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none" />
+              </div>
             </div>
 
             <div>

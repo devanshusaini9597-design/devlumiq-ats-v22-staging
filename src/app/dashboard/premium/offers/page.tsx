@@ -8,7 +8,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FileCheck, DollarSign, Calendar, Gift, Download, Save, CheckCircle, Briefcase } from 'lucide-react';
+import { FileCheck, DollarSign, Gift, Download, Save, CheckCircle, Briefcase, ChevronDown } from 'lucide-react';
 import { CandidateSelector } from '@/components/ui/CandidateSelector';
 import { useToast } from '@/components/ui/Toast';
 import { useLocale } from '@/components/providers/LocaleProvider';
@@ -18,6 +18,35 @@ interface Candidate {
   name: string;
   email: string;
   position?: string;
+}
+
+const selectCls =
+  'w-full appearance-none pl-3 pr-9 py-2.5 rounded-xl border border-stone-200 bg-stone-50 text-sm text-stone-900 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition-all cursor-pointer';
+const inputCls =
+  'w-full px-3 py-2.5 rounded-xl border border-stone-200 bg-stone-50 text-sm text-stone-900 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition-all';
+
+function SelectField({
+  label,
+  value,
+  onChange,
+  children,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-stone-600 mb-1">{label}</label>
+      <div className="relative">
+        <select value={value} onChange={(e) => onChange(e.target.value)} className={selectCls}>
+          {children}
+        </select>
+        <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400 pointer-events-none" />
+      </div>
+    </div>
+  );
 }
 
 export default function OfferLettersPage() {
@@ -226,38 +255,24 @@ Employee Signature: _________________________ Date: _____________
                   type="text"
                   value={position}
                   onChange={(e) => setPosition(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:border-brand-500 outline-none"
+                  className={inputCls}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-stone-600 mb-1">Department</label>
-                  <select
-                    value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:border-brand-500 outline-none"
-                  >
-                    <option value="Engineering">Engineering</option>
-                    <option value="Product">Product</option>
-                    <option value="Design">Design</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="Sales">Sales</option>
-                    <option value="HR">HR</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-stone-600 mb-1">Employment Type</label>
-                  <select
-                    value={employmentType}
-                    onChange={(e) => setEmploymentType(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:border-brand-500 outline-none"
-                  >
-                    <option value="Full-time">Full-time</option>
-                    <option value="Part-time">Part-time</option>
-                    <option value="Contract">Contract</option>
-                    <option value="Internship">Internship</option>
-                  </select>
-                </div>
+                <SelectField label="Department" value={department} onChange={setDepartment}>
+                  <option value="Engineering">Engineering</option>
+                  <option value="Product">Product</option>
+                  <option value="Design">Design</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Sales">Sales</option>
+                  <option value="HR">HR</option>
+                </SelectField>
+                <SelectField label="Employment Type" value={employmentType} onChange={setEmploymentType}>
+                  <option value="Full-time">Full-time</option>
+                  <option value="Part-time">Part-time</option>
+                  <option value="Contract">Contract</option>
+                  <option value="Internship">Internship</option>
+                </SelectField>
               </div>
             </div>
           </div>
@@ -276,29 +291,22 @@ Employee Signature: _________________________ Date: _____________
                   value={salary}
                   onChange={(e) => setSalary(e.target.value)}
                   placeholder="e.g. 80000"
-                  className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:border-brand-500 outline-none"
+                  className={inputCls}
                 />
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-stone-600 mb-1">Currency</label>
-                <select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:border-brand-500 outline-none"
-                >
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                  <option value="GBP">GBP</option>
-                  <option value="INR">INR</option>
-                </select>
-              </div>
+              <SelectField label="Currency" value={currency} onChange={setCurrency}>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="GBP">GBP</option>
+                <option value="INR">INR</option>
+              </SelectField>
               <div>
                 <label className="block text-xs font-semibold text-stone-600 mb-1">Start Date</label>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:border-brand-500 outline-none"
+                  className={inputCls}
                 />
               </div>
             </div>
@@ -314,7 +322,7 @@ Employee Signature: _________________________ Date: _____________
               value={benefits}
               onChange={(e) => setBenefits(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:border-brand-500 outline-none resize-none"
+              className={`${inputCls} resize-none`}
             />
             <p className="text-xs text-stone-500 mt-1">Separate benefits with commas</p>
           </div>
@@ -332,15 +340,15 @@ Employee Signature: _________________________ Date: _____________
         </div>
 
         {/* Right Column - Preview */}
-        <div className="space-y-4">
-          <div className="p-4 rounded-2xl bg-white border border-stone-200 shadow-sm">
+        <div className="space-y-4 xl:sticky xl:top-4 self-start">
+          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-stone-200 shadow-sm min-h-[28rem]">
             <h3 className="font-bold text-stone-900 mb-3 flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-brand-600" />
               Preview
             </h3>
             {generatedLetter ? (
               <>
-                <pre className="p-4 bg-stone-50 border border-stone-200 rounded-xl text-sm font-mono whitespace-pre-wrap max-h-96 overflow-auto">
+                <pre className="p-4 bg-stone-50 border border-stone-200 rounded-xl text-sm font-mono whitespace-pre-wrap max-h-[32rem] overflow-auto">
                   {generatedLetter}
                 </pre>
                 <div className="flex gap-2 mt-4">
@@ -366,9 +374,38 @@ Employee Signature: _________________________ Date: _____________
                 </div>
               </>
             ) : (
-              <div className="p-12 text-center border border-dashed border-stone-200 rounded-xl">
-                <FileCheck className="w-12 h-12 text-stone-300 mx-auto mb-4" />
-                <p className="text-stone-500">Fill in the details and click Generate</p>
+              <div className="relative rounded-xl border border-stone-200 bg-gradient-to-b from-stone-50 to-white overflow-hidden">
+                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-brand-500" />
+                <div className="p-6 sm:p-8 space-y-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                      <FileCheck className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-stone-800">Offer letter preview</p>
+                      <p className="text-xs text-stone-500">Appears here after you generate</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2.5 opacity-60">
+                    <div className="h-2.5 w-1/3 rounded bg-stone-200" />
+                    <div className="h-2 w-full rounded bg-stone-100" />
+                    <div className="h-2 w-11/12 rounded bg-stone-100" />
+                    <div className="h-2 w-4/5 rounded bg-stone-100" />
+                    <div className="pt-3 space-y-2">
+                      <div className="h-2.5 w-2/5 rounded bg-stone-200" />
+                      <div className="h-2 w-full rounded bg-stone-100" />
+                      <div className="h-2 w-5/6 rounded bg-stone-100" />
+                      <div className="h-2 w-3/4 rounded bg-stone-100" />
+                    </div>
+                    <div className="pt-3 space-y-2">
+                      <div className="h-2.5 w-1/4 rounded bg-stone-200" />
+                      <div className="h-2 w-2/3 rounded bg-stone-100" />
+                    </div>
+                  </div>
+                  <p className="text-sm text-stone-500 pt-2">
+                    Fill in the details on the left, then click <span className="font-semibold text-stone-700">Generate Offer Letter</span>.
+                  </p>
+                </div>
               </div>
             )}
           </div>

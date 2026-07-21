@@ -269,8 +269,29 @@ export default function ResumeParserPage() {
   const inputCls = 'w-full px-3.5 py-2.5 border border-stone-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 outline-none transition-all bg-white';
   const badge = result ? confidenceLabel(result._confidence) : null;
 
+  const EXTRACT_FIELDS = [
+    'Full Name', 'Email & Phone', 'Location', 'Current Job Title',
+    'LinkedIn & GitHub', 'Portfolio URL', 'Skills',
+    'Work History', 'Years Experience', 'Education',
+    'Certifications', 'Languages', 'Summary',
+  ] as const;
+
+  const fieldStatus = result
+    ? [
+        { label: 'Full Name', ok: !!result.name?.trim() },
+        { label: 'Email', ok: !!result.email?.trim() },
+        { label: 'Phone', ok: !!result.phone?.trim() },
+        { label: 'Location', ok: !!result.location?.trim() },
+        { label: 'Job Title', ok: !!result.currentTitle?.trim() },
+        { label: 'Skills', ok: result.skills.length > 0 },
+        { label: 'Work History', ok: result.workExperience.length > 0 },
+        { label: 'Education', ok: result.education.length > 0 },
+        { label: 'Summary', ok: !!result.summary?.trim() },
+      ]
+    : [];
+
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-6xl">
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 
       {/* ── Header ── */}
       <div className="flex items-center gap-3">
@@ -279,270 +300,256 @@ export default function ResumeParserPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-stone-900">Resume AI Parser</h1>
-          <p className="text-stone-500 text-sm">Upload PDF, DOCX, DOC, or TXT — extract 15+ fields automatically</p>
+          <p className="text-stone-500 text-sm">Upload a resume — we extract contact info, skills, work history, and more</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-
-        {/* ── Left panel: upload + edit ── */}
-        <div className="xl:col-span-3 space-y-4">
-
-          {/* Upload zone */}
-          {!result && (
-            <div
-              onDrop={handleDrop}
-              onDragOver={e => e.preventDefault()}
-              className="p-8 rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50 text-center hover:border-brand-400 hover:bg-brand-50/30 transition-colors"
-            >
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-100 to-teal-100 flex items-center justify-center mx-auto mb-4">
+      {/* ── Empty state: full-width upload (no side-panel gap) ── */}
+      {!result && (
+        <div className="space-y-5">
+          <div
+            onDrop={handleDrop}
+            onDragOver={e => e.preventDefault()}
+            className="relative overflow-hidden rounded-2xl border-2 border-dashed border-stone-300 bg-gradient-to-br from-stone-50 via-white to-brand-50/40 text-center hover:border-brand-400 transition-colors"
+          >
+            <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,_rgba(13,148,136,0.06),_transparent_55%)]" />
+            <div className="relative px-6 py-12 sm:py-16">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-100 to-teal-100 flex items-center justify-center mx-auto mb-5 shadow-sm">
                 {parsing ? (
                   <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <FileText className="w-8 h-8 text-brand-600" />
                 )}
               </div>
-              <h3 className="text-lg font-semibold text-stone-900 mb-2">
-                {parsing ? 'AI is analysing your resume…' : 'Upload Resume'}
+              <h3 className="text-xl font-semibold text-stone-900 mb-2">
+                {parsing ? 'Analysing resume…' : 'Drop a resume to get started'}
               </h3>
-              <p className="text-stone-500 text-sm mb-6 max-w-sm mx-auto">
+              <p className="text-stone-500 text-sm mb-7 max-w-md mx-auto">
                 {parsing
-                  ? 'Extracting name, contact details, skills, work history, education & more'
-                  : 'Drop a file here or click to browse. Supports PDF, DOCX, DOC, TXT (max 5 MB).'}
+                  ? 'Pulling out name, contact details, skills, work history, education, and more'
+                  : 'PDF, Word, or text files up to 5 MB. Drag and drop, or choose a file.'}
               </p>
               {!parsing && (
-                <label className="inline-flex items-center gap-2 px-6 py-3 bg-brand-600 text-white rounded-xl font-semibold cursor-pointer hover:bg-brand-700 transition-colors shadow-lg shadow-brand-500/25">
+                <label className="inline-flex items-center gap-2 px-7 py-3.5 bg-brand-600 text-white rounded-xl font-semibold cursor-pointer hover:bg-brand-700 transition-colors shadow-lg shadow-brand-500/25">
                   <Upload className="w-5 h-5" />
                   Choose File
                   <input type="file" accept=".pdf,.docx,.doc,.txt" className="hidden" onChange={handleFileInput} />
                 </label>
               )}
               {file && !parsing && (
-                <p className="mt-3 text-xs text-stone-400">{file.name} · {fmtBytes(file.size)}</p>
+                <p className="mt-4 text-xs text-stone-400">{file.name} · {fmtBytes(file.size)}</p>
               )}
             </div>
-          )}
+          </div>
 
-          {/* Results form */}
-          <AnimatePresence>
-            {result && (
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="p-6 rounded-2xl bg-white border border-stone-200 shadow-sm space-y-5"
-              >
-                {/* Header row */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
-                      <Sparkles className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-stone-900 text-sm">AI Extracted Data</p>
-                      <p className="text-xs text-stone-400">{file?.name} · {result._meta?.parseMethod}</p>
-                    </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { n: '1', title: 'Upload', desc: 'PDF, DOCX, or TXT' },
+              { n: '2', title: 'Extract', desc: 'AI reads the resume' },
+              { n: '3', title: 'Review', desc: 'Fix anything needed' },
+              { n: '4', title: 'Save', desc: 'Add to your pipeline' },
+            ].map(s => (
+              <div key={s.n} className="flex items-start gap-3 p-4 rounded-xl bg-white border border-stone-200">
+                <div className="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-sm shrink-0">{s.n}</div>
+                <div>
+                  <p className="font-semibold text-stone-900 text-sm">{s.title}</p>
+                  <p className="text-xs text-stone-500">{s.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-2xl bg-white border border-stone-200 p-5 sm:p-6">
+            <h3 className="font-bold text-stone-900 mb-3 text-sm">What we pull from each resume</h3>
+            <div className="flex flex-wrap gap-2">
+              {EXTRACT_FIELDS.map(f => (
+                <span key={f} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-stone-50 border border-stone-200 text-stone-700">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  {f}
+                </span>
+              ))}
+            </div>
+            <p className="mt-4 text-xs text-stone-500 flex items-start gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
+              Best results with text-based PDFs or Word files — not scanned images. Always review before saving.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Results: form + live field checklist ── */}
+      <AnimatePresence>
+        {result && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="grid grid-cols-1 xl:grid-cols-3 gap-5"
+          >
+            <div className="xl:col-span-2 p-6 rounded-2xl bg-white border border-stone-200 shadow-sm space-y-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-amber-600" />
                   </div>
-                  <button onClick={() => { setResult(null); setFile(null); }} className="p-2 hover:bg-stone-100 rounded-lg text-stone-400 hover:text-red-500 transition-colors">
-                    <X className="w-5 h-5" />
+                  <div>
+                    <p className="font-bold text-stone-900 text-sm">AI Extracted Data</p>
+                    <p className="text-xs text-stone-400">{file?.name} · {result._meta?.parseMethod}</p>
+                  </div>
+                </div>
+                <button onClick={() => { setResult(null); setFile(null); }} className="p-2 hover:bg-stone-100 rounded-lg text-stone-400 hover:text-red-500 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {badge && (
+                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold ${badge.cls}`}>
+                  <badge.icon className="w-3.5 h-3.5" />
+                  {badge.label}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Full Name" icon={User}>
+                  <input value={result.name} onChange={e => set('name', e.target.value)} className={inputCls} placeholder="Candidate name" />
+                </Field>
+                <Field label="Current Title" icon={Briefcase}>
+                  <input value={result.currentTitle} onChange={e => set('currentTitle', e.target.value)} className={inputCls} placeholder="e.g. Senior Engineer" />
+                </Field>
+                <Field label="Email" icon={Mail}>
+                  <input type="email" value={result.email} onChange={e => set('email', e.target.value)} className={inputCls} placeholder="email@example.com" />
+                </Field>
+                <Field label="Phone" icon={Phone}>
+                  <input type="tel" value={result.phone} onChange={e => set('phone', e.target.value)} className={inputCls} placeholder="+1 (555) 000-0000" />
+                </Field>
+                <Field label="Location" icon={MapPin}>
+                  <input value={result.location} onChange={e => set('location', e.target.value)} className={inputCls} placeholder="City, State" />
+                </Field>
+                <Field label="Experience (years)" icon={Clock}>
+                  <input type="number" value={result.experienceYears ?? ''} onChange={e => set('experienceYears', e.target.value ? Number(e.target.value) : null)} className={inputCls} placeholder="e.g. 5" min={0} max={50} />
+                </Field>
+                <Field label="LinkedIn" icon={Linkedin}>
+                  <input value={result.linkedin} onChange={e => set('linkedin', e.target.value)} className={inputCls} placeholder="https://linkedin.com/in/..." />
+                </Field>
+                <Field label="GitHub" icon={Github}>
+                  <input value={result.github} onChange={e => set('github', e.target.value)} className={inputCls} placeholder="https://github.com/..." />
+                </Field>
+                {result.portfolio && (
+                  <Field label="Portfolio" icon={Globe}>
+                    <input value={result.portfolio} onChange={e => set('portfolio', e.target.value)} className={inputCls} placeholder="https://..." />
+                  </Field>
+                )}
+              </div>
+
+              <Field label="Skills Detected" icon={Briefcase}>
+                <div className="flex flex-wrap gap-1.5 mb-2 min-h-[32px]">
+                  {result.skills.map((s, i) => (
+                    <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 bg-brand-50 text-brand-700 rounded-lg text-xs font-medium border border-brand-200">
+                      {s}
+                      <button type="button" onClick={() => set('skills', result.skills.filter((_, j) => j !== i))} className="hover:text-red-500 transition-colors">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                  {!result.skills.length && <span className="text-xs text-stone-400 italic">No skills detected — add manually</span>}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    value={newSkill}
+                    onChange={e => setNewSkill(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addSkill())}
+                    className={inputCls + ' flex-1'}
+                    placeholder="Add skill and press Enter…"
+                  />
+                  <button type="button" onClick={addSkill} className="px-3 py-2.5 bg-brand-600 text-white rounded-xl hover:bg-brand-700 transition-colors">
+                    <Plus className="w-4 h-4" />
                   </button>
                 </div>
+              </Field>
 
-                {/* Confidence badge */}
-                {badge && (
-                  <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold ${badge.cls}`}>
-                    <badge.icon className="w-3.5 h-3.5" />
-                    {badge.label}
-                  </div>
-                )}
+              <WorkSection items={result.workExperience} />
+              <EduSection items={result.education} />
 
-                {/* ── Contact ── */}
+              {(result.certifications.length > 0 || result.languages.length > 0) && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field label="Full Name" icon={User}>
-                    <input value={result.name} onChange={e => set('name', e.target.value)} className={inputCls} placeholder="Candidate name" />
-                  </Field>
-                  <Field label="Current Title" icon={Briefcase}>
-                    <input value={result.currentTitle} onChange={e => set('currentTitle', e.target.value)} className={inputCls} placeholder="e.g. Senior Engineer" />
-                  </Field>
-                  <Field label="Email" icon={Mail}>
-                    <input type="email" value={result.email} onChange={e => set('email', e.target.value)} className={inputCls} placeholder="email@example.com" />
-                  </Field>
-                  <Field label="Phone" icon={Phone}>
-                    <input type="tel" value={result.phone} onChange={e => set('phone', e.target.value)} className={inputCls} placeholder="+1 (555) 000-0000" />
-                  </Field>
-                  <Field label="Location" icon={MapPin}>
-                    <input value={result.location} onChange={e => set('location', e.target.value)} className={inputCls} placeholder="City, State" />
-                  </Field>
-                  <Field label="Experience (years)" icon={Clock}>
-                    <input type="number" value={result.experienceYears ?? ''} onChange={e => set('experienceYears', e.target.value ? Number(e.target.value) : null)} className={inputCls} placeholder="e.g. 5" min={0} max={50} />
-                  </Field>
-                  <Field label="LinkedIn" icon={Linkedin}>
-                    <input value={result.linkedin} onChange={e => set('linkedin', e.target.value)} className={inputCls} placeholder="https://linkedin.com/in/..." />
-                  </Field>
-                  <Field label="GitHub" icon={Github}>
-                    <input value={result.github} onChange={e => set('github', e.target.value)} className={inputCls} placeholder="https://github.com/..." />
-                  </Field>
-                  {result.portfolio && (
-                    <Field label="Portfolio" icon={Globe}>
-                      <input value={result.portfolio} onChange={e => set('portfolio', e.target.value)} className={inputCls} placeholder="https://..." />
-                    </Field>
+                  {result.certifications.length > 0 && (
+                    <div className="p-4 rounded-xl border border-stone-200 bg-stone-50">
+                      <p className="flex items-center gap-1.5 text-xs font-semibold text-stone-500 uppercase mb-2">
+                        <Award className="w-3.5 h-3.5 text-brand-500" /> Certifications
+                      </p>
+                      <ul className="space-y-1">
+                        {result.certifications.map((c, i) => (
+                          <li key={i} className="text-xs text-stone-700 flex items-start gap-1">
+                            <CheckCircle className="w-3 h-3 text-emerald-500 mt-0.5 shrink-0" />{c}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {result.languages.length > 0 && (
+                    <div className="p-4 rounded-xl border border-stone-200 bg-stone-50">
+                      <p className="flex items-center gap-1.5 text-xs font-semibold text-stone-500 uppercase mb-2">
+                        <Globe className="w-3.5 h-3.5 text-brand-500" /> Languages
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {result.languages.map((l, i) => (
+                          <span key={i} className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-200">{l}</span>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
+              )}
 
-                {/* ── Skills ── */}
-                <Field label="Skills Detected" icon={Briefcase}>
-                  <div className="flex flex-wrap gap-1.5 mb-2 min-h-[32px]">
-                    {result.skills.map((s, i) => (
-                      <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 bg-brand-50 text-brand-700 rounded-lg text-xs font-medium border border-brand-200">
-                        {s}
-                        <button type="button" onClick={() => set('skills', result.skills.filter((_, j) => j !== i))} className="hover:text-red-500 transition-colors">
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
-                    {!result.skills.length && <span className="text-xs text-stone-400 italic">No skills detected — add manually</span>}
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      value={newSkill}
-                      onChange={e => setNewSkill(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addSkill())}
-                      className={inputCls + ' flex-1'}
-                      placeholder="Add skill and press Enter…"
-                    />
-                    <button type="button" onClick={addSkill} className="px-3 py-2.5 bg-brand-600 text-white rounded-xl hover:bg-brand-700 transition-colors">
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
-                </Field>
+              <Field label="Professional Summary" icon={FileText}>
+                <textarea value={result.summary} onChange={e => set('summary', e.target.value)} rows={4} className={inputCls + ' resize-none'} placeholder="Professional summary…" />
+              </Field>
 
-                {/* ── Work experience items ── */}
-                <WorkSection items={result.workExperience} />
-
-                {/* ── Education items ── */}
-                <EduSection items={result.education} />
-
-                {/* ── Certifications & Languages ── */}
-                {(result.certifications.length > 0 || result.languages.length > 0) && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {result.certifications.length > 0 && (
-                      <div className="p-4 rounded-xl border border-stone-200 bg-stone-50">
-                        <p className="flex items-center gap-1.5 text-xs font-semibold text-stone-500 uppercase mb-2">
-                          <Award className="w-3.5 h-3.5 text-brand-500" /> Certifications
-                        </p>
-                        <ul className="space-y-1">
-                          {result.certifications.map((c, i) => (
-                            <li key={i} className="text-xs text-stone-700 flex items-start gap-1">
-                              <CheckCircle className="w-3 h-3 text-emerald-500 mt-0.5 shrink-0" />{c}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {result.languages.length > 0 && (
-                      <div className="p-4 rounded-xl border border-stone-200 bg-stone-50">
-                        <p className="flex items-center gap-1.5 text-xs font-semibold text-stone-500 uppercase mb-2">
-                          <Globe className="w-3.5 h-3.5 text-brand-500" /> Languages
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {result.languages.map((l, i) => (
-                            <span key={i} className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-200">{l}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* ── Summary ── */}
-                <Field label="Professional Summary" icon={FileText}>
-                  <textarea value={result.summary} onChange={e => set('summary', e.target.value)} rows={4} className={inputCls + ' resize-none'} placeholder="Professional summary…" />
-                </Field>
-
-                {/* ── Actions ── */}
-                <div className="flex gap-2 pt-2">
-                  <motion.button
-                    whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
-                    onClick={save} disabled={saving}
-                    className="flex-1 py-3 bg-brand-600 text-white rounded-xl font-semibold hover:bg-brand-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-brand-500/20"
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    {saving ? 'Saving…' : 'Save Candidate'}
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
-                    onClick={exportJSON}
-                    className="px-4 py-3 border border-stone-200 text-stone-700 rounded-xl font-semibold hover:bg-stone-50 transition-colors flex items-center gap-2"
-                  >
-                    <Download className="w-4 h-4" /> JSON
-                  </motion.button>
-                  <label className="px-4 py-3 border border-stone-200 text-stone-700 rounded-xl font-semibold hover:bg-stone-50 transition-colors flex items-center gap-2 cursor-pointer">
-                    <Upload className="w-4 h-4" /> New
-                    <input type="file" accept=".pdf,.docx,.doc,.txt" className="hidden" onChange={handleFileInput} />
-                  </label>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* ── Right panel: how it works + supported fields ── */}
-        <div className="xl:col-span-2 space-y-4">
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100 border border-stone-200">
-            <h3 className="font-bold text-stone-900 mb-4 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-amber-500" /> How It Works
-            </h3>
-            <div className="space-y-4">
-              {[
-                { n: '1', title: 'Upload File', desc: 'PDF, DOCX, DOC, or TXT — up to 5 MB' },
-                { n: '2', title: 'Server Parsing', desc: 'AI extracts 15+ structured fields server-side with no data leaving your infrastructure' },
-                { n: '3', title: 'Review & Edit', desc: 'Verify extracted data and make corrections if needed' },
-                { n: '4', title: 'Save to Pipeline', desc: 'Save the candidate with full profile or export as JSON' },
-              ].map(s => (
-                <div key={s.n} className="flex gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-sm shrink-0">{s.n}</div>
-                  <div>
-                    <p className="font-semibold text-stone-900 text-sm">{s.title}</p>
-                    <p className="text-xs text-stone-500">{s.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-white border border-stone-200 shadow-sm">
-            <h3 className="font-bold text-stone-900 mb-4">Extracted Fields</h3>
-            <div className="grid grid-cols-1 gap-2">
-              {[
-                'Full Name', 'Email & Phone', 'Location', 'Current Job Title',
-                'LinkedIn & GitHub', 'Portfolio URL', 'Skills (150+ keywords)',
-                'Work History (company, dates)', 'Total Years Experience',
-                'Education (degree, GPA)', 'Certifications',
-                'Languages', 'Professional Summary',
-              ].map(f => (
-                <div key={f} className="flex items-center gap-2 text-sm text-stone-600">
-                  <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />{f}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-              <div>
-                <p className="font-semibold text-amber-800 text-sm">Tips for best results</p>
-                <ul className="mt-1 space-y-1 text-xs text-amber-700">
-                  <li>• Use text-based PDFs — not scanned images</li>
-                  <li>• DOCX files from Word give the highest accuracy</li>
-                  <li>• Standard headings (Experience, Education, Skills) improve parsing</li>
-                  <li>• Always review extracted data before saving</li>
-                </ul>
+              <div className="flex gap-2 pt-2">
+                <motion.button
+                  whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                  onClick={save} disabled={saving}
+                  className="flex-1 py-3 bg-brand-600 text-white rounded-xl font-semibold hover:bg-brand-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-brand-500/20"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  {saving ? 'Saving…' : 'Save Candidate'}
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                  onClick={exportJSON}
+                  className="px-4 py-3 border border-stone-200 text-stone-700 rounded-xl font-semibold hover:bg-stone-50 transition-colors flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" /> JSON
+                </motion.button>
+                <label className="px-4 py-3 border border-stone-200 text-stone-700 rounded-xl font-semibold hover:bg-stone-50 transition-colors flex items-center gap-2 cursor-pointer">
+                  <Upload className="w-4 h-4" /> New
+                  <input type="file" accept=".pdf,.docx,.doc,.txt" className="hidden" onChange={handleFileInput} />
+                </label>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
+
+            <div className="space-y-4 xl:sticky xl:top-4 self-start">
+              <div className="p-5 rounded-2xl bg-white border border-stone-200 shadow-sm">
+                <h3 className="font-bold text-stone-900 mb-1 text-sm">Extraction checklist</h3>
+                <p className="text-xs text-stone-500 mb-4">Green means we found it — edit anything that looks off.</p>
+                <div className="space-y-2">
+                  {fieldStatus.map(f => (
+                    <div key={f.label} className="flex items-center gap-2 text-sm">
+                      <CheckCircle className={`w-4 h-4 shrink-0 ${f.ok ? 'text-emerald-500' : 'text-stone-300'}`} />
+                      <span className={f.ok ? 'text-stone-700' : 'text-stone-400'}>{f.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200">
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  Double-check name and email before saving — those are required to add the candidate to your pipeline.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
