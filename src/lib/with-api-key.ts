@@ -41,7 +41,7 @@ export type ApiKeyRecord = Omit<ApiKey, 'keyHash'> & {
   };
 };
 
-type RouteContext = { params?: Promise<Record<string, unknown>> };
+type RouteContext = { params: Promise<Record<string, string>> };
 type AuthedHandler<T extends RouteContext = RouteContext> = (
   req: NextRequest,
   ctx: T,
@@ -50,7 +50,7 @@ type AuthedHandler<T extends RouteContext = RouteContext> = (
 
 type ApiKeyHandler = (
   req: NextRequest,
-  ctx: { params?: Promise<Record<string, unknown>> },
+  ctx: RouteContext,
   key: ApiKeyRecord,
 ) => Promise<NextResponse> | NextResponse;
 
@@ -185,7 +185,7 @@ export async function resolveBearerAuth(rawKey: string): Promise<ApiKeyRecord | 
  * @param handler              Route handler receiving the validated key + owning user
  */
 export function withApiKey(requiredPermissions: string[], handler: ApiKeyHandler) {
-  return async (req: NextRequest, ctx: { params?: Promise<Record<string, unknown>> } = {}) => {
+  return async (req: NextRequest, ctx: RouteContext) => {
     const authHeader = req.headers.get('authorization') ?? '';
     if (!authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Missing or invalid Authorization header' }, { status: 401 });
@@ -236,7 +236,7 @@ export function withSessionOrApiKey<T extends RouteContext = RouteContext>(
   apiKeyPermissions: string[],
   handler: AuthedHandler<T>,
 ) {
-  return async (req: NextRequest, ctx: T = {} as T) => {
+  return async (req: NextRequest, ctx: T) => {
     const authHeader = req.headers.get('authorization') ?? '';
 
     if (authHeader.startsWith('Bearer ')) {
