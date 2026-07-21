@@ -52,15 +52,26 @@ const planColors: Record<string, string> = {
 export default function BillingSettings() {
   const [data, setData] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const fetchSub = async () => {
-    const res = await fetch('/api/billing/subscription', { credentials: 'include' });
-    if (res.ok) {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/billing/subscription', { credentials: 'include' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Could not load billing (${res.status})`);
+      }
       const json = await res.json();
       setData(json);
+    } catch (e: unknown) {
+      setData(null);
+      setError(e instanceof Error ? e.message : 'Could not load billing');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -93,13 +104,42 @@ export default function BillingSettings() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-48">
+      <div className="flex items-center justify-center h-48 rounded-2xl border border-stone-200 bg-white">
         <Loader2 className="w-6 h-6 animate-spin text-stone-400" />
       </div>
     );
   }
 
-  if (!data) return null;
+  if (!data) {
+    return (
+      <div className="rounded-2xl border border-stone-200 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)] space-y-4">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <h2 className="text-base font-bold text-stone-900">Billing unavailable</h2>
+            <p className="text-sm text-stone-500 mt-1">
+              {error || 'We could not load your subscription right now.'}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => void fetchSub()}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-white bg-gradient-to-r from-brand-600 to-teal-600"
+          >
+            Try again
+          </button>
+          <a
+            href="mailto:support@devlumiq.com?subject=Billing%20help"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-stone-700 bg-stone-50 border border-stone-200 hover:bg-stone-100"
+          >
+            Contact support
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   const sub = data.subscription;
   const limits = data.limits;
@@ -201,7 +241,6 @@ export default function BillingSettings() {
         </div>
       </div>
 
-      {/* Add-ons — purchasable without forcing plan change */}
       <div className="rounded-2xl border border-stone-200 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
         <h2 className="text-base font-bold text-stone-900 mb-1">Add-ons</h2>
         <p className="text-xs text-stone-500 mb-4">

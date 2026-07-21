@@ -704,10 +704,16 @@ export default function SettingsPage() {
               {/* BILLING */}
               {tab === 'billing' && (
                 <div className="space-y-6">
-                  <div className="rounded-2xl border border-stone-200 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
-                    {sectionHd(<CreditCard className="w-5 h-5 text-brand-600" />, 'Subscription & Billing', 'Manage your plan, upgrade, or update payment methods')}
-                    <BillingSettings />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-stone-100">
+                      <CreditCard className="w-5 h-5 text-brand-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold text-stone-900">Subscription & Billing</h2>
+                      <p className="text-xs text-stone-500 mt-0.5">Manage your plan, upgrade, or update payment methods</p>
+                    </div>
                   </div>
+                  <BillingSettings />
                 </div>
               )}
 
