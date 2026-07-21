@@ -35,7 +35,7 @@ export default function PageHeader({ icon: Icon, title, subtitle, children }: Pa
           )}
         </div>
       </div>
-      {children && <div className="flex-shrink-0">{children}</div>}
+      {children && <div className="flex-shrink-0 min-w-0 flex flex-wrap items-center gap-2">{children}</div>}
     </motion.div>
   );
 }

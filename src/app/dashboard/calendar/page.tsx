@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { Video, Phone, FileCheck, Calendar as CalendarIcon, Sparkles } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import FullCalendarView from '@/components/calendar/FullCalendarView';
 import CalendarEventModal, { type CalendarEventData } from '@/components/calendar/CalendarEventModal';
@@ -63,7 +64,7 @@ export default function CalendarPage() {
   const upcoming = useMemo(() => eventsForCalendar.slice(0, 5), [eventsForCalendar]);
 
   return (
-    <div className="space-y-4 sm:space-y-5">
+    <PageShell>
       <PageHeader icon={CalendarIcon} title={t('calendar.title')} subtitle={t('calendar.subtitle')} />
 
       {loading ? (
@@ -186,6 +187,6 @@ export default function CalendarPage() {
       <CalendarEventModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />
         </>
       )}
-    </div>
+    </PageShell>
   );
 }

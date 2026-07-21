@@ -8,6 +8,8 @@ import {
   ExternalLink, Sparkles, X
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 
 interface CompanyProfile {
   id: string;
@@ -165,29 +167,19 @@ export default function CompanyBuilder() {
   ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
-    >
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-brand-500 to-teal-500 shadow-lg shadow-brand-500/25">
-            <Building2 className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-stone-900">Career Page Builder</h1>
-            <p className="text-sm text-stone-500">Customize your branded career page</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3">
+    <PageShell>
+      <PageHeader
+        icon={Building2}
+        title="Career Page Builder"
+        subtitle="Customize your branded career page"
+      >
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {company?.slug && (
             <a
               href={`/careers/${company.slug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-2.5 border border-stone-200 bg-white text-stone-600 rounded-xl text-sm font-medium hover:border-brand-300 hover:text-brand-600 transition-colors"
+              className="btn-secondary !px-3 !py-2.5 !text-sm inline-flex items-center gap-1.5"
             >
               <ExternalLink className="w-4 h-4" />
               <span className="hidden sm:inline">Preview Page</span>
@@ -210,7 +202,7 @@ export default function CompanyBuilder() {
             whileTap={{ scale: 0.98 }}
             onClick={saveCompany}
             disabled={saving}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-brand-600 to-teal-500 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-brand-500/30 transition-all disabled:opacity-50 shadow-md shadow-brand-500/20"
+            className="btn-primary !px-4 !py-2.5 !text-sm disabled:opacity-50"
           >
             {saving ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
@@ -219,7 +211,7 @@ export default function CompanyBuilder() {
             )}
           </motion.button>
         </div>
-      </div>
+      </PageHeader>
 
       {/* ── Tabs ───────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
@@ -257,7 +249,7 @@ export default function CompanyBuilder() {
           {activeTab === 'preview' && <PreviewTab company={company} />}
         </motion.div>
       </div>
-    </motion.div>
+    </PageShell>
   );
 }
 

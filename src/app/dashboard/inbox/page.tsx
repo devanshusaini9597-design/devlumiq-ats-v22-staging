@@ -9,6 +9,8 @@ import {
   TrendingUp, MessageSquare, Eye, CheckCheck, X
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
+import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -286,28 +288,24 @@ export default function InboxPage() {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-brand-500 to-teal-500 shadow-lg shadow-brand-500/25">
-            <Inbox className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-stone-900">{t('inbox.title') || 'Inbox'}</h1>
-            <p className="text-sm text-stone-500">{t('inbox.subtitle') || 'Manage your email conversations'}</p>
-          </div>
+    <PageShell>
+      <PageHeader
+        icon={Inbox}
+        title={t('inbox.title') || 'Inbox'}
+        subtitle={t('inbox.subtitle') || 'Manage your email conversations'}
+      >
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setShowCompose(true)}
+            className="btn-primary !px-4 !py-2.5 !text-sm inline-flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Compose
+          </motion.button>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setShowCompose(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-brand-600 to-teal-500 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-brand-500/30 transition-all shadow-md shadow-brand-500/20"
-        >
-          <Plus className="w-4 h-4" />
-          Compose
-        </motion.button>
-      </div>
+      </PageHeader>
 
       {/* Stats Row */}
       {stats && (
@@ -823,6 +821,6 @@ export default function InboxPage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </PageShell>
   );
 }

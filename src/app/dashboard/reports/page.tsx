@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Download, Calendar, TrendingUp, Users, Clock, BarChart2, Loader2, Target } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
 import { jsPDF } from 'jspdf';
@@ -77,7 +78,7 @@ export default function ReportsPage() {
 
   if (data === null) {
     return (
-      <div className="space-y-6 animate-pulse w-full min-w-0">
+      <PageShell className="animate-pulse">
         <div className="h-10 w-48 rounded-xl bg-stone-200" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
@@ -89,17 +90,12 @@ export default function ReportsPage() {
             <div key={i} className="h-28 rounded-xl bg-stone-100" />
           ))}
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className="space-y-3 w-full min-w-0"
-    >
+    <PageShell>
       <PageHeader icon={FileText} title={t('reports.title')} subtitle={t('reports.subtitle')} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -215,6 +211,6 @@ export default function ReportsPage() {
           })()}
         </div>
       </motion.div>
-    </motion.div>
+    </PageShell>
   );
 }

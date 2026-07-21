@@ -129,17 +129,17 @@ export default function JobDetailPage() {
         <div className="h-1.5 bg-gradient-to-r from-brand-500 via-teal-500 to-emerald-500" />
         
         <div className="p-6 sm:p-8 border-b border-stone-100">
-          <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+          <div className="flex flex-col lg:flex-row lg:items-start gap-6 flex-wrap">
             {/* Left: Icon & Title */}
-            <div className="flex items-start gap-4">
+            <div className="flex items-start gap-4 min-w-0 flex-1">
               <motion.div 
                 whileHover={{ scale: 1.05 }}
-                className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-100 to-teal-100 flex items-center justify-center flex-shrink-0 shadow-lg shadow-brand-100"
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-brand-500 via-brand-600 to-teal-700 flex items-center justify-center flex-shrink-0 shadow-lg shadow-brand-500/20 ring-1 ring-white/20 ring-inset"
               >
-                <Briefcase className="w-8 h-8 text-brand-600" />
+                <Briefcase className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-sm" />
               </motion.div>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight">{job.title}</h1>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight truncate" style={{ letterSpacing: '-0.025em' }}>{job.title}</h1>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-sm text-stone-600">
                   <span className="flex items-center gap-1.5">
                     <div className="w-6 h-6 rounded-md bg-stone-100 flex items-center justify-center">

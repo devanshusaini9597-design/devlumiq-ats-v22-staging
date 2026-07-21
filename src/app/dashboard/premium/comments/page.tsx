@@ -11,6 +11,8 @@ import { motion } from 'framer-motion';
 import { MessageSquare, Send, AtSign, Users, Trash2 } from 'lucide-react';
 import { CandidateSelector } from '@/components/ui/CandidateSelector';
 import { useToast } from '@/components/ui/Toast';
+import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { formatDistanceToNow } from 'date-fns';
 import { useLocale } from '@/components/providers/LocaleProvider';
@@ -187,18 +189,13 @@ export default function TeamCommentsPage() {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
     >
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600">
-          <MessageSquare className="w-6 h-6 text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-stone-900">Team Comments</h1>
-          <p className="text-stone-500">Collaborate with your team using @mentions</p>
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        icon={MessageSquare}
+        title="Team Comments"
+        subtitle="Collaborate with your team using @mentions"
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Left - Candidate Selector */}
@@ -343,6 +340,7 @@ export default function TeamCommentsPage() {
         cancelLabel="Cancel"
         variant="danger"
       />
+    </PageShell>
     </motion.div>
   );
 }

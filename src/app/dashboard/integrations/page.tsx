@@ -10,6 +10,9 @@ import {
   Layers, Sparkles, Crown, Award, ArrowRight, Loader2, CheckCheck
 } from 'lucide-react';
 import { useLocale } from '@/components/providers/LocaleProvider';
+import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
+import StatCard from '@/components/ui/StatCard';
 import Link from 'next/link';
 
 interface Integration {
@@ -355,20 +358,14 @@ export default function IntegrationsPage() {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="space-y-6"
     >
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-brand-500 to-teal-500 shadow-lg shadow-brand-500/25">
-            <Puzzle className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-stone-900">{t('integrations.title') || 'Integrations'}</h1>
-            <p className="text-sm text-stone-500">{t('integrations.subtitle') || 'Connect tools to supercharge your hiring'}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
+    <PageShell>
+      <PageHeader
+        icon={Puzzle}
+        title={t('integrations.title') || 'Integrations'}
+        subtitle={t('integrations.subtitle') || 'Connect tools to supercharge your hiring'}
+      >
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
           <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 rounded-xl border border-emerald-200">
             <Link2 className="w-5 h-5 text-emerald-600" />
             <span className="text-sm font-bold text-emerald-700">{connectedCount} {t('integrations.connected') || 'Connected'}</span>
@@ -386,63 +383,34 @@ export default function IntegrationsPage() {
             </div>
           )}
         </div>
-      </div>
+      </PageHeader>
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200"
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <CheckCircle className="w-5 h-5 text-emerald-600" />
-            <span className="text-xs font-medium text-stone-600">Active</span>
-          </div>
-          <p className="text-2xl font-bold text-stone-900">{connectedCount}</p>
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200"
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <Share2 className="w-5 h-5 text-blue-600" />
-            <span className="text-xs font-medium text-stone-600">Job Boards</span>
-          </div>
-          <p className="text-2xl font-bold text-stone-900">
-            {integrations.filter(i => i.category === 'jobboards' && connectedIntegrations.has(i.id)).length}
-          </p>
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="p-4 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200"
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <Zap className="w-5 h-5 text-purple-600" />
-            <span className="text-xs font-medium text-stone-600">Automation</span>
-          </div>
-          <p className="text-2xl font-bold text-stone-900">
-            {integrations.filter(i => i.category === 'productivity' && connectedIntegrations.has(i.id)).length}
-          </p>
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="p-4 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200"
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-5 h-5 text-amber-600" />
-            <span className="text-xs font-medium text-stone-600">Premium</span>
-          </div>
-          <p className="text-2xl font-bold text-stone-900">
-            {integrations.filter(i => i.premium && connectedIntegrations.has(i.id)).length}
-          </p>
-        </motion.div>
+        <StatCard
+          label="Active"
+          value={connectedCount}
+          icon={CheckCircle}
+          iconClassName="text-emerald-600 bg-emerald-50"
+        />
+        <StatCard
+          label="Job Boards"
+          value={integrations.filter(i => i.category === 'jobboards' && connectedIntegrations.has(i.id)).length}
+          icon={Share2}
+          iconClassName="text-sky-600 bg-sky-50"
+        />
+        <StatCard
+          label="Automation"
+          value={integrations.filter(i => i.category === 'productivity' && connectedIntegrations.has(i.id)).length}
+          icon={Zap}
+          iconClassName="text-brand-600 bg-brand-50"
+        />
+        <StatCard
+          label="Premium"
+          value={integrations.filter(i => i.premium && connectedIntegrations.has(i.id)).length}
+          icon={Sparkles}
+          iconClassName="text-amber-600 bg-amber-50"
+        />
       </div>
 
       {/* Category Tabs */}
@@ -808,6 +776,7 @@ export default function IntegrationsPage() {
           </>
         )}
       </AnimatePresence>
+    </PageShell>
     </motion.div>
   );
 }

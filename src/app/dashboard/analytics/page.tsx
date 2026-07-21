@@ -7,6 +7,7 @@ import {
   Activity, Briefcase, ArrowUpRight, CheckCircle2
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { WeeklyChart, PipelineDoughnut } from '@/components/charts/DashboardCharts';
 
@@ -59,7 +60,7 @@ export default function AnalyticsPage() {
 
   if (data === null) {
     return (
-      <div className="space-y-5 animate-pulse">
+      <PageShell className="animate-pulse">
         <div className="h-10 w-48 rounded-xl bg-stone-200" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => <div key={i} className="h-32 rounded-2xl bg-stone-100" />)}
@@ -70,7 +71,7 @@ export default function AnalyticsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div className="h-52 rounded-2xl bg-stone-100" /><div className="h-52 rounded-2xl bg-stone-100" />
         </div>
-      </div>
+      </PageShell>
     );
   }
 
@@ -85,7 +86,7 @@ export default function AnalyticsPage() {
   const maxSrc = Math.max(...(d.topSources ?? []).map(s => s.count), 1);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }} className="space-y-5">
+    <PageShell>
       {/* --- Section: Analytics Root - start --- */}
       <PageHeader icon={BarChart3} title={t('analytics.title')} subtitle={t('analytics.subtitle')} />
 
@@ -208,7 +209,7 @@ export default function AnalyticsPage() {
 
       {/* Advanced analytics add-on (PRO / analyticsPlus) — summary above stays for all plans */}
       <AdvancedAnalyticsSection />
-    </motion.div>
+    </PageShell>
   );
 }
 

@@ -22,6 +22,7 @@ import {
   Linkedin, Github, ExternalLink, Archive, MoreHorizontal, X, RefreshCw, CheckCircle2, Upload
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
 import { Modal } from '@/components/ui/Modal';
@@ -671,7 +672,7 @@ export default function CandidatesPage() {
   ];
 
   return (
-    <div className="space-y-3">
+    <PageShell>
       {/* --- Section: Candidates Root - start --- */}
       <PageHeader
         icon={Users}
@@ -685,7 +686,7 @@ export default function CandidatesPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setImportModalOpen(true)}
-              className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl font-semibold border-2 border-stone-200 bg-white text-stone-700 hover:border-brand-300 hover:bg-brand-50/40 transition-all"
+              className="btn-secondary !px-5 !py-3.5 inline-flex items-center justify-center gap-2"
             >
               <Upload className="w-5 h-5 text-brand-600" />
               Import CSV
@@ -695,7 +696,7 @@ export default function CandidatesPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setAddModalOpen(true)}
-              className="flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl font-semibold bg-gradient-to-r from-brand-600 via-teal-600 to-brand-700 text-white shadow-lg shadow-brand-500/25 hover:shadow-brand-500/35 transition-all"
+              className="btn-primary !px-6 !py-3.5 inline-flex items-center justify-center gap-2.5"
             >
               <Plus className="w-5 h-5" />
               {t('candidates.addCandidate')}
@@ -1595,7 +1596,7 @@ export default function CandidatesPage() {
         )}
       </Modal>
       {/* --- Section: Candidates Root - end --- */}
-    </div>
+    </PageShell>
   );
 }
 

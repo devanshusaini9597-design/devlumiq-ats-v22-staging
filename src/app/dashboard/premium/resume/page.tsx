@@ -16,6 +16,8 @@ import {
   Building2, Calendar, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types matching the server API response
@@ -291,18 +293,13 @@ export default function ResumeParserPage() {
     : [];
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-
-      {/* ── Header ── */}
-      <div className="flex items-center gap-3">
-        <div className="p-3 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-lg shadow-blue-500/20">
-          <Upload className="w-6 h-6 text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-stone-900">Resume AI Parser</h1>
-          <p className="text-stone-500 text-sm">Upload a resume — we extract contact info, skills, work history, and more</p>
-        </div>
-      </div>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+    <PageShell>
+      <PageHeader
+        icon={Upload}
+        title="Resume AI Parser"
+        subtitle="Upload a resume — we extract contact info, skills, work history, and more"
+      />
 
       {/* ── Empty state: full-width upload (no side-panel gap) ── */}
       {!result && (
@@ -550,6 +547,7 @@ export default function ResumeParserPage() {
           </motion.div>
         )}
       </AnimatePresence>
+    </PageShell>
     </motion.div>
   );
 }

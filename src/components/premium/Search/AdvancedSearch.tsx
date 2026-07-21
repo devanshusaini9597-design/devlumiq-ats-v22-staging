@@ -6,6 +6,8 @@ import {
   Search, Filter, Save, Trash2, Play, Clock,
   ChevronDown, X, Plus, Star 
 } from 'lucide-react';
+import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 
 interface SavedSearch {
   id: string;
@@ -140,13 +142,12 @@ export default function AdvancedSearch() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-stone-900">Advanced Search</h1>
-          <p className="text-stone-500">Find candidates with Boolean filters and advanced criteria</p>
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        icon={Search}
+        title="Advanced Search"
+        subtitle="Find candidates with Boolean filters and advanced criteria"
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Sidebar - Saved Searches */}
@@ -207,7 +208,7 @@ export default function AdvancedSearch() {
               <button
                 onClick={performSearch}
                 disabled={loading}
-                className="px-6 py-3 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 flex items-center gap-2"
+                className="btn-primary !px-6 !py-3 disabled:opacity-50 inline-flex items-center gap-2"
               >
                 {loading ? 'Searching...' : <><Search className="w-4 h-4" /> Search</>}
               </button>
@@ -398,7 +399,7 @@ export default function AdvancedSearch() {
               </button>
               <button
                 onClick={saveSearch}
-                className="flex-1 px-4 py-2 bg-brand-600 text-white rounded-lg"
+                className="flex-1 btn-primary !px-4 !py-2"
               >
                 Save
               </button>
@@ -406,6 +407,6 @@ export default function AdvancedSearch() {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

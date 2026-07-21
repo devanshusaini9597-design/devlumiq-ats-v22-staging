@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Download, Loader2, AlertTriangle, EyeOff } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 import { useToast } from '@/components/ui/Toast';
 import { PermissionGate } from '@/components/PermissionGate';
 
@@ -101,7 +102,7 @@ export default function DeiDashboardPage() {
         </div>
       }
     >
-      <div className="space-y-4">
+      <PageShell>
         <PageHeader
           icon={Shield}
           title="DEI & bias analytics"
@@ -184,7 +185,7 @@ export default function DeiDashboardPage() {
             </div>
           )}
         </div>
-      </div>
+      </PageShell>
     </PermissionGate>
   );
 }

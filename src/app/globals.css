@@ -138,9 +138,25 @@
   .card-ats-bordered:hover {
     box-shadow: var(--shadow-elevated);
   }
-  /* Icon container - standard size and radius */
+  /* Icon container — matches PageHeader */
   .icon-box-ats {
-    @apply w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0;
+    @apply w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-brand-500 via-brand-600 to-teal-700 shadow-lg shadow-brand-500/20 ring-1 ring-white/20 ring-inset;
+  }
+  .icon-box-ats > svg {
+    @apply w-5 h-5 sm:w-6 sm:h-6 text-white;
+  }
+
+  /* Toolbar / filter row shell */
+  .toolbar-ats {
+    @apply card-ats-bordered p-4;
+  }
+
+  /* Table shell with safe overflow */
+  .table-shell-ats {
+    @apply card-ats-bordered overflow-hidden;
+  }
+  .table-scroll-ats {
+    @apply w-full overflow-x-auto;
   }
   
   /* Shimmer animation */
@@ -369,9 +385,9 @@
     @apply focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500;
   }
   
-  /* Input styling */
+  /* Input styling — consistent py/focus across settings + admin forms */
   .input-ats {
-    @apply w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all;
+    @apply w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-stone-50 text-sm text-stone-900 placeholder:text-stone-400 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all;
   }
   
   /* Button base - enhanced hover */

@@ -15,6 +15,9 @@ import {
   MessageCircle, Briefcase, Target, Layers, Users, BarChart3,
 } from 'lucide-react';
 import Link from 'next/link';
+import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
+import StatCard from '@/components/ui/StatCard';
 
 type Feature = {
   id: string;
@@ -167,10 +170,10 @@ const premiumFeatures: Feature[] = [
 ];
 
 const statCards = [
-  { label: 'Premium Tools', value: '9', icon: Sparkles, color: 'text-amber-500', bg: 'bg-amber-50', border: 'border-amber-100' },
-  { label: 'Time Saved', value: '50%', icon: Zap, color: 'text-brand-600', bg: 'bg-brand-50', border: 'border-brand-100' },
-  { label: 'Productivity', value: '2×', icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
-  { label: 'Avg Score Accuracy', value: '94%', icon: BarChart3, color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-100' },
+  { label: 'Premium Tools', value: '9', icon: Sparkles, iconClassName: 'text-amber-600 bg-amber-50' },
+  { label: 'Time Saved', value: '50%', icon: Zap, iconClassName: 'text-brand-600 bg-brand-50' },
+  { label: 'Productivity', value: '2×', icon: TrendingUp, iconClassName: 'text-emerald-600 bg-emerald-50' },
+  { label: 'Avg Score Accuracy', value: '94%', icon: BarChart3, iconClassName: 'text-sky-600 bg-sky-50' },
 ];
 
 const accessSteps = [
@@ -188,66 +191,30 @@ export default function PremiumFeaturesPage() {
     : premiumFeatures.filter((f) => f.category === activeCategory);
 
   return (
-    <div className="space-y-8 pb-4">
-
-      {/* ── Hero Banner ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-stone-900 via-stone-950 to-stone-900 p-6 sm:p-8 border border-stone-800"
+    <PageShell>
+      <PageHeader
+        icon={Crown}
+        title="Premium Features"
+        subtitle="Pro Plan · Active — The full suite of advanced recruitment tools for professional hiring teams."
       >
-        {/* Background accents */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_80%_20%,rgba(245,158,11,0.12),transparent)] pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_50%_at_20%_80%,rgba(13,148,136,0.08),transparent)] pointer-events-none" />
-        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-amber-500/5 to-transparent rounded-bl-full pointer-events-none" />
-
-        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-          <div className="flex items-start gap-5">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-2xl shadow-amber-500/30 flex-shrink-0">
-              <Crown className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-xs font-bold text-amber-400 tracking-wider uppercase">Pro Plan</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs text-emerald-400 font-semibold">Active</span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">Premium Features</h1>
-              <p className="text-stone-400 mt-1.5 text-sm sm:text-base max-w-lg">
-                The full suite of advanced recruitment tools — collaborative and built for professional hiring teams.
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2 sm:items-end flex-shrink-0">
-            {['Smart Candidate Search', 'Interview Scoring', 'Resume Parser'].map((f) => (
-              <div key={f} className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                <span className="text-xs text-stone-400">{f}</span>
-              </div>
-            ))}
-          </div>
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-xs font-bold text-amber-700 tracking-wider uppercase">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Pro Plan
+          </span>
         </div>
-      </motion.div>
+      </PageHeader>
 
       {/* ── Stats Row ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {statCards.map((s, i) => (
-          <motion.div
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {statCards.map((s) => (
+          <StatCard
             key={s.label}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.08 + i * 0.06 }}
-            className={`flex items-center gap-3 p-4 rounded-xl bg-white border ${s.border} shadow-sm`}
-          >
-            <div className={`p-2 rounded-lg ${s.bg} flex-shrink-0`}>
-              <s.icon className={`w-4 h-4 ${s.color}`} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xl font-black text-stone-900 leading-tight">{s.value}</p>
-              <p className="text-xs text-stone-500 font-medium leading-tight">{s.label}</p>
-            </div>
-          </motion.div>
+            label={s.label}
+            value={s.value}
+            icon={s.icon}
+            iconClassName={s.iconClassName}
+          />
         ))}
       </div>
 
@@ -392,6 +359,6 @@ export default function PremiumFeaturesPage() {
         </div>
       </motion.div>
 
-    </div>
+    </PageShell>
   );
 }

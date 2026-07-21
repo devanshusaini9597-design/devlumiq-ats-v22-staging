@@ -22,6 +22,7 @@ import {
   ArrowLeftRight, Sparkles, ArrowRight, ArrowLeft
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 import { KanbanColumn } from '@/components/kanban/KanbanColumn';
 import { RejectKeepWarmModal, type RejectKeepWarmChoice } from '@/components/kanban/RejectKeepWarmModal';
 
@@ -315,7 +316,7 @@ export default function KanbanPage() {
   const totalCandidates = useMemo(() => Object.values(byStage).flat().length, [byStage]);
 
   return (
-    <div className="space-y-3">
+    <PageShell>
       <PageHeader icon={LayoutGrid} title={t('kanban.title')} subtitle={t('kanban.subtitle')}>
         {/* Cards Per Page Control */}
         <div className="relative">
@@ -587,6 +588,6 @@ export default function KanbanPage() {
           }}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

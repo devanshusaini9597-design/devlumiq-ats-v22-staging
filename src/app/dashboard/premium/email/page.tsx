@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { Mail, Send, Sparkles, CheckCircle, FileText, Calendar, Gift, HeartHandshake, Phone } from 'lucide-react';
 import { CandidateSelector } from '@/components/ui/CandidateSelector';
 import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 import { useToast } from '@/components/ui/Toast';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { EmailShortFormManager } from '@/components/dashboard/EmailShortFormManager';
@@ -212,11 +213,7 @@ export default function EmailTemplatesPage() {
   const { subject: previewSubject, body: previewBody } = getProcessedContent();
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
-    >
+    <PageShell>
       {/* Header */}
       <PageHeader icon={Mail} title={t('premium.emailTemplates.title')} subtitle={t('premium.emailTemplates.subtitle')} />
 
@@ -414,6 +411,6 @@ export default function EmailTemplatesPage() {
       </div>
 
       <EmailShortFormManager />
-    </motion.div>
+    </PageShell>
   );
 }

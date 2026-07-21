@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 import Link from 'next/link';
 import { useLocale } from '@/components/providers/LocaleProvider';
 
@@ -271,29 +273,25 @@ export default function JobPostingPage() {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
     >
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-brand-500 to-purple-600 shadow-lg shadow-brand-500/25">
-            <Briefcase className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-stone-900">Job Posting</h1>
-            <p className="text-stone-500">Create and manage job listings</p>
-          </div>
+    <PageShell>
+      <PageHeader
+        icon={Briefcase}
+        title="Job Posting"
+        subtitle="Create and manage job listings"
+      >
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => { resetForm(); setShowCreateModal(true); }}
+            className="btn-primary !px-4 !py-2.5 !text-sm inline-flex items-center justify-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Post New Job
+          </motion.button>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        onClick={() => { resetForm(); setShowCreateModal(true); }}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-brand-600 text-white rounded-xl font-semibold hover:bg-brand-700 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Post New Job
-        </motion.button>
-      </div>
+      </PageHeader>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -751,6 +749,7 @@ export default function JobPostingPage() {
         cancelLabel="Cancel"
         variant="danger"
       />
+    </PageShell>
     </motion.div>
   );
 }

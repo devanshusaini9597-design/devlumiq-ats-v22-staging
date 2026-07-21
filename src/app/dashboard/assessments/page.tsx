@@ -11,6 +11,9 @@ import {
   ChevronDown, Send, Copy, AlertCircle,
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
+import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
+import StatCard from '@/components/ui/StatCard';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
 import { format } from 'date-fns';
@@ -880,55 +883,52 @@ export default function AssessmentsPage() {
     activeTab === 'pending_review' ? pendingReviewAssignments : assignments;
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-brand-500 to-teal-600 shadow-lg shadow-brand-500/25">
-            <ClipboardList className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-stone-900">Skills Assessments</h1>
-              <span className="px-2 py-0.5 bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 rounded-lg text-xs font-bold shrink-0">
-                <Crown className="w-3 h-3 inline mr-1" />Premium
-              </span>
-            </div>
-            <p className="text-sm sm:text-base text-stone-500 mt-1">Create and manage candidate skill evaluations</p>
-          </div>
+    <PageShell>
+      <PageHeader
+        icon={ClipboardList}
+        title="Skills Assessments"
+        subtitle="Create and manage candidate skill evaluations"
+      >
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          <span className="px-2 py-0.5 bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 rounded-lg text-xs font-bold shrink-0">
+            <Crown className="w-3 h-3 inline mr-1" />Premium
+          </span>
+          <motion.button
+            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+            onClick={() => setShowCreateModal(true)}
+            className="btn-primary !px-4 !py-2.5 !text-sm inline-flex items-center justify-center gap-2 w-full sm:w-auto"
+          >
+            <Plus className="w-4 h-4" />Create Assessment
+          </motion.button>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-brand-600 text-white rounded-xl font-semibold text-sm hover:bg-brand-700 transition-colors shadow-lg shadow-brand-500/20 w-full sm:w-auto"
-        >
-          <Plus className="w-4 h-4" />Create Assessment
-        </motion.button>
-      </div>
+      </PageHeader>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {[
-          { label: 'Assessment Templates', value: templates.length, colorClass: 'from-brand-50 to-teal-50 border-brand-200', iconColor: 'text-brand-600', badgeColor: 'text-brand-600', icon: ClipboardList, badge: 'Total' },
-          { label: 'Candidates Assigned', value: assignments.length, colorClass: 'from-blue-50 to-indigo-50 border-blue-200', iconColor: 'text-blue-600', badgeColor: 'text-blue-600', icon: Users, badge: 'Active' },
-          { label: 'Completion Rate', value: `${completionRate}%`, colorClass: 'from-emerald-50 to-teal-50 border-emerald-200', iconColor: 'text-emerald-600', badgeColor: 'text-emerald-600', icon: Target, badge: 'Rate' },
-          { label: 'Pass Rate', value: `${passRate}%`, colorClass: 'from-amber-50 to-orange-50 border-amber-200', iconColor: 'text-amber-600', badgeColor: 'text-amber-600', icon: Award, badge: 'Success' },
-        ].map((stat, i) => {
-          const Icon = stat.icon;
-          return (
-            <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-              className={`p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-gradient-to-br border ${stat.colorClass}`}>
-              <div className="flex items-center justify-between mb-2 sm:mb-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white shadow-sm flex items-center justify-center">
-                  <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${stat.iconColor}`} />
-                </div>
-                <span className={`text-xs font-medium bg-white px-2 py-1 rounded-full hidden sm:inline ${stat.badgeColor}`}>{stat.badge}</span>
-              </div>
-              <p className="text-2xl sm:text-3xl font-bold text-stone-900">{stat.value}</p>
-              <p className="text-xs sm:text-sm text-stone-500 mt-0.5 sm:mt-1">{stat.label}</p>
-            </motion.div>
-          );
-        })}
+        <StatCard
+          label="Assessment Templates"
+          value={templates.length}
+          icon={ClipboardList}
+          iconClassName="text-brand-600 bg-brand-50"
+        />
+        <StatCard
+          label="Candidates Assigned"
+          value={assignments.length}
+          icon={Users}
+          iconClassName="text-sky-600 bg-sky-50"
+        />
+        <StatCard
+          label="Completion Rate"
+          value={`${completionRate}%`}
+          icon={Target}
+          iconClassName="text-emerald-600 bg-emerald-50"
+        />
+        <StatCard
+          label="Pass Rate"
+          value={`${passRate}%`}
+          icon={Award}
+          iconClassName="text-amber-600 bg-amber-50"
+        />
       </div>
 
       {/* Search + Category — templates tab only */}
@@ -1263,6 +1263,6 @@ export default function AssessmentsPage() {
         onGraded={fetchAssignments}
       />
       <DeleteModal deleteModal={deleteModal} isDeleting={isDeleting} onCancel={() => setDeleteModal(null)} onConfirm={handleConfirmDelete} />
-    </div>
+    </PageShell>
   );
 }

@@ -9,6 +9,8 @@ import { useLocale } from '@/components/providers/LocaleProvider';
 import { JobDescriptionEditor } from '@/components/JobDescriptionEditor';
 import { useToast } from '@/components/ui/Toast';
 import { required } from '@/lib/validation';
+import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 
 export default function NewJobPage() {
   const router = useRouter();
@@ -23,21 +25,20 @@ export default function NewJobPage() {
   const [titleError, setTitleError] = useState<string | null>(null);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="space-y-6"
-    >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <Link
-          href="/dashboard/jobs"
-          className="inline-flex items-center gap-2 text-stone-600 hover:text-brand-600 font-semibold transition-colors w-fit"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          {t('jobEditor.title')}
-        </Link>
-      </div>
+    <PageShell>
+      <PageHeader
+        icon={Briefcase}
+        title={t('jobEditor.title')}
+        subtitle={
+          <Link
+            href="/dashboard/jobs"
+            className="inline-flex items-center gap-1.5 text-stone-500 hover:text-brand-600 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Back to jobs
+          </Link>
+        }
+      />
 
       <div className="rounded-2xl border border-stone-200/80 bg-white overflow-hidden shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-elevated)] transition-shadow">
         <div className="p-6 sm:p-8 space-y-6">
@@ -140,20 +141,20 @@ export default function NewJobPage() {
                   setSubmitting(false);
                 }
               }}
-              className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-semibold bg-gradient-to-r from-brand-600 to-teal-600 text-white shadow-lg shadow-brand-500/25 hover:shadow-brand-500/35 transition-all disabled:opacity-70"
+              className="btn-primary !px-6 !py-3.5 disabled:opacity-70"
             >
               <Briefcase className="w-5 h-5" />
               {submitting ? (t('jobEditor.publishing') ?? 'Publishing...') : t('jobEditor.publish')}
             </motion.button>
             <Link
               href="/dashboard/jobs"
-              className="px-6 py-3.5 rounded-xl font-semibold border-2 border-stone-200 hover:border-stone-300 text-stone-700 transition-all"
+              className="btn-secondary !px-6 !py-3.5"
             >
               {t('jobEditor.cancel')}
             </Link>
           </div>
         </div>
       </div>
-    </motion.div>
+    </PageShell>
   );
 }

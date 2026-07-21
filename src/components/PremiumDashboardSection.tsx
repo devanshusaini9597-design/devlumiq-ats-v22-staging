@@ -134,7 +134,7 @@ function QuickSearchWidget() {
         <button 
           onClick={search}
           disabled={loading}
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-violet-500 hover:bg-violet-600 disabled:bg-violet-300 text-white rounded-lg transition-colors"
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-brand-500 hover:bg-brand-600 disabled:bg-brand-300 text-white rounded-lg transition-colors"
         >
           {loading ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <ChevronRight className="w-3.5 h-3.5" />}
         </button>

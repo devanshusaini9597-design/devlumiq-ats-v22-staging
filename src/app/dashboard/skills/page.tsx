@@ -6,6 +6,7 @@ import {
   Tags, Plus, Search, Loader2, RefreshCw, CheckCircle2, Sparkles, Upload, Download, ChevronDown,
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 import { useToast } from '@/components/ui/Toast';
 import { PermissionGate } from '@/components/PermissionGate';
 
@@ -189,7 +190,7 @@ export default function SkillsTaxonomyPage() {
   const busy = seeding || importing;
 
   return (
-    <div className="space-y-4">
+    <PageShell>
       <PageHeader
         icon={Tags}
         title="Skills taxonomy"
@@ -370,6 +371,6 @@ export default function SkillsTaxonomyPage() {
           Skills already on candidate profiles still work. Tag candidates and jobs from this list to see match scores.
         </p>
       </div>
-    </div>
+    </PageShell>
   );
 }

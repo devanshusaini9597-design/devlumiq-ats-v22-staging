@@ -6,6 +6,7 @@ import {
   Users, Plus, Loader2, Search, Send, UserPlus, Archive, Sparkles,
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 import { useToast } from '@/components/ui/Toast';
 import { Modal } from '@/components/ui/Modal';
 import { PermissionGate } from '@/components/PermissionGate';
@@ -224,7 +225,7 @@ export default function TalentPoolsPage() {
   const selected = pools.find((p) => p.id === selectedId);
 
   return (
-    <div className="space-y-4">
+    <PageShell>
       <PageHeader
         icon={Users}
         title="Talent pools"
@@ -419,6 +420,6 @@ export default function TalentPoolsPage() {
           </button>
         </div>
       </Modal>
-    </div>
+    </PageShell>
   );
 }

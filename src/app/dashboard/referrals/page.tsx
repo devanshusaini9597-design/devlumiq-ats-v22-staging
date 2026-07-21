@@ -8,6 +8,8 @@ import {
   Share2, Building2, Zap, Target, Percent
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
+import StatCard from '@/components/ui/StatCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
@@ -194,7 +196,7 @@ export default function ReferralsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <PageShell>
       {/* Create Program Modal */}
       <AnimatePresence>
         {showCreateModal && (
@@ -319,98 +321,54 @@ export default function ReferralsPage() {
         )}
       </AnimatePresence>
 
-      {/* Premium Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 shadow-lg shadow-rose-500/25">
-            <Users className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-bold text-stone-900">Employee Referrals</h1>
-              <span className="px-2 py-0.5 bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 rounded-lg text-xs font-bold">
-                <Crown className="w-3 h-3 inline mr-1" />
-                Premium
-              </span>
-            </div>
-            <p className="text-stone-500 mt-1">Track and manage your employee referral program</p>
-          </div>
+      <PageHeader
+        icon={Users}
+        title="Employee Referrals"
+        subtitle="Track and manage your employee referral program"
+      >
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          <span className="px-2 py-0.5 bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 rounded-lg text-xs font-bold">
+            <Crown className="w-3 h-3 inline mr-1" />
+            Premium
+          </span>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setShowCreateModal(true)}
+            className="btn-primary !px-4 !py-2.5 !text-sm inline-flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            New Program
+          </motion.button>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-brand-600 text-white rounded-xl font-semibold text-sm hover:bg-brand-700 transition-colors shadow-lg shadow-brand-500/20"
-        >
-          <Plus className="w-4 h-4" />
-          New Program
-        </motion.button>
-      </div>
+      </PageHeader>
 
       {/* Premium Stats Overview */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-5 rounded-2xl bg-gradient-to-br from-brand-50 to-teal-50 border border-brand-200"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center">
-              <UserPlus className="w-5 h-5 text-brand-600" />
-            </div>
-            <span className="text-xs font-medium text-brand-600 bg-white px-2 py-1 rounded-full">Total</span>
-          </div>
-          <p className="text-3xl font-bold text-stone-900">{referrals.length}</p>
-          <p className="text-sm text-stone-500 mt-1">Total Referrals</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-emerald-600" />
-            </div>
-            <span className="text-xs font-medium text-emerald-600 bg-white px-2 py-1 rounded-full">Success</span>
-          </div>
-          <p className="text-3xl font-bold text-stone-900">{hiredCount}</p>
-          <p className="text-sm text-stone-500 mt-1">Successfully Hired</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center">
-              <Percent className="w-5 h-5 text-amber-600" />
-            </div>
-            <span className="text-xs font-medium text-amber-600 bg-white px-2 py-1 rounded-full">Rate</span>
-          </div>
-          <p className="text-3xl font-bold text-stone-900">{conversionRate}%</p>
-          <p className="text-sm text-stone-500 mt-1">Conversion Rate</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="p-5 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-green-600" />
-            </div>
-            <span className="text-xs font-medium text-green-600 bg-white px-2 py-1 rounded-full">Rewards</span>
-          </div>
-          <p className="text-3xl font-bold text-stone-900">${totalRewards.toLocaleString()}</p>
-          <p className="text-sm text-stone-500 mt-1">Total Paid Out</p>
-        </motion.div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <StatCard
+          label="Total Referrals"
+          value={referrals.length}
+          icon={UserPlus}
+          iconClassName="text-brand-600 bg-brand-50"
+        />
+        <StatCard
+          label="Successfully Hired"
+          value={hiredCount}
+          icon={CheckCircle}
+          iconClassName="text-emerald-600 bg-emerald-50"
+        />
+        <StatCard
+          label="Conversion Rate"
+          value={`${conversionRate}%`}
+          icon={Percent}
+          iconClassName="text-amber-600 bg-amber-50"
+        />
+        <StatCard
+          label="Total Paid Out"
+          value={`$${totalRewards.toLocaleString()}`}
+          icon={DollarSign}
+          iconClassName="text-sky-600 bg-sky-50"
+        />
       </div>
 
       {/* Search & Filter Bar */}
@@ -705,6 +663,6 @@ export default function ReferralsPage() {
           <p className="text-sm text-stone-500">Referred employees stay 70% longer on average</p>
         </div>
       </motion.div>
-    </div>
+    </PageShell>
   );
 }

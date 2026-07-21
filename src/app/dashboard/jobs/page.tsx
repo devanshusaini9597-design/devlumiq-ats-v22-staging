@@ -11,6 +11,7 @@ import {
   CheckCircle2, AlertTriangle, Sparkles, ChevronDown, Clock,
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
@@ -314,12 +315,7 @@ export default function JobsPage() {
   }, [searchQuery, activeTab, activeDept]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className="space-y-3"
-    >
+    <PageShell>
       <PageHeader
         icon={Briefcase}
         title={t('jobs.title')}
@@ -330,7 +326,7 @@ export default function JobsPage() {
             <motion.span
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl font-semibold bg-gradient-to-r from-brand-600 via-teal-600 to-brand-700 text-white shadow-lg shadow-brand-500/25 hover:shadow-brand-500/35 transition-all inline-block"
+              className="btn-primary !px-6 !py-3.5 inline-flex items-center justify-center gap-2.5"
             >
               <Plus className="w-5 h-5" />
               {t('jobs.postNewJob')}
@@ -837,7 +833,7 @@ export default function JobsPage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </PageShell>
   );
 }
 

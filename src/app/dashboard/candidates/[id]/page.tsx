@@ -329,12 +329,12 @@ export default function CandidateProfilePage() {
         {/* Profile Header */}
         <div className="p-5 sm:p-8 border-b border-stone-100">
           <div className="flex flex-col sm:flex-row sm:items-start gap-5">
-            <motion.div whileHover={{ scale: 1.03 }} className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-brand-100 to-teal-100 flex items-center justify-center text-xl sm:text-2xl font-bold text-brand-700 border-2 border-brand-200/50 flex-shrink-0">
+            <motion.div whileHover={{ scale: 1.03 }} className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-brand-500 via-brand-600 to-teal-700 flex items-center justify-center text-xl sm:text-2xl font-bold text-white shadow-lg shadow-brand-500/20 ring-1 ring-white/20 ring-inset flex-shrink-0">
               {candidate.name[0]}
             </motion.div>
             <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-extrabold text-stone-900 tracking-tight">{candidate.name}</h1>
+              <div className="flex flex-wrap items-center gap-2 min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight truncate min-w-0" style={{ letterSpacing: '-0.025em' }}>{candidate.name}</h1>
               </div>
               <p className="text-stone-600 mt-0.5 font-medium text-sm">{candidate.currentTitle || candidate.position}{candidate.currentCompany ? ` at ${candidate.currentCompany}` : ''}</p>
               <div className="flex flex-wrap items-center gap-2 mt-3">

@@ -11,6 +11,8 @@ import { motion } from 'framer-motion';
 import { FileCheck, DollarSign, Gift, Download, Save, CheckCircle, Briefcase, ChevronDown } from 'lucide-react';
 import { CandidateSelector } from '@/components/ui/CandidateSelector';
 import { useToast } from '@/components/ui/Toast';
+import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 import { useLocale } from '@/components/providers/LocaleProvider';
 
 interface Candidate {
@@ -213,18 +215,13 @@ Employee Signature: _________________________ Date: _____________
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
     >
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600">
-          <FileCheck className="w-6 h-6 text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-stone-900">Offer Letter Generator</h1>
-          <p className="text-stone-500">Create professional offer letters</p>
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        icon={FileCheck}
+        title="Offer Letter Generator"
+        subtitle="Create professional offer letters"
+      />
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
         {/* Left Column - Form */}
@@ -411,6 +408,7 @@ Employee Signature: _________________________ Date: _____________
           </div>
         </div>
       </div>
+    </PageShell>
     </motion.div>
   );
 }

@@ -10,6 +10,8 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 interface Benefit  { id?: string; icon: string; title: string; description: string; sortOrder?: number }
@@ -192,24 +194,18 @@ export default function CompanyBuilder() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-      {/* ── Page header ──────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 to-teal-600 flex items-center justify-center shadow-lg shadow-brand-500/25">
-            <Building2 className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-extrabold text-stone-900">Company Builder</h1>
-            <p className="text-sm text-stone-500">Customize your public careers page</p>
-          </div>
-        </div>
+    <PageShell>
+      <PageHeader
+        icon={Building2}
+        title="Company Builder"
+        subtitle="Customize your public careers page"
+      >
         <div className="flex flex-wrap items-center gap-3">
           <a
             href="/careers"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-stone-200 bg-white text-sm font-semibold text-stone-700 hover:bg-stone-50 transition-colors shadow-sm"
+            className="btn-secondary !px-4 !py-2.5 !text-sm inline-flex items-center gap-2"
           >
             <Eye className="w-4 h-4" />
             Preview Page
@@ -218,21 +214,21 @@ export default function CompanyBuilder() {
           <motion.button
             type="button" onClick={handleSave} disabled={saving}
             whileHover={{ scale: saving ? 1 : 1.015 }} whileTap={{ scale: 0.97 }}
-            className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg ${
+            className={`inline-flex items-center gap-2 !px-5 !py-2.5 !text-sm font-bold transition-all ${
               saved
-                ? 'bg-emerald-50 text-emerald-700 border-2 border-emerald-300 shadow-emerald-100'
-                : 'bg-gradient-to-r from-brand-600 to-teal-600 text-white shadow-brand-500/25 hover:shadow-brand-500/40 disabled:opacity-70'
+                ? 'bg-emerald-50 text-emerald-700 border-2 border-emerald-300 rounded-xl shadow-emerald-100'
+                : 'btn-primary disabled:opacity-70'
             }`}
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
             {saving ? 'Saving…' : saved ? 'Saved!' : 'Save & Publish'}
           </motion.button>
         </div>
-      </div>
+      </PageHeader>
 
       {/* ── Error banner ─────────────────────────────────────────────── */}
       {loadErr && (
-        <div className="mb-4 flex items-start gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+        <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
           <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
           <p>{loadErr}</p>
         </div>
@@ -706,6 +702,6 @@ export default function CompanyBuilder() {
           {saving ? 'Saving…' : saved ? 'Saved!' : 'Save & Publish'}
         </motion.button>
       </div>
-    </motion.div>
+    </PageShell>
   );
 }

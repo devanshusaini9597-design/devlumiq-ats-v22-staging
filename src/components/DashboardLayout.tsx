@@ -21,6 +21,7 @@ import {
   Building, Puzzle, Info, CheckCircle2, AlertTriangle, Inbox, Clock, Lock, Tags, Archive
 } from 'lucide-react';
 import { ROLE_PERMISSIONS, Role } from '@/lib/roles';
+import { roleBadgeClass } from '@/lib/roleUi';
 import LocaleSwitcher from './LocaleSwitcher';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
@@ -948,13 +949,7 @@ export default function DashboardLayout({
                   </div>
                   <span className="hidden sm:inline text-sm font-semibold text-stone-700">Hi, {displayName}</span>
                   {userRole && (
-                    <span className={`hidden sm:inline text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${
-                      userRole === 'ADMIN' ? 'bg-violet-100 text-violet-700' :
-                      userRole === 'RECRUITER' ? 'bg-brand-100 text-brand-700' :
-                      userRole === 'HIRING_MANAGER' ? 'bg-amber-100 text-amber-700' :
-                      userRole === 'INTERVIEWER' ? 'bg-sky-100 text-sky-700' :
-                      'bg-stone-100 text-stone-600'
-                    }`}>
+                    <span className={`hidden sm:inline text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${roleBadgeClass(userRole)}`}>
                       {userRole.replace('_', ' ')}
                     </span>
                   )}

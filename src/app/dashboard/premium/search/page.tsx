@@ -14,6 +14,9 @@ import {
   Zap, Target, TrendingUp, Award, Brain, SlidersHorizontal, ArrowRight, Mail, Briefcase, Eye
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
+import StatCard from '@/components/ui/StatCard';
 import Link from 'next/link';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useLocale } from '@/components/providers/LocaleProvider';
@@ -203,75 +206,50 @@ export default function SmartSearchPage() {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-4 sm:space-y-6"
     >
-      {/* Premium Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-        <motion.div 
-          whileHover={{ scale: 1.05 }}
-          className="p-4 rounded-2xl bg-gradient-to-br from-brand-500 via-teal-500 to-emerald-500 shadow-xl shadow-brand-500/20"
-        >
-          <Brain className="w-7 h-7 text-white" />
-        </motion.div>
-        <div className="flex-1">
-          <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight">{t('premium.smartSearch.title')}</h1>
-          <p className="text-sm text-stone-500 mt-1">{t('premium.smartSearch.desc')}</p>
-        </div>
+    <PageShell>
+      <PageHeader
+        icon={Brain}
+        title={t('premium.smartSearch.title')}
+        subtitle={t('premium.smartSearch.desc')}
+      >
         {searching && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-brand-50 text-brand-700 text-sm font-medium"
-          >
-            <Loader2 className="w-4 h-4 animate-spin" />
-            AI Searching...
-          </motion.div>
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-brand-50 text-brand-700 text-sm font-medium"
+            >
+              <Loader2 className="w-4 h-4 animate-spin" />
+              AI Searching...
+            </motion.div>
+          </div>
         )}
-      </div>
+      </PageHeader>
 
       {/* Premium Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <motion.div 
-          whileHover={{ y: -2 }}
-          className="p-4 rounded-2xl bg-gradient-to-br from-blue-50 via-indigo-50 to-violet-50 border border-blue-200/50 shadow-sm"
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-              <Target className="w-5 h-5 text-blue-600" />
-            </div>
-            <p className="text-xs text-blue-600 uppercase font-bold tracking-wider">{t('premium.smartSearch.results')}</p>
-          </div>
-          <p className="text-3xl font-bold text-stone-900">{stats.total}</p>
-          <p className="text-xs text-stone-500 mt-1">Total candidates found</p>
-        </motion.div>
-        
-        <motion.div 
-          whileHover={{ y: -2 }}
-          className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 border border-amber-200/50 shadow-sm"
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-amber-600" />
-            </div>
-            <p className="text-xs text-amber-600 uppercase font-bold tracking-wider">{t('premium.smartSearch.avgMatch')}</p>
-          </div>
-          <p className="text-3xl font-bold text-amber-600">{stats.avgMatch}%</p>
-          <p className="text-xs text-stone-500 mt-1">Average match score</p>
-        </motion.div>
-        
-        <motion.div 
-          whileHover={{ y: -2 }}
-          className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 via-teal-50 to-green-50 border border-emerald-200/50 shadow-sm"
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
-              <Award className="w-5 h-5 text-emerald-600" />
-            </div>
-            <p className="text-xs text-emerald-600 uppercase font-bold tracking-wider">{t('premium.smartSearch.highMatches')}</p>
-          </div>
-          <p className="text-3xl font-bold text-emerald-600">{stats.highMatches}</p>
-          <p className="text-xs text-stone-500 mt-1">High quality matches (85%+)</p>
-        </motion.div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <StatCard
+          label={t('premium.smartSearch.results')}
+          value={stats.total}
+          icon={Target}
+          iconClassName="text-sky-600 bg-sky-50"
+          sub="Total candidates found"
+        />
+        <StatCard
+          label={t('premium.smartSearch.avgMatch')}
+          value={`${stats.avgMatch}%`}
+          icon={TrendingUp}
+          iconClassName="text-amber-600 bg-amber-50"
+          sub="Average match score"
+        />
+        <StatCard
+          label={t('premium.smartSearch.highMatches')}
+          value={stats.highMatches}
+          icon={Award}
+          iconClassName="text-emerald-600 bg-emerald-50"
+          sub="High quality matches (85%+)"
+        />
       </div>
 
       {/* Premium Search Filters */}
@@ -597,6 +575,7 @@ export default function SmartSearchPage() {
           </>
         )}
       </div>
+    </PageShell>
     </motion.div>
   );
 }

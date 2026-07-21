@@ -11,6 +11,8 @@ import { motion } from 'framer-motion';
 import { Star, Target, Award, Save, TrendingUp } from 'lucide-react';
 import { CandidateSelector } from '@/components/ui/CandidateSelector';
 import { useToast } from '@/components/ui/Toast';
+import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 import Link from 'next/link';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { InterviewTranscriptPanel, type ScorecardSuggestion } from '@/components/dashboard/InterviewTranscriptPanel';
@@ -187,18 +189,13 @@ export default function InterviewScoringPage() {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
     >
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600">
-          <Star className="w-6 h-6 text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-stone-900">Interview Scoring</h1>
-          <p className="text-stone-500">Rate candidates on 5 key criteria</p>
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        icon={Star}
+        title="Interview Scoring"
+        subtitle="Rate candidates on 5 key criteria"
+      />
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6">
         {/* Left Column - Candidate & Overall */}
@@ -364,6 +361,7 @@ export default function InterviewScoringPage() {
           )}
         </div>
       </div>
+    </PageShell>
     </motion.div>
   );
 }

@@ -7,9 +7,11 @@ import {
   Eye, EyeOff, Lock, KeyRound, Palette, Building2, Globe,
   Smartphone, Monitor, Sun, Moon, Sparkles, ChevronRight,
   ClipboardCopy, LogOut, AlertTriangle, Camera, AtSign,
-  Clock, BarChart3, UserCheck, Zap, CreditCard, Key, Chrome,
+  Clock, BarChart3, Zap, CreditCard, Key, Chrome,
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
+import RoleBadge from '@/components/ui/RoleBadge';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
 import { required, email as validateEmail } from '@/lib/validation';
@@ -45,9 +47,7 @@ const sectionHd = (icon: React.ReactNode, title: string, subtitle?: string) => (
 );
 
 const inputCls = (err?: string) =>
-  `w-full px-4 py-3 rounded-xl border bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-brand-500/15 outline-none font-medium text-stone-900 transition-all placeholder:text-stone-400 ${
-    err ? 'border-red-400 focus:border-red-400' : 'border-stone-200 focus:border-brand-500'
-  }`;
+  `input-ats ${err ? 'border-red-400 focus:border-red-400' : ''}`;
 
 function FieldError({ msg }: { msg?: string }) {
   return msg ? <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1"><AlertTriangle className="w-3 h-3" />{msg}</p> : null;
@@ -81,7 +81,7 @@ function SaveBtn({ saving, saved, label = 'Save changes', savedLabel = 'Saved!',
       className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all disabled:opacity-70 ${
         saved
           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-          : 'bg-gradient-to-r from-brand-600 to-teal-600 text-white shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40'
+          : 'btn-primary !px-5 !py-2.5 !text-sm'
       }`}
     >
       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
@@ -228,14 +228,15 @@ export default function SettingsPage() {
 
   //  render 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+    <PageShell>
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-6">
       <PageHeader icon={Settings} title={t('settings.title')} subtitle="Manage your account, preferences & workspace" />
 
-      <div className="mt-6 flex flex-col lg:flex-row gap-6 min-h-0">
+      <div className="flex flex-col lg:flex-row gap-6 min-h-0">
         {/*  Sidebar  */}
-        <aside className="lg:w-56 flex-shrink-0">
+        <aside className="lg:w-56 flex-shrink-0 space-y-4">
           {/* Avatar card */}
-          <div className="rounded-2xl border border-stone-200/80 bg-white p-5 shadow-[var(--shadow-card)] mb-4 text-center">
+          <div className="rounded-2xl border border-stone-200/80 bg-white p-5 shadow-[var(--shadow-card)] text-center">
             <div className="relative inline-block">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-teal-600 flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-brand-500/25 mx-auto">
                 {INITIALS}
@@ -251,14 +252,14 @@ export default function SettingsPage() {
             <p className="mt-3 font-bold text-stone-900 text-sm truncate">{userName || '—'}</p>
             <p className="text-stone-400 text-xs truncate">{userEmail}</p>
             {userRole && (
-              <span className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-50 text-brand-600 text-[10px] font-bold border border-brand-100 uppercase tracking-wider">
-                <UserCheck className="w-2.5 h-2.5" />{userRole.replace('_', ' ')}
-              </span>
+              <div className="mt-2 flex justify-center">
+                <RoleBadge role={userRole} showIcon />
+              </div>
             )}
           </div>
 
-          {/* Nav */}
-          <nav className="rounded-2xl border border-stone-200/80 bg-white overflow-hidden shadow-[var(--shadow-card)]">
+          {/* Nav — horizontal scroll on mobile, vertical on lg+ */}
+          <nav className="flex lg:flex-col overflow-x-auto gap-1 lg:gap-0 rounded-2xl border border-stone-200/80 bg-white p-1 lg:p-0 lg:overflow-hidden shadow-[var(--shadow-card)]">
             {TABS.map((t, idx) => {
               const Icon = t.icon;
               const active = tab === t.id;
@@ -267,8 +268,8 @@ export default function SettingsPage() {
                   key={t.id}
                   type="button"
                   onClick={() => setTab(t.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm font-medium transition-all ${
-                    idx !== TABS.length - 1 ? 'border-b border-stone-100' : ''
+                  className={`flex-shrink-0 lg:w-full whitespace-nowrap flex items-center gap-2.5 lg:gap-3 px-3.5 lg:px-4 py-2.5 lg:py-3.5 text-sm font-medium transition-all rounded-xl lg:rounded-none ${
+                    idx !== TABS.length - 1 ? 'lg:border-b lg:border-stone-100' : ''
                   } ${
                     active
                       ? 'bg-brand-50 text-brand-700'
@@ -279,7 +280,7 @@ export default function SettingsPage() {
                 >
                   <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-brand-600' : t.id === 'danger' ? 'text-red-400' : 'text-stone-400'}`} />
                   <span className="flex-1 text-left">{t.label}</span>
-                  {active && <ChevronRight className="w-3.5 h-3.5 text-brand-400" />}
+                  {active && <ChevronRight className="w-3.5 h-3.5 text-brand-400 hidden lg:block" />}
                 </button>
               );
             })}
@@ -300,7 +301,7 @@ export default function SettingsPage() {
               {tab === 'profile' && (
                 <div className="space-y-4">
                   <div className="rounded-2xl border border-stone-200/80 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
-                    {sectionHd(<User className="w-4.5 h-4.5 text-brand-600" />, 'Personal Information', 'Your name and email are shown across the platform')}
+                    {sectionHd(<User className="w-4 h-4 text-brand-600" />, 'Personal Information', 'Your name and email are shown across the platform')}
                     <div className="space-y-5">
                       <div>
                         <label htmlFor="s-name" className="block text-sm font-semibold text-stone-700 mb-1.5">Full Name</label>
@@ -347,7 +348,7 @@ export default function SettingsPage() {
               {/*  NOTIFICATIONS  */}
               {tab === 'notifications' && (
                 <div className="rounded-2xl border border-stone-200/80 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
-                  {sectionHd(<Bell className="w-4.5 h-4.5 text-amber-600" />, 'Notification Preferences', 'Choose when and how you receive alerts')}
+                  {sectionHd(<Bell className="w-4 h-4 text-amber-600" />, 'Notification Preferences', 'Choose when and how you receive alerts')}
                   <div className="space-y-1 divide-y divide-stone-100">
                     {[
                       { key: 'emailDigest',       label: 'Daily email digest',          desc: 'A morning summary of all activity' },
@@ -383,7 +384,7 @@ export default function SettingsPage() {
               {tab === 'security' && (
                 <div className="space-y-4">
                   <div className="rounded-2xl border border-stone-200/80 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
-                    {sectionHd(<KeyRound className="w-4.5 h-4.5 text-emerald-600" />, 'Change Password', 'Use a strong password with letters, numbers & symbols')}
+                    {sectionHd(<KeyRound className="w-4 h-4 text-emerald-600" />, 'Change Password', 'Use a strong password with letters, numbers & symbols')}
                     <div className="space-y-4">
                       {/* Current */}
                       <div>
@@ -435,7 +436,7 @@ export default function SettingsPage() {
 
                   {/* Sessions */}
                   <div className="rounded-2xl border border-stone-200/80 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
-                    {sectionHd(<Shield className="w-4.5 h-4.5 text-brand-600" />, 'Active Sessions', 'Sign out from devices you no longer use')}
+                    {sectionHd(<Shield className="w-4 h-4 text-brand-600" />, 'Active Sessions', 'Sign out from devices you no longer use')}
                     <div className="space-y-3">
                       {[
                         { device: 'Chrome on Windows', location: 'Current session', icon: <Monitor className="w-4 h-4" />, active: true },
@@ -462,7 +463,7 @@ export default function SettingsPage() {
 
                   {/* SSO / SAML — Enterprise only; password login unchanged */}
                   <div className="rounded-2xl border border-stone-200/80 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
-                    {sectionHd(<Shield className="w-4.5 h-4.5 text-violet-600" />, 'SSO / SAML', 'Enterprise single sign-on — optional; email/password stays available')}
+                    {sectionHd(<Shield className="w-4 h-4 text-violet-600" />, 'SSO / SAML', 'Enterprise single sign-on — optional; email/password stays available')}
                     <SsoSettings />
                   </div>
                 </div>
@@ -471,7 +472,7 @@ export default function SettingsPage() {
               {/*  APPEARANCE  */}
               {tab === 'appearance' && (
                 <div className="rounded-2xl border border-stone-200/80 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
-                  {sectionHd(<Palette className="w-4.5 h-4.5 text-violet-600" />, 'Appearance', 'Customize how the dashboard looks and feels')}
+                  {sectionHd(<Palette className="w-4 h-4 text-violet-600" />, 'Appearance', 'Customize how the dashboard looks and feels')}
                   <div className="space-y-8">
                     {/* Theme */}
                     <div>
@@ -533,7 +534,7 @@ export default function SettingsPage() {
               {tab === 'workspace' && (
                 <div className="space-y-4">
                   <div className="rounded-2xl border border-stone-200/80 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
-                    {sectionHd(<Building2 className="w-4.5 h-4.5 text-teal-600" />, 'Workspace Info', 'Your organisation details and branding')}
+                    {sectionHd(<Building2 className="w-4 h-4 text-teal-600" />, 'Workspace Info', 'Your organisation details and branding')}
                     <div className="space-y-5">
                       <div>
                         <label className="block text-sm font-semibold text-stone-700 mb-1.5">Company Name</label>
@@ -706,7 +707,7 @@ export default function SettingsPage() {
                 <div className="space-y-6">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 rounded-xl bg-stone-100">
-                      <CreditCard className="w-5 h-5 text-brand-600" />
+                      <CreditCard className="w-4 h-4 text-brand-600" />
                     </div>
                     <div>
                       <h2 className="text-base font-bold text-stone-900">Subscription & Billing</h2>
@@ -721,7 +722,7 @@ export default function SettingsPage() {
               {tab === 'api-keys' && (
                 <div className="space-y-6">
                   <div className="rounded-2xl border border-stone-200 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
-                    {sectionHd(<Key className="w-5 h-5 text-brand-600" />, 'API Keys', 'Connect your own OpenAI, email, background-check, and other provider keys — stored encrypted')}
+                    {sectionHd(<Key className="w-4 h-4 text-brand-600" />, 'API Keys', 'Connect your own OpenAI, email, background-check, and other provider keys — stored encrypted')}
                     <ApiKeyManager />
                   </div>
                 </div>
@@ -731,7 +732,7 @@ export default function SettingsPage() {
               {tab === 'extension' && (
                 <div className="space-y-6">
                   <div className="rounded-2xl border border-stone-200 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
-                    {sectionHd(<Chrome className="w-5 h-5 text-brand-600" />, 'Chrome Extension', 'One-click LinkedIn profile import — a real ATS differentiator')}
+                    {sectionHd(<Chrome className="w-4 h-4 text-brand-600" />, 'Chrome Extension', 'One-click LinkedIn profile import — a real ATS differentiator')}
                     <ExtensionSettings />
                   </div>
                 </div>
@@ -741,7 +742,7 @@ export default function SettingsPage() {
               {tab === 'danger' && (
                 <div className="space-y-4">
                   <div className="rounded-2xl border border-red-200/80 bg-red-50/30 p-6 sm:p-8 shadow-[var(--shadow-card)]">
-                    {sectionHd(<AlertTriangle className="w-4.5 h-4.5 text-red-600" />, 'Danger Zone', 'Irreversible actions — proceed with caution')}
+                    {sectionHd(<AlertTriangle className="w-4 h-4 text-red-600" />, 'Danger Zone', 'Irreversible actions — proceed with caution')}
                     <div className="space-y-3">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 rounded-xl bg-white border border-red-200/60">
                         <div className="min-w-0">
@@ -781,5 +782,6 @@ export default function SettingsPage() {
         </div>
       </div>
     </motion.div>
+    </PageShell>
   );
 }

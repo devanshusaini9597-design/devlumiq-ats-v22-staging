@@ -6,10 +6,12 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { 
   ArrowLeft, Briefcase, Building2, MapPin, Save, X, 
-  CheckCircle2, Globe, Clock, DollarSign, FileText 
+  CheckCircle2, Globe, Clock, DollarSign, FileText, Pencil
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { JobSkillEditor } from '@/components/dashboard/JobSkillEditor';
+import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 
 interface JobData {
   id: string;
@@ -83,10 +85,10 @@ export default function EditJobPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="h-8 w-48 bg-stone-200 rounded-lg animate-pulse" />
-        <div className="h-96 bg-stone-100 rounded-xl animate-pulse" />
-      </div>
+      <PageShell className="animate-pulse">
+        <div className="h-8 w-48 bg-stone-200 rounded-lg" />
+        <div className="h-96 bg-stone-100 rounded-xl" />
+      </PageShell>
     );
   }
 
@@ -105,46 +107,30 @@ export default function EditJobPage() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-4xl mx-auto"
-    >
-      {/* Premium Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3">
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Link
-              href={`/dashboard/jobs/${id}`}
-              className="p-2.5 rounded-xl bg-white border border-stone-200 hover:border-brand-300 hover:bg-brand-50/50 text-stone-600 hover:text-brand-600 transition-all shadow-sm"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-          </motion.div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-stone-900">Edit Job</h1>
-            <p className="text-sm text-stone-500 flex items-center gap-2">
-              <Briefcase className="w-3.5 h-3.5" />
-              {job.title}
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Link
-              href={`/dashboard/jobs/${id}`}
-              className="px-4 py-2.5 border border-stone-200 text-stone-700 rounded-xl font-medium hover:bg-stone-50 transition-all shadow-sm"
-            >
-              Cancel
-            </Link>
-          </motion.div>
+    <PageShell className="max-w-4xl mx-auto">
+      <PageHeader
+        icon={Pencil}
+        title="Edit Job"
+        subtitle={
+          <span className="inline-flex items-center gap-2">
+            <Briefcase className="w-3.5 h-3.5" />
+            {job.title}
+          </span>
+        }
+      >
+        <div className="flex items-center gap-3 flex-wrap">
+          <Link
+            href={`/dashboard/jobs/${id}`}
+            className="btn-secondary !px-4 !py-2.5 !text-sm"
+          >
+            Cancel
+          </Link>
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleSubmit}
             disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-brand-600 to-brand-500 text-white rounded-xl font-semibold hover:from-brand-700 hover:to-brand-600 disabled:opacity-50 transition-all shadow-lg shadow-brand-500/25"
+            className="btn-primary !px-5 !py-2.5 !text-sm disabled:opacity-50"
           >
             {saving ? (
               <>
@@ -159,6 +145,16 @@ export default function EditJobPage() {
             )}
           </motion.button>
         </div>
+      </PageHeader>
+
+      <div className="flex items-center gap-3">
+        <Link
+          href={`/dashboard/jobs/${id}`}
+          className="inline-flex items-center gap-2 text-stone-600 hover:text-brand-600 font-semibold transition-colors text-sm"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to job
+        </Link>
       </div>
 
       {/* Form */}
@@ -381,6 +377,6 @@ export default function EditJobPage() {
           </motion.button>
         </div>
       </form>
-    </motion.div>
+    </PageShell>
   );
 }

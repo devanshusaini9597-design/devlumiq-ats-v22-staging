@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FileSignature, FileCheck, Clock, XCircle, CheckCircle, Send, Download, FileText, Pen, AlertCircle } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
@@ -151,7 +152,7 @@ export default function ESignaturePage() {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-5">
+    <PageShell>
       <PageHeader 
         icon={FileSignature} 
         title={t('esignature.title') || 'E-Signature'} 
@@ -399,6 +400,6 @@ export default function ESignaturePage() {
           </div>
         </div>
       </motion.div>
-    </div>
+    </PageShell>
   );
 }

@@ -6,6 +6,7 @@ import { Shield, CheckCircle, Clock, XCircle, AlertTriangle, FileSearch, User, C
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
 import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { format } from 'date-fns';
 
@@ -599,14 +600,14 @@ export default function BackgroundChecksPage() {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 min-h-0">
+    <PageShell>
       {/* Header */}
       <PageHeader icon={Shield} title={t('bgChecks.title')} subtitle={t('bgChecks.subtitle')}>
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleOpenModal}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-brand-600 to-teal-600 text-white rounded-xl font-semibold text-sm shadow-lg shadow-brand-500/25 hover:shadow-brand-500/35 transition-all w-full sm:w-auto"
+          className="flex items-center justify-center gap-2 px-5 py-2.5 btn-primary !text-sm w-full sm:w-auto"
         >
           <Plus className="w-4 h-4" />
           {t('bgChecks.requestCheck')}
@@ -722,6 +723,6 @@ export default function BackgroundChecksPage() {
         candidates={candidates}
         onSubmit={handleRequestCheck}
       />
-    </div>
+    </PageShell>
   );
 }

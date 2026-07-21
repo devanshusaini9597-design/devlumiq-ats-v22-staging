@@ -16,6 +16,9 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { useLocale } from '@/components/providers/LocaleProvider';
+import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
+import StatCard from '@/components/ui/StatCard';
 import JobBoardCredentialsForm from '@/components/dashboard/JobBoardCredentialsForm';
 
 interface Job {
@@ -369,33 +372,29 @@ function JobBoardsPage() {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
     >
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 shadow-lg shadow-rose-500/25">
-            <Share2 className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-stone-900">Job Board Integrations</h1>
-            <p className="text-stone-500 text-sm">Connect credentials for live posts — drafts still work without them</p>
-          </div>
+    <PageShell>
+      <PageHeader
+        icon={Share2}
+        title="Job Board Integrations"
+        subtitle="Connect credentials for live posts — drafts still work without them"
+      >
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => {
+              if (!selectedJob) { toast.error('Select a job first'); return; }
+              setShowQuickPost(true);
+            }}
+            disabled={posting !== null}
+            className="hidden sm:inline-flex items-center gap-2 btn-primary !px-4 !py-2.5 !text-sm disabled:opacity-50"
+          >
+            <Zap className="w-4 h-4" />
+            Quick Post
+          </motion.button>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => {
-            if (!selectedJob) { toast.error('Select a job first'); return; }
-            setShowQuickPost(true);
-          }}
-          disabled={posting !== null}
-          className="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-brand-600 to-teal-500 text-white rounded-xl font-semibold text-sm shadow-md shadow-brand-500/20 hover:shadow-lg hover:shadow-brand-500/30 transition-all disabled:opacity-50"
-        >
-          <Zap className="w-4 h-4" />
-          Quick Post
-        </motion.button>
-      </div>
+      </PageHeader>
 
       <div className="rounded-2xl border border-stone-200 bg-white p-6">
         <h2 className="text-sm font-bold text-stone-900 mb-4">Board credentials</h2>
@@ -404,19 +403,30 @@ function JobBoardsPage() {
 
       {/* ── Stats Row ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {[
-          { icon: Activity, label: 'Total Clicks', value: totalClicks.toLocaleString(), gradient: 'from-blue-500 to-indigo-600', bg: 'from-blue-50 to-indigo-50', border: 'border-blue-100', text: 'text-blue-600' },
-          { icon: Users, label: 'Applications', value: totalApplications.toString(), gradient: 'from-emerald-500 to-teal-600', bg: 'from-emerald-50 to-teal-50', border: 'border-emerald-100', text: 'text-emerald-600' },
-          { icon: Link2, label: 'Active Boards', value: `${activeBoards} / ${boards.length}`, gradient: 'from-amber-500 to-orange-500', bg: 'from-amber-50 to-orange-50', border: 'border-amber-100', text: 'text-amber-600' },
-          { icon: Target, label: 'Conversion Rate', value: `${conversionRate}%`, gradient: 'from-purple-500 to-violet-600', bg: 'from-purple-50 to-violet-50', border: 'border-purple-100', text: 'text-purple-600' },
-        ].map((stat) => (
-          <div key={stat.label} className={`p-4 rounded-xl bg-gradient-to-br ${stat.bg} border ${stat.border} relative overflow-hidden`}>
-            <div className={`absolute top-0 right-0 w-16 h-16 bg-gradient-to-br ${stat.gradient} opacity-5 rounded-full translate-x-4 -translate-y-4 pointer-events-none`} />
-            <stat.icon className={`w-5 h-5 ${stat.text} mb-2`} />
-            <p className="text-2xl font-bold text-stone-900">{stat.value}</p>
-            <p className="text-xs text-stone-500 font-medium">{stat.label}</p>
-          </div>
-        ))}
+        <StatCard
+          label="Total Clicks"
+          value={totalClicks.toLocaleString()}
+          icon={Activity}
+          iconClassName="text-sky-600 bg-sky-50"
+        />
+        <StatCard
+          label="Applications"
+          value={totalApplications.toString()}
+          icon={Users}
+          iconClassName="text-emerald-600 bg-emerald-50"
+        />
+        <StatCard
+          label="Active Boards"
+          value={`${activeBoards} / ${boards.length}`}
+          icon={Link2}
+          iconClassName="text-amber-600 bg-amber-50"
+        />
+        <StatCard
+          label="Conversion Rate"
+          value={`${conversionRate}%`}
+          icon={Target}
+          iconClassName="text-brand-600 bg-brand-50"
+        />
       </div>
 
       {/* ── Job Selector ────────────────────────────────────────────────── */}
@@ -862,6 +872,7 @@ function JobBoardsPage() {
           </>
         )}
       </AnimatePresence>
+    </PageShell>
     </motion.div>
   );
 }

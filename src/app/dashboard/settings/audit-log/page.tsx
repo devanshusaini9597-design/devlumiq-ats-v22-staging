@@ -4,10 +4,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Shield, Search, RefreshCw, ChevronLeft, ChevronRight,
-  Loader2, User, LogIn, Edit2, UserX, UserCheck, Settings,
+  Loader2, LogIn, Edit2, UserX, UserCheck, Settings,
   Crown, Activity, Filter,
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
+import StatCard from '@/components/ui/StatCard';
 import { useAuth } from '@/hooks/useAuth';
 
 interface LogEntry {
@@ -98,7 +100,7 @@ export default function AuditLogPage() {
   }
 
   return (
-    <div className="space-y-6 pb-8">
+    <PageShell>
       <PageHeader
         title="Audit Logs"
         subtitle="Track all user actions and security events across your workspace"
@@ -107,31 +109,34 @@ export default function AuditLogPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div className="bg-white rounded-2xl border border-stone-100 p-4 shadow-sm">
-          <p className="text-2xl font-bold text-stone-900">{total}</p>
-          <p className="text-xs text-stone-500">Total Events</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-stone-100 p-4 shadow-sm">
-          <p className="text-2xl font-bold text-violet-600">
-            {logs.filter(l => l.action === 'role_change').length}
-          </p>
-          <p className="text-xs text-stone-500">Role Changes</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-stone-100 p-4 shadow-sm col-span-2 sm:col-span-1">
-          <p className="text-2xl font-bold text-emerald-600">
-            {logs.filter(l => l.action === 'login').length}
-          </p>
-          <p className="text-xs text-stone-500">Logins (this page)</p>
-        </div>
+        <StatCard
+          label="Total Events"
+          value={total}
+          icon={Activity}
+          iconClassName="text-stone-600 bg-stone-100"
+        />
+        <StatCard
+          label="Role Changes"
+          value={logs.filter(l => l.action === 'role_change').length}
+          icon={Crown}
+          iconClassName="text-violet-600 bg-violet-50"
+        />
+        <StatCard
+          label="Logins (this page)"
+          value={logs.filter(l => l.action === 'login').length}
+          icon={LogIn}
+          iconClassName="text-emerald-600 bg-emerald-50"
+          className="col-span-2 sm:col-span-1"
+        />
       </div>
 
       {/* Toolbar */}
-      <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-4">
+      <div className="toolbar-ats">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
             <input
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none text-sm transition-all"
+              className="input-ats pl-9"
               placeholder="Search by user or action…"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -140,7 +145,7 @@ export default function AuditLogPage() {
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400" />
             <select
-              className="appearance-none pl-8 pr-7 py-2.5 rounded-xl border border-stone-200 bg-stone-50 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 cursor-pointer"
+              className="input-ats appearance-none pl-8 pr-7 cursor-pointer"
               value={actionFilter}
               onChange={e => { setActionFilter(e.target.value); }}
             >
@@ -160,45 +165,47 @@ export default function AuditLogPage() {
       </div>
 
       {/* Log table — desktop */}
-      <div className="hidden md:block bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-stone-100 bg-stone-50/60">
-              <th className="text-left px-5 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">User</th>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Action</th>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Details</th>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Time</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-stone-50">
-            {loading ? (
-              <tr><td colSpan={4} className="text-center py-12 text-stone-400">
-                <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />Loading logs…
-              </td></tr>
-            ) : filtered.length === 0 ? (
-              <tr><td colSpan={4} className="text-center py-12 text-stone-400">No events found</td></tr>
-            ) : filtered.map(log => (
-              <motion.tr key={log.id} layout className="hover:bg-stone-50/50 transition-colors">
-                <td className="px-5 py-3.5">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-xs font-bold text-brand-700 shrink-0">
-                      {log.user.name.slice(0, 2).toUpperCase()}
+      <div className="hidden md:block table-shell-ats">
+        <div className="table-scroll-ats">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-stone-100 bg-stone-50/60">
+                <th className="text-left px-5 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">User</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Action</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Details</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Time</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-50">
+              {loading ? (
+                <tr><td colSpan={4} className="text-center py-12 text-stone-400">
+                  <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />Loading logs…
+                </td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={4} className="text-center py-12 text-stone-400">No events found</td></tr>
+              ) : filtered.map(log => (
+                <motion.tr key={log.id} layout className="hover:bg-stone-50/50 transition-colors">
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-xs font-bold text-brand-700 shrink-0">
+                        {log.user.name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-stone-800">{log.user.name}</p>
+                        <p className="text-xs text-stone-400 truncate">{log.user.email}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-stone-800">{log.user.name}</p>
-                      <p className="text-xs text-stone-400">{log.user.email}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-5 py-3.5"><ActionBadge action={log.action} /></td>
-                <td className="px-5 py-3.5">{formatMeta(log.metadata) ?? <span className="text-xs text-stone-300">—</span>}</td>
-                <td className="px-5 py-3.5 text-xs text-stone-400 whitespace-nowrap">
-                  {new Date(log.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                </td>
-              </motion.tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                  <td className="px-5 py-3.5"><ActionBadge action={log.action} /></td>
+                  <td className="px-5 py-3.5">{formatMeta(log.metadata) ?? <span className="text-xs text-stone-300">—</span>}</td>
+                  <td className="px-5 py-3.5 text-xs text-stone-400 whitespace-nowrap">
+                    {new Date(log.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         {/* Pagination */}
         {!loading && pages > 1 && (
@@ -234,15 +241,15 @@ export default function AuditLogPage() {
         ) : filtered.length === 0 ? (
           <p className="text-center py-10 text-sm text-stone-400">No events found</p>
         ) : filtered.map(log => (
-          <div key={log.id} className="bg-white rounded-2xl border border-stone-100 shadow-sm p-4 space-y-2.5">
+          <div key={log.id} className="card-ats-bordered p-4 space-y-2.5">
             <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-xs font-bold text-brand-700 shrink-0">
                   {log.user.name.slice(0, 2).toUpperCase()}
                 </div>
-                <div>
-                  <p className="font-semibold text-stone-800 text-sm">{log.user.name}</p>
-                  <p className="text-xs text-stone-400">{log.user.email}</p>
+                <div className="min-w-0">
+                  <p className="font-semibold text-stone-800 text-sm truncate">{log.user.name}</p>
+                  <p className="text-xs text-stone-400 truncate">{log.user.email}</p>
                 </div>
               </div>
               <ActionBadge action={log.action} />
@@ -263,6 +270,6 @@ export default function AuditLogPage() {
           </div>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

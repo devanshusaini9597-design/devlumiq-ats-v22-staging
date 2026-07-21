@@ -14,6 +14,7 @@ import {
   Info, LightbulbIcon, ArrowUpRight, MoreHorizontal, Wifi, WifiOff, Loader2
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
+import PageShell from '@/components/ui/PageShell';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
 import { WeeklyChart, PipelineDoughnut } from '@/components/charts/DashboardCharts';
@@ -567,11 +568,12 @@ function RecruiterDashboard() {
     <>
       {/* --- Section: Dashboard Root - start --- */}
       <DashboardWelcomeModal open={showWelcomeModal} onClose={() => setShowWelcomeModal(false)} />
+      <PageShell>
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
-        className="space-y-3 sm:space-y-4"
+        className="space-y-6"
       >
       {/* Premium Header with Live Indicator - Repositioned for mobile */}
       <div className="flex flex-col gap-4">
@@ -1411,6 +1413,7 @@ function RecruiterDashboard() {
         </div>
       </motion.div>
     </motion.div>
+    </PageShell>
     {/* --- Section: Dashboard Root - end --- */}
     </>
   );
