@@ -971,3 +971,7 @@ DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'WebhookE
 
 DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Subscription_organizationId_fkey') THEN ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Company"("id") ON DELETE CASCADE; END IF; END $$;
 DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'OrgApiKeyConfig_organizationId_fkey') THEN ALTER TABLE "OrgApiKeyConfig" ADD CONSTRAINT "OrgApiKeyConfig_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Company"("id") ON DELETE CASCADE; END IF; END $$;
+
+-- Deferred from add_multi_tenancy (Company is created in this migration on fresh installs)
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'User_organizationId_fkey') THEN ALTER TABLE "User" ADD CONSTRAINT "User_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Company"("id") ON DELETE SET NULL ON UPDATE CASCADE; END IF; END $$;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Candidate_organizationId_fkey') THEN ALTER TABLE "Candidate" ADD CONSTRAINT "Candidate_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Company"("id") ON DELETE SET NULL ON UPDATE CASCADE; END IF; END $$;
