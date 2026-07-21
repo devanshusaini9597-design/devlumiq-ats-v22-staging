@@ -3,9 +3,20 @@ import { prisma } from '@/lib/prisma';
 import { withPermission, withAuth } from '@/lib/with-permission';
 
 // id param = candidateId (used from the candidate profile page)
-export const GET = withAuth(async (_req: NextRequest, ctx) => {
+export const GET = withAuth(async (_req: NextRequest, ctx, session) => {
   try {
     const { id: candidateId } = await (ctx.params as Promise<{ id: string }>);
+
+    // Verify candidate belongs to user's org
+    if (session.organizationId) {
+      const candidate = await prisma.candidate.findFirst({
+        where: { id: candidateId, organizationId: session.organizationId },
+        select: { id: true },
+      });
+      if (!candidate) {
+        return NextResponse.json({ scores: [] }, { status: 403 });
+      }
+    }
 
     // Get all interviews for this candidate, with their scores
     const interviews = await prisma.interviewEvent.findMany({
@@ -33,10 +44,21 @@ export const GET = withAuth(async (_req: NextRequest, ctx) => {
   }
 });
 
-export const POST = withPermission('SCORE_INTERVIEW', async (req: NextRequest, ctx) => {
+export const POST = withPermission('SCORE_INTERVIEW', async (req: NextRequest, ctx, session) => {
   try {
     const { id: candidateId } = await (ctx.params as Promise<{ id: string }>);
     const data = await req.json();
+
+    // Verify candidate belongs to user's org
+    if (session.organizationId) {
+      const candidate = await prisma.candidate.findFirst({
+        where: { id: candidateId, organizationId: session.organizationId },
+        select: { id: true },
+      });
+      if (!candidate) {
+        return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
+      }
+    }
 
     // Find or create an interview event for this candidate
     let interview = await prisma.interviewEvent.findFirst({
@@ -45,8 +67,13 @@ export const POST = withPermission('SCORE_INTERVIEW', async (req: NextRequest, c
     });
 
     if (!interview) {
-      // Get first admin/recruiter user for scoredById
-      const user = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
+      // Get first admin/recruiter user for scoredById within the same org
+      const user = await prisma.user.findFirst({
+        where: {
+          role: 'ADMIN',
+          ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+        },
+      });
       if (!user) {
         return NextResponse.json({ error: 'No admin user found' }, { status: 400 });
       }

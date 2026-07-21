@@ -11,8 +11,22 @@ export async function GET(request: Request) {
     const location = searchParams.get('location');
     const type = searchParams.get('type');
     const search = searchParams.get('search');
+    const companySlug = searchParams.get('company');
+
+    let companyId: string | undefined;
+    if (companySlug) {
+      const company = await prisma.company.findUnique({
+        where: { slug: companySlug },
+        select: { id: true },
+      });
+      companyId = company?.id;
+    }
 
     const where: any = { status: 'Active' };
+
+    if (companyId) {
+      where.companyId = companyId;
+    }
 
     if (department && department !== 'all') {
       where.department = department;
@@ -45,12 +59,12 @@ export async function GET(request: Request) {
         },
       }),
       prisma.job.findMany({
-        where: { status: 'Active' },
+        where: { status: 'Active', ...(companyId ? { companyId } : {}) },
         distinct: ['department'],
         select: { department: true },
       }),
       prisma.job.findMany({
-        where: { status: 'Active' },
+        where: { status: 'Active', ...(companyId ? { companyId } : {}) },
         distinct: ['location'],
         select: { location: true },
       }),

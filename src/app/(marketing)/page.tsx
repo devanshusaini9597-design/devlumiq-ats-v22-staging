@@ -3,12 +3,13 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   BarChart3, Users, Briefcase, Building2, Shield, Zap, LayoutDashboard,
   Upload, Search, UserCheck, ArrowRight, GripVertical,
-  Calendar, Mail, MessageSquare, Globe, Layers, Play, CheckCircle2,
-  Video, Star, Linkedin, Twitter, Github, ExternalLink,
-  ArrowUpRight, FileText, Clock, TrendingUp, Award, HeadphonesIcon, ChevronDown,
+  Calendar, Mail, MessageSquare, Globe, Layers, CheckCircle2,
+  Star, Linkedin, Twitter, Github, ExternalLink,
+  ArrowUpRight, FileText, Clock, TrendingUp, Award, HeadphonesIcon, ChevronDown, Code,
 } from 'lucide-react';
 import HeroDashboardPreview from '@/components/HeroDashboardPreview';
 import Logo from '@/components/Logo';
@@ -37,7 +38,7 @@ const stepKeys = [
 
 
 
-const logos = ['TechFlow', 'Nexora', 'DataFirst', 'CloudScale', 'InnovateLab', 'GrowthHQ', 'AlphaTech', 'NextGen'];
+const logos = ['Next.js', 'React', 'TypeScript', 'Prisma', 'Tailwind CSS', 'Framer Motion', 'PostgreSQL', 'OpenAI'];
 
 const benefitKeys = [
   { icon: Clock, titleKey: 'home.save40Time', descKey: 'home.save40Desc' },
@@ -54,9 +55,9 @@ const deepDiveKeys = [
 
 const integrations = [
   { name: 'LinkedIn', icon: Linkedin, connected: true, iconBg: 'bg-blue-100', iconColor: 'text-blue-700' },
-  { name: 'Slack', icon: MessageSquare, connected: true, iconBg: 'bg-violet-100', iconColor: 'text-violet-700' },
-  { name: 'Google Calendar', icon: Calendar, connected: true, iconBg: 'bg-red-50', iconColor: 'text-red-500' },
-  { name: 'Outlook', icon: Mail, connected: true, iconBg: 'bg-sky-50', iconColor: 'text-sky-600' },
+  { name: 'Slack', icon: MessageSquare, connected: false, iconBg: 'bg-violet-100', iconColor: 'text-violet-700' },
+  { name: 'Google Calendar', icon: Calendar, connected: false, iconBg: 'bg-red-50', iconColor: 'text-red-500' },
+  { name: 'Outlook', icon: Mail, connected: false, iconBg: 'bg-sky-50', iconColor: 'text-sky-600' },
   { name: 'Zapier', icon: Zap, connected: false, iconBg: 'bg-orange-100', iconColor: 'text-orange-600' },
   { name: 'HRIS', icon: Users, connected: false, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
 ];
@@ -157,14 +158,14 @@ export default function HomePage() {
       <section className="py-10 sm:py-14 px-4 sm:px-6 lg:px-8 bg-white border-b border-stone-100">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-8">
-            <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">Recognized by the best</p>
+            <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">Built With</p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-5 justify-items-center">
             {[
-              { label: 'G2', sub: '4.9 ★ Leader', color: 'from-orange-500 to-red-500', badge: 'Leader 2025' },
-              { label: 'Capterra', sub: '4.8 ★ Top Rated', color: 'from-blue-500 to-indigo-500', badge: 'Best Value' },
-              { label: 'Product Hunt', sub: '#1 of the day', color: 'from-rose-500 to-orange-500', badge: '🏆 Featured' },
-              { label: 'GetApp', sub: 'Category Leader', color: 'from-emerald-500 to-teal-500', badge: 'Category Leader' },
+              { label: 'Next.js 14', sub: 'App Router · RSC', color: 'from-stone-700 to-stone-900', badge: 'Framework' },
+              { label: 'TypeScript', sub: 'Type-safe by default', color: 'from-blue-500 to-indigo-500', badge: 'Language' },
+              { label: 'Tailwind CSS', sub: 'Utility-first styling', color: 'from-cyan-500 to-teal-500', badge: 'Styling' },
+              { label: 'Prisma ORM', sub: 'Type-safe database', color: 'from-emerald-500 to-teal-600', badge: 'Database' },
             ].map((award) => (
               <motion.div
                 key={award.label}
@@ -176,7 +177,7 @@ export default function HomePage() {
                 className="flex flex-col items-center gap-2 px-5 py-4 rounded-2xl border border-stone-200/80 bg-white shadow-sm hover:shadow-md hover:border-brand-200/60 transition-all"
               >
                 <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${award.color} flex items-center justify-center shadow-md`}>
-                  <Award className="w-5 h-5 text-white" />
+                  <Code className="w-5 h-5 text-white" />
                 </div>
                 <p className="text-sm font-extrabold text-stone-900">{award.label}</p>
                 <p className="text-[11px] text-stone-500 font-medium">{award.sub}</p>
@@ -220,96 +221,26 @@ export default function HomePage() {
       </section>
       {/* --- Section: Logo Cloud - end --- */}
 
+      {/* Dashboard Preview */}
       <section className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-stone-50">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <SectionHeading icon={Play} title={t('home.watchDemo')} subtitle={t('home.demoDesc')} />
+            <SectionHeading icon={LayoutDashboard} title="Dashboard Preview" subtitle="A quick look at the Devlumiq ATS interface." />
           </div>
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="relative rounded-3xl overflow-hidden shadow-2xl shadow-black/20 aspect-video bg-stone-900 cursor-pointer group"
+            className="relative rounded-3xl overflow-hidden shadow-2xl shadow-black/20 border border-stone-200/80 bg-white"
           >
-            {/* Styled dashboard mockup background */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
-              {/* Window chrome */}
-              <div className="absolute top-0 inset-x-0 h-8 bg-stone-950 border-b border-stone-800/60 flex items-center gap-2 px-4">
-                <div className="flex gap-1.5 flex-shrink-0">
-                  <div className="w-2 h-2 rounded-full bg-red-500/50" />
-                  <div className="w-2 h-2 rounded-full bg-amber-400/50" />
-                  <div className="w-2 h-2 rounded-full bg-emerald-500/50" />
-                </div>
-                <div className="h-2.5 w-24 bg-stone-800 rounded-md ml-3" />
-                <div className="flex gap-2 ml-4">
-                  {['Candidates','Pipeline','Analytics'].map((item, i) => (
-                    <div key={item} className={`h-2 rounded-full ${i === 1 ? 'w-14 bg-brand-600/70' : 'w-12 bg-stone-700'}`} />
-                  ))}
-                </div>
-                <div className="ml-auto h-5 w-20 bg-brand-600/60 rounded-lg" />
-              </div>
-              {/* Sidebar */}
-              <div className="absolute left-0 top-8 bottom-0 w-12 bg-stone-950 border-r border-stone-800/50 flex flex-col items-center pt-3 gap-2">
-                {[true, false, false, false, false, false].map((active, idx) => (
-                  <div key={idx} className={`w-7 h-7 rounded-xl ${active ? 'bg-brand-600' : 'bg-stone-800/80'}`} />
-                ))}
-              </div>
-              {/* Main area */}
-              <div className="absolute left-12 top-8 right-0 bottom-0 bg-stone-900/80 p-3">
-                {/* Stat cards */}
-                <div className="grid grid-cols-4 gap-2 mb-3">
-                  {[
-                    { clr: 'bg-brand-600', v: '127', l: 'Candidates' },
-                    { clr: 'bg-violet-600', v: '23', l: 'Open Jobs' },
-                    { clr: 'bg-amber-500', v: '8', l: 'Interviews' },
-                    { clr: 'bg-emerald-600', v: '94%', l: 'Accepted' },
-                  ].map((s) => (
-                    <div key={s.l} className="rounded-xl bg-stone-800 border border-stone-700/40 p-2">
-                      <div className={`h-0.5 w-full ${s.clr} rounded-full mb-1.5`} />
-                      <div className="text-white font-bold text-sm leading-none">{s.v}</div>
-                      <div className="text-stone-500 text-[9px] mt-1">{s.l}</div>
-                    </div>
-                  ))}
-                </div>
-                {/* Kanban columns */}
-                <div className="flex gap-2">
-                  {[
-                    { stage: 'Applied', clr: 'bg-stone-500', n: 3 },
-                    { stage: 'Review', clr: 'bg-amber-500', n: 2 },
-                    { stage: 'Interview', clr: 'bg-brand-500', n: 2 },
-                    { stage: 'Offer', clr: 'bg-emerald-500', n: 1 },
-                  ].map((col) => (
-                    <div key={col.stage} className="flex-1 min-w-0">
-                      <div className={`h-0.5 ${col.clr} rounded-full mb-2`} />
-                      {[...Array(col.n)].map((_, j) => (
-                        <div key={j} className="p-1.5 rounded-xl bg-stone-800/70 border border-stone-700/30 mb-1.5 flex items-center gap-1.5">
-                          <div className="w-4 h-4 rounded-full bg-stone-600 flex-shrink-0" />
-                          <div className="flex-1 min-w-0 space-y-1">
-                            <div className="h-1.5 bg-stone-600 rounded-full w-full" />
-                            <div className="h-1 bg-stone-700 rounded-full w-2/3" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            {/* Gradient overlay for depth & play button visibility */}
-            <div className="absolute inset-0 bg-gradient-to-t from-stone-900/70 via-stone-900/20 to-stone-900/30" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <motion.div
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:bg-brand-500 transition-colors shadow-2xl"
-              >
-                <Play className="w-8 h-8 sm:w-10 sm:h-10 text-white ml-1" fill="white" />
-              </motion.div>
-            </div>
-            <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
-              <span className="text-white/80 text-sm font-medium">Watch 2-min Demo</span>
-              <span className="text-white/80 text-sm font-medium">HD</span>
-            </div>
+            <Image
+              src="/images/website-dashboard-preview.png"
+              alt="Devlumiq ATS Dashboard"
+              width={1600}
+              height={900}
+              className="w-full h-auto"
+              priority
+            />
           </motion.div>
         </div>
       </section>
@@ -460,108 +391,32 @@ export default function HomePage() {
                       ${accent === 'brand' ? 'border-brand-200/80 bg-gradient-to-br from-brand-50 to-white' : accent === 'warm' ? 'border-warm-200/80 bg-gradient-to-br from-warm-50 to-white' : 'border-teal-200/80 bg-gradient-to-br from-teal-50 to-white'}
                       shadow-[var(--shadow-elevated)]`}
                     >
-                      {/* AI Candidate Screening */}
                       {feature.image === 'search' && (
-                        <div className="p-5 sm:p-6">
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-bold text-stone-800">23 Candidates Found</span>
-                            <span className="text-[11px] font-bold text-brand-700 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-full">AI Ranked</span>
-                          </div>
-                          <div className="space-y-2">
-                            {[
-                              { init: 'JD', score: '98%', title: 'Senior Engineer', sub: '5 yrs · React / Node', g: 'from-brand-500 to-teal-600' },
-                              { init: 'SE', score: '94%', title: 'Full-Stack Developer', sub: '4 yrs · Python / AWS', g: 'from-violet-500 to-purple-600' },
-                              { init: 'MK', score: '91%', title: 'Software Engineer', sub: '3 yrs · TypeScript', g: 'from-amber-500 to-orange-600' },
-                              { init: 'RL', score: '87%', title: 'Backend Engineer', sub: '6 yrs · Go / Rust', g: 'from-emerald-500 to-teal-600' },
-                            ].map((c) => (
-                              <div key={c.init} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white border border-stone-100 shadow-sm">
-                                <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${c.g} flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0`}>{c.init}</div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-bold text-stone-900 truncate">{c.title}</p>
-                                  <p className="text-[10px] text-stone-500 truncate">{c.sub}</p>
-                                </div>
-                                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md flex-shrink-0">{c.score}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="mt-3 pt-3 border-t border-stone-100 flex items-center justify-between">
-                            <span className="text-[10px] text-stone-400">Updated 2 min ago</span>
-                            <span className="text-[10px] font-semibold text-brand-600 flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3" /> Smart Match Active
-                            </span>
-                          </div>
-                        </div>
+                        <Image
+                          src="/images/website-candidates-search-preview.png"
+                          alt="Smart candidate screening"
+                          width={800}
+                          height={500}
+                          className="w-full h-auto"
+                        />
                       )}
-                      {/* Kanban Pipeline */}
                       {feature.image === 'workflow' && (
-                        <div className="p-4 sm:p-5">
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-bold text-stone-800">Hiring Pipeline</span>
-                            <span className="text-[11px] text-stone-400">12 active</span>
-                          </div>
-                          <div className="flex gap-1.5 overflow-hidden">
-                            {[
-                              { stage: 'Applied', bar: 'bg-stone-300', cards: [{ init: 'AR', g: 'from-stone-400 to-stone-600' }, { init: 'BN', g: 'from-brand-400 to-teal-500' }, { init: 'CL', g: 'from-violet-400 to-purple-600' }] },
-                              { stage: 'Review', bar: 'bg-amber-400', cards: [{ init: 'DK', g: 'from-amber-400 to-orange-500' }, { init: 'EF', g: 'from-rose-400 to-pink-500' }] },
-                              { stage: 'Interview', bar: 'bg-brand-500', cards: [{ init: 'GH', g: 'from-brand-500 to-teal-600' }, { init: 'IJ', g: 'from-cyan-500 to-blue-600' }] },
-                              { stage: 'Offer', bar: 'bg-emerald-500', cards: [{ init: 'KL', g: 'from-emerald-500 to-teal-600' }] },
-                            ].map((col) => (
-                              <div key={col.stage} className="flex-1 min-w-0">
-                                <div className="text-[9px] font-bold text-stone-500 mb-1 truncate">{col.stage}</div>
-                                <div className={`h-0.5 rounded-full ${col.bar} mb-1.5`} />
-                                {col.cards.map((card) => (
-                                  <div key={card.init} className="p-1 rounded-lg bg-white border border-stone-100 shadow-sm mb-1 flex items-center gap-1">
-                                    <div className={`w-4 h-4 rounded-full bg-gradient-to-br ${card.g} flex-shrink-0`} />
-                                    <div className="flex-1 min-w-0 space-y-0.5">
-                                      <div className="h-1.5 bg-stone-200 rounded-full w-full" />
-                                      <div className="h-1 bg-stone-100 rounded-full w-2/3" />
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ))}
-                          </div>
-                          <div className="mt-3 grid grid-cols-4 gap-1 text-center border-t border-stone-100 pt-2.5">
-                            {['3','2','2','1'].map((n, ni) => (
-                              <span key={ni} className="text-[9px] font-semibold text-stone-400">{n} open</span>
-                            ))}
-                          </div>
-                        </div>
+                        <Image
+                          src="/images/website-pipeline-preview.png"
+                          alt="Kanban pipeline board"
+                          width={800}
+                          height={500}
+                          className="w-full h-auto"
+                        />
                       )}
-                      {/* Analytics Dashboard */}
                       {feature.image === 'analytics' && (
-                        <div className="p-5 sm:p-6">
-                          <div className="grid grid-cols-2 gap-2 mb-4">
-                            {[
-                              { label: 'Time-to-Hire', value: '18d', trend: '↓ 40%', vc: 'text-brand-600' },
-                              { label: 'Acceptance Rate', value: '89%', trend: '↑ 12%', vc: 'text-stone-900' },
-                              { label: 'Sourced', value: '1.2K', trend: '↑ 28%', vc: 'text-violet-600' },
-                              { label: 'Cost / Hire', value: '$3.2K', trend: '↓ 18%', vc: 'text-stone-900' },
-                            ].map((m) => (
-                              <div key={m.label} className="p-2.5 rounded-xl bg-white border border-stone-100 shadow-sm">
-                                <p className="text-[9px] text-stone-500 font-medium truncate">{m.label}</p>
-                                <p className={`text-base font-extrabold ${m.vc} leading-none mt-0.5`}>{m.value}</p>
-                                <p className="text-[9px] text-emerald-600 font-bold mt-0.5">{m.trend}</p>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="bg-white rounded-xl border border-stone-100 shadow-sm p-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <p className="text-[10px] font-bold text-stone-700">Weekly Hires</p>
-                              <p className="text-[10px] text-stone-400">This week</p>
-                            </div>
-                            <div className="flex items-end gap-1 h-12">
-                              {[45, 70, 55, 85, 75, 95, 80].map((h, hi) => (
-                                <div key={hi} style={{ height: `${h}%` }} className={`flex-1 rounded-t-sm ${hi === 5 ? 'bg-brand-500' : 'bg-brand-200'}`} />
-                              ))}
-                            </div>
-                            <div className="flex justify-between mt-1">
-                              {['M','T','W','T','F','S','S'].map((d, di) => (
-                                <span key={di} className="text-[8px] text-stone-400 flex-1 text-center">{d}</span>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
+                        <Image
+                          src="/images/webite-analytics-preview.png"
+                          alt="Analytics dashboard"
+                          width={800}
+                          height={500}
+                          className="w-full h-auto"
+                        />
                       )}
                     </div>
                   </motion.div>
@@ -693,10 +548,10 @@ export default function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {[
               {
-                tag: 'AI & Automation',
+                tag: 'Smart Hiring',
                 tagColor: 'text-violet-600 bg-violet-50',
-                title: 'How AI Screening Cuts Time-to-Hire by 40%',
-                excerpt: 'Explore how modern ATS platforms use AI to rank candidates, eliminate bias, and surface the best fits faster than any manual process.',
+                title: 'How Smart Screening Cuts Time-to-Hire by 40%',
+                excerpt: 'Explore how modern ATS platforms use automated screening to rank candidates, reduce bias, and surface the best fits faster than any manual process.',
                 readTime: '5 min read',
                 gradient: 'from-violet-500/10 to-purple-500/5',
               },
@@ -764,27 +619,30 @@ export default function HomePage() {
         <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ backgroundImage: 'radial-gradient(ellipse 60% 40% at 50% 0%, rgba(13,148,136,0.1), transparent 70%)' }} />
         <div className="max-w-6xl mx-auto relative">
           <div className="text-center mb-14">
-            <SectionHeading icon={TrendingUp} title="Simple, transparent pricing" subtitle="Start free. Scale as you grow. No surprise fees." />
+            <SectionHeading
+              icon={TrendingUp}
+              title="Choose your license"
+              subtitle="Regular or Extended — start with a 14-day trial."
+            />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 lg:gap-6">
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 lg:gap-6">
             {[
               {
-                name: 'Starter', price: '$29', period: '/mo', highlight: false,
-                desc: 'Perfect for small teams',
-                features: ['Up to 5 users', '500 candidates', 'Basic analytics', 'Email support'],
-                cta: 'Get started free', href: '/pricing',
+                name: 'License Regular',
+                highlight: false,
+                desc: 'Built for standard ATS workflows',
+                features: ['Core ATS features', 'Team management', 'Candidate tracking', 'Email support'],
+                cta: 'View Regular license',
+                href: '/pricing',
               },
               {
-                name: 'Growth', price: '$79', period: '/mo', highlight: true,
-                desc: 'Most popular for scaling teams',
-                features: ['Up to 25 users', '5,000 candidates', 'Full analytics', 'AI screening', 'Priority support'],
-                cta: 'Start free trial', href: '/pricing',
-              },
-              {
-                name: 'Enterprise', price: 'Custom', period: '', highlight: false,
-                desc: 'For large organizations',
-                features: ['Unlimited users', 'Unlimited candidates', 'White-label', 'Dedicated CSM', 'SLA + SSO'],
-                cta: 'Contact sales', href: '/contact',
+                name: 'License Extended',
+                highlight: true,
+                desc: 'More tools for growing teams',
+                features: ['Expanded automation', 'Advanced reporting', 'Additional integrations', 'Priority support'],
+                cta: 'View Extended license',
+                href: '/pricing',
               },
             ].map((plan, i) => (
               <motion.div
@@ -796,25 +654,19 @@ export default function HomePage() {
                 whileHover={{ y: -5 }}
                 className={`relative flex flex-col rounded-2xl border p-7 shadow-[var(--shadow-card)] transition-all duration-300 ${
                   plan.highlight
-                    ? 'bg-gradient-to-b from-brand-600 to-teal-700 border-brand-500 shadow-brand-500/20 shadow-xl text-white mt-4 sm:mt-0'
+                    ? 'bg-gradient-to-b from-brand-600 to-teal-700 border-brand-500 shadow-brand-500/20 shadow-xl text-white'
                     : 'bg-white border-stone-200/80 hover:border-brand-200/80 hover:shadow-[var(--shadow-elevated)]'
                 }`}
               >
-                {plan.highlight && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-400 text-amber-900 text-[11px] font-extrabold shadow-lg">
-                      <Star className="w-3 h-3" fill="currentColor" /> Most Popular
-                    </span>
-                  </div>
-                )}
                 <div className="mb-5">
-                  <p className={`text-xs font-bold uppercase tracking-widest mb-2 ${plan.highlight ? 'text-teal-200' : 'text-brand-500'}`}>{plan.name}</p>
-                  <div className="flex items-end gap-1">
-                    <span className={`text-4xl font-extrabold ${plan.highlight ? 'text-white' : 'text-stone-900'}`}>{plan.price}</span>
-                    {plan.period && <span className={`text-sm font-medium mb-1.5 ${plan.highlight ? 'text-teal-200' : 'text-stone-400'}`}>{plan.period}</span>}
-                  </div>
-                  <p className={`text-sm mt-1 ${plan.highlight ? 'text-teal-100' : 'text-stone-500'}`}>{plan.desc}</p>
+                  <p className={`text-xs font-bold uppercase tracking-widest mb-2 ${plan.highlight ? 'text-teal-200' : 'text-brand-500'}`}>
+                    {plan.name}
+                  </p>
+                  <p className={`text-sm mt-1 ${plan.highlight ? 'text-teal-100' : 'text-stone-500'}`}>
+                    {plan.desc}
+                  </p>
                 </div>
+
                 <ul className="space-y-2.5 flex-1 mb-7">
                   {plan.features.map((f) => (
                     <li key={f} className={`flex items-center gap-2.5 text-sm ${plan.highlight ? 'text-teal-50' : 'text-stone-600'}`}>
@@ -823,6 +675,7 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
+
                 <Link href={plan.href}>
                   <motion.button
                     whileHover={{ scale: 1.02 }}
@@ -839,9 +692,10 @@ export default function HomePage() {
               </motion.div>
             ))}
           </div>
+
           <p className="text-center text-sm text-stone-500 mt-8">
-            All plans include a <strong className="text-stone-700">14-day free trial</strong>. No credit card required.{' '}
-            <Link href="/pricing" className="text-brand-600 font-semibold hover:underline">View full pricing →</Link>
+            Both license types include a <strong className="text-stone-700">14-day trial</strong>.{' '}
+            <Link href="/pricing" className="text-brand-600 font-semibold hover:underline">View license details →</Link>
           </p>
         </div>
       </section>
@@ -875,7 +729,7 @@ export default function HomePage() {
                   'Complex, outdated UI no one enjoys',
                   'Days of setup and onboarding',
                   'Manual data entry for everything',
-                  'No AI screening or smart match',
+                  'No smart screening or candidate ranking',
                   'Per-seat pricing adds up fast',
                   'Poor mobile experience',
                 ].map((item) => (
@@ -909,8 +763,8 @@ export default function HomePage() {
                 {[
                   'Beautiful, intuitive UI teams love',
                   'Up and running in under 30 minutes',
-                  'AI auto-imports and parses resumes',
-                  'Smart match ranks candidates instantly',
+                  'Auto-parse resumes with AI or rules',
+                  'Smart ranking scores candidates instantly',
                   'Flat pricing — unlimited seats on Pro',
                   'Full mobile-first responsive design',
                 ].map((item) => (
@@ -1083,4 +937,3 @@ export default function HomePage() {
     </>
   );
 }
-

@@ -1,11 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth, withPermission } from '@/lib/with-permission';
 
 // DocuSign Integration API
 const DOCUSIGN_BASE_URL = process.env.DOCUSIGN_BASE_URL || 'https://demo.docusign.net/restapi/v2.1';
 
 // POST /api/esignature/send - Send document for signature
-export async function POST(request: Request) {
+export const POST = withPermission('USE_ESIGNATURE', async (request: NextRequest) => {
   try {
     const { 
       candidateId, 
@@ -44,111 +45,45 @@ export async function POST(request: Request) {
       },
     });
 
-    // In production, this would call DocuSign API
-    // const docusignResponse = await sendToDocuSign({
-    //   templateId,
-    //   emailSubject,
-    //   emailBody,
-    //   recipients: [{
-    //     email: candidate.email,
-    //     name: candidate.name,
-    //     role: 'signer'
-    //   }],
-    //   documents
-    // });
+    // ── DocuSign API Integration (stub) ─────────────────────────────────────
+    // To enable real DocuSign, set DOCUSIGN_CLIENT_ID, DOCUSIGN_CLIENT_SECRET,
+    // and DOCUSIGN_ACCOUNT_ID in .env, then implement the sendToDocuSign()
+    // function below with the official DocuSign SDK.
+    //
+    // Without DocuSign credentials, a placeholder external ID is stored so the
+    // workflow (create → track → complete) still functions end-to-end.
+    const externalId = process.env.DOCUSIGN_CLIENT_ID
+      ? await sendToDocuSign({
+          templateId,
+          emailSubject,
+          emailBody,
+          recipients: [{ email: candidate.email, name: candidate.name, role: 'signer' }],
+          documents,
+        }).then(r => r.envelopeId)
+      : `stub-${Date.now()}`;
 
-    // Update with mock external ID
     await prisma.eSignatureRequest.update({
       where: { id: eSignature.id },
-      data: {
-        externalId: `docusign-${Date.now()}`,
-      },
+      data: { externalId },
     });
 
     return NextResponse.json({
       success: true,
       eSignatureId: eSignature.id,
-      message: 'Signature request sent successfully',
-      // In production: envelopeId: docusignResponse.envelopeId
+      externalId,
+      message: process.env.DOCUSIGN_CLIENT_ID
+        ? 'Signature request sent via DocuSign'
+        : 'Signature request created (DocuSign not configured — using stub ID)',
     });
   } catch (error) {
     console.error('Error sending eSignature:', error);
     return NextResponse.json({ error: 'Failed to send signature request' }, { status: 500 });
   }
-}
+});
 
-// Sample eSignature data for demo
-const sampleESignatures = [
-  {
-    id: 'esign-1',
-    candidateId: 'cand-1',
-    offerLetterId: 'offer-1',
-    provider: 'DOCUSIGN',
-    externalId: 'docusign-env-001',
-    status: 'completed',
-    signUrl: null,
-    signedDocumentUrl: 'https://example.com/signed-doc-1.pdf',
-    signerName: 'Sarah Johnson',
-    signerEmail: 'sarah.johnson@email.com',
-    signedAt: new Date('2024-03-20').toISOString(),
-    createdAt: new Date('2024-03-15').toISOString(),
-    sentAt: new Date('2024-03-15').toISOString(),
-    completedAt: new Date('2024-03-20').toISOString(),
-    expiresAt: new Date('2024-04-15').toISOString(),
-    candidate: { name: 'Sarah Johnson', email: 'sarah.johnson@email.com' },
-    offerLetter: { 
-      candidate: { name: 'Sarah Johnson', email: 'sarah.johnson@email.com' },
-      job: { title: 'Senior Software Engineer' }
-    }
-  },
-  {
-    id: 'esign-2',
-    candidateId: 'cand-2',
-    offerLetterId: 'offer-2',
-    provider: 'DOCUSIGN',
-    externalId: 'docusign-env-002',
-    status: 'sent',
-    signUrl: 'https://demo.docusign.net/sign/env-002',
-    signedDocumentUrl: null,
-    signerName: 'Michael Chen',
-    signerEmail: 'michael.chen@email.com',
-    signedAt: null,
-    createdAt: new Date('2024-03-25').toISOString(),
-    sentAt: new Date('2024-03-25').toISOString(),
-    completedAt: null,
-    expiresAt: new Date('2024-04-25').toISOString(),
-    candidate: { name: 'Michael Chen', email: 'michael.chen@email.com' },
-    offerLetter: { 
-      candidate: { name: 'Michael Chen', email: 'michael.chen@email.com' },
-      job: { title: 'Product Manager' }
-    }
-  },
-  {
-    id: 'esign-3',
-    candidateId: 'cand-3',
-    offerLetterId: 'offer-3',
-    provider: 'DOCUSIGN',
-    externalId: 'docusign-env-003',
-    status: 'declined',
-    signUrl: null,
-    signedDocumentUrl: null,
-    signerName: 'Emily Davis',
-    signerEmail: 'emily.davis@email.com',
-    signedAt: null,
-    createdAt: new Date('2024-03-22').toISOString(),
-    sentAt: new Date('2024-03-22').toISOString(),
-    completedAt: null,
-    expiresAt: new Date('2024-04-22').toISOString(),
-    candidate: { name: 'Emily Davis', email: 'emily.davis@email.com' },
-    offerLetter: { 
-      candidate: { name: 'Emily Davis', email: 'emily.davis@email.com' },
-      job: { title: 'UX Designer' }
-    }
-  },
-];
 
 // GET /api/esignature/status - Check signature status
-export async function GET(request: Request) {
+export const GET = withAuth(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url);
     const candidateId = searchParams.get('candidateId');
@@ -163,31 +98,16 @@ export async function GET(request: Request) {
       orderBy: { sentAt: 'desc' },
     });
 
-    // Return sample data if no requests in database
-    if (!requests || requests.length === 0) {
-      return NextResponse.json(sampleESignatures);
-    }
-
-    // In production, fetch real-time status from DocuSign
-    // const statuses = await Promise.all(
-    //   requests.map(async (req) => {
-    //     if (req.externalId) {
-    //       return await getDocuSignStatus(req.externalId);
-    //     }
-    //     return req.status;
-    //   })
-    // );
 
     return NextResponse.json(requests);
   } catch (error) {
     console.error('Error fetching eSignatures:', error);
-    // Return sample data on error
-    return NextResponse.json(sampleESignatures);
+    return NextResponse.json([], { status: 500 });
   }
-}
+});
 
 // POST /api/esignature/webhook - DocuSign webhook handler
-export async function PATCH(request: Request) {
+export const PATCH = withPermission('USE_ESIGNATURE', async (request: NextRequest) => {
   try {
     const payload = await request.json();
     
@@ -225,18 +145,22 @@ export async function PATCH(request: Request) {
     console.error('Error handling webhook:', error);
     return NextResponse.json({ error: 'Webhook failed' }, { status: 500 });
   }
-}
+});
 
-// Helper functions for DocuSign API (implement with actual DocuSign SDK)
-async function sendToDocuSign(params: any) {
-  // Implementation with DocuSign SDK
-  // const client = new docusign.ApiClient();
-  // client.setBasePath(DOCUSIGN_BASE_URL);
-  // ... authentication and API call
-  return { envelopeId: 'mock-envelope-id' };
-}
-
-async function getDocuSignStatus(envelopeId: string) {
-  // Implementation with DocuSign SDK
-  return 'sent';
+// ── DocuSign SDK Integration Point ───────────────────────────────────────────
+// Replace this stub with the official DocuSign eSignature SDK:
+//   npm install docusign-esign
+// Then implement envelope creation using your DOCUSIGN_ACCOUNT_ID.
+async function sendToDocuSign(params: {
+  templateId?: string;
+  emailSubject?: string;
+  emailBody?: string;
+  recipients: { email: string; name: string; role: string }[];
+  documents?: any[];
+}): Promise<{ envelopeId: string }> {
+  // TODO: Implement with docusign-esign SDK
+  // const apiClient = new docusign.ApiClient();
+  // apiClient.setBasePath(process.env.DOCUSIGN_BASE_URL);
+  // ... OAuth2 + createEnvelope
+  throw new Error('DocuSign SDK not implemented — set DOCUSIGN_CLIENT_ID to enable');
 }

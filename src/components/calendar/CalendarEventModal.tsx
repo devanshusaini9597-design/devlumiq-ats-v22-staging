@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Video, Phone, FileCheck } from 'lucide-react';
 import { format } from 'date-fns';
+import { InterviewTranscriptPanel } from '@/components/dashboard/InterviewTranscriptPanel';
 
 export type CalendarEventData = {
   id: string;
@@ -16,9 +17,16 @@ export type CalendarEventData = {
 
 const typeConfig: Record<string, { icon: typeof Video; label: string; iconBg: string; accent: string }> = {
   interview: { icon: Video, label: 'Interview', iconBg: 'bg-brand-500/10', accent: 'text-brand-700' },
+  technical: { icon: Video, label: 'Technical', iconBg: 'bg-brand-500/10', accent: 'text-brand-700' },
+  behavioral: { icon: Phone, label: 'Behavioral', iconBg: 'bg-warm-500/10', accent: 'text-warm-700' },
   callback: { icon: Phone, label: 'Callback', iconBg: 'bg-warm-500/10', accent: 'text-warm-700' },
   offer: { icon: FileCheck, label: 'Offer Review', iconBg: 'bg-emerald-500/10', accent: 'text-emerald-700' },
 };
+
+function isInterviewLike(type?: string) {
+  const t = (type || '').toLowerCase();
+  return !t || t === 'interview' || t === 'technical' || t === 'behavioral' || t === 'phone' || t === 'video' || t === 'onsite' || t === 'panel' || t === 'callback';
+}
 
 export default function CalendarEventModal({
   event,
@@ -29,6 +37,7 @@ export default function CalendarEventModal({
 }) {
   const config = event ? typeConfig[event.type ?? 'interview'] ?? typeConfig.interview : null;
   const Icon = config?.icon ?? Video;
+  const showTranscript = event && isInterviewLike(event.type);
 
   useEffect(() => {
     if (event) document.body.style.overflow = 'hidden';
@@ -58,11 +67,10 @@ export default function CalendarEventModal({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={{ duration: 0.2 }}
-              className="w-full max-w-[400px] max-h-[85vh] pointer-events-auto"
+              className={`w-full pointer-events-auto ${showTranscript ? 'max-w-2xl' : 'max-w-[400px]'} max-h-[90vh]`}
             >
-            <div className="bg-white rounded-2xl shadow-[var(--shadow-elevated)] border border-stone-200/80 overflow-hidden max-h-[85vh] flex flex-col">
-              {/* Header - theme-aligned */}
-              <div className="flex items-start justify-between gap-4 px-5 py-5 border-b border-stone-200/80 bg-white">
+            <div className="bg-white rounded-2xl shadow-[var(--shadow-elevated)] border border-stone-200/80 overflow-hidden max-h-[90vh] flex flex-col">
+              <div className="flex items-start justify-between gap-4 px-5 py-5 border-b border-stone-200/80 bg-white flex-shrink-0">
                 <div className="flex items-start gap-4 min-w-0">
                   <div className={`w-11 h-11 rounded-xl ${config?.iconBg ?? 'bg-brand-500/10'} border border-stone-200/80 flex items-center justify-center flex-shrink-0`}>
                     <Icon className={`w-5 h-5 ${config?.accent}`} />
@@ -83,8 +91,7 @@ export default function CalendarEventModal({
                 </button>
               </div>
 
-              {/* Content — spacing & typography */}
-              <div className="flex-1 overflow-y-auto px-5 py-5 bg-stone-50/50">
+              <div className="flex-1 overflow-y-auto px-5 py-5 bg-stone-50/50 space-y-4">
                 <dl className="space-y-4">
                   {event.candidate && (
                     <div className="px-4 py-3.5 rounded-xl bg-white/80 border border-stone-200/60 shadow-[var(--shadow-soft)]">
@@ -104,11 +111,13 @@ export default function CalendarEventModal({
                   </div>
                 </dl>
 
-                <div className="flex gap-3 mt-6">
-                  <button className="flex-1 py-3 px-4 rounded-xl text-sm font-semibold bg-brand-600 text-white shadow-md shadow-brand-600/20 hover:bg-brand-700 hover:shadow-brand-600/30 transition-all duration-200">
-                    Join Meeting
-                  </button>
+                {showTranscript && (
+                  <InterviewTranscriptPanel interviewId={event.id} />
+                )}
+
+                <div className="flex gap-3 pt-1">
                   <button
+                    type="button"
                     onClick={onClose}
                     className="flex-1 py-3 px-4 rounded-xl text-sm font-semibold border border-stone-200 text-stone-600 hover:border-stone-300 hover:bg-stone-50 transition-colors"
                   >

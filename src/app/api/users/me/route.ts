@@ -54,11 +54,18 @@ export async function PATCH(request: NextRequest) {
   const updated = await prisma.user.update({
     where: { id: session.id },
     data: { name, email },
-    select: { id: true, name: true, email: true, role: true },
+    select: { id: true, name: true, email: true, role: true, tokenVersion: true },
   });
 
-  // Refresh session cookie with updated user data (signed JWT)
-  const newToken = signSession({ userId: updated.id, email: updated.email, name: updated.name, role: updated.role });
+  // Refresh session cookie preserving organizationId and tokenVersion
+  const newToken = signSession({
+    userId: updated.id,
+    email: updated.email,
+    name: updated.name,
+    role: updated.role,
+    organizationId: session.organizationId,
+    tokenVersion: updated.tokenVersion,
+  });
   const response = NextResponse.json({ user: updated });
   response.cookies.set(SESSION_COOKIE, newToken, sessionCookieOptions());
   return response;

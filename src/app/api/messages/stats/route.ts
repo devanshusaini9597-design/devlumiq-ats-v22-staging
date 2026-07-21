@@ -8,6 +8,11 @@ export async function GET() {
     const user = await requireAuth();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const orgFilter = user.organizationId ? { organizationId: user.organizationId } : {};
+    const msgOrgFilter = user.organizationId
+      ? { thread: { organizationId: user.organizationId } }
+      : {};
+
     const [
       totalThreads,
       totalMessages,
@@ -16,32 +21,36 @@ export async function GET() {
       outboundCount,
       recentThreads,
     ] = await Promise.all([
-      prisma.messageThread.count(),
+      prisma.messageThread.count({ where: { ...orgFilter } }),
       prisma.message.count({
-        where: { isDeleted: false },
+        where: { isDeleted: false, ...msgOrgFilter },
       }),
       prisma.message.count({
         where: {
           isDeleted: false,
           isRead: false,
           direction: 'INBOUND',
+          ...msgOrgFilter,
         },
       }),
       prisma.message.count({
         where: {
           isDeleted: false,
           direction: 'INBOUND',
+          ...msgOrgFilter,
         },
       }),
       prisma.message.count({
         where: {
           isDeleted: false,
           direction: 'OUTBOUND',
+          ...msgOrgFilter,
         },
       }),
       prisma.messageThread.findMany({
         take: 5,
         orderBy: { lastMessageAt: 'desc' },
+        where: { ...orgFilter },
         include: {
           messages: {
             where: { isDeleted: false },

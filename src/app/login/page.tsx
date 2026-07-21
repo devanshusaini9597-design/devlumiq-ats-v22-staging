@@ -1,17 +1,69 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+export const dynamic = 'force-dynamic';
+
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Mail, Lock, Shield, LogIn, Eye, EyeOff, Loader2, Sparkles, Users, BarChart3 } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Mail, Lock, Shield, LogIn, Eye, EyeOff, Loader2, Sparkles, Users, BarChart3, Crown, Briefcase, UserCheck, Star } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
 import { email as validateEmail } from '@/lib/validation';
 
-const DEMO_EMAIL = 'demo@devlumiq.com';
-const DEMO_PASSWORD = 'demo';
+const DEMO_ROLES = [
+  {
+    role: 'ADMIN',
+    label: 'Admin',
+    email: 'admin@devlumiq.com',
+    icon: Crown,
+    bg: 'bg-orange-500',
+    ringColor: 'ring-orange-400/50',
+    labelBg: 'bg-orange-50',
+    labelText: 'text-orange-700',
+  },
+  {
+    role: 'RECRUITER',
+    label: 'Recruiter',
+    email: 'recruiter@devlumiq.com',
+    icon: Briefcase,
+    bg: 'bg-blue-500',
+    ringColor: 'ring-blue-400/50',
+    labelBg: 'bg-blue-50',
+    labelText: 'text-blue-700',
+  },
+  {
+    role: 'HIRING_MANAGER',
+    label: 'HR Manager',
+    email: 'hiring@devlumiq.com',
+    icon: UserCheck,
+    bg: 'bg-purple-500',
+    ringColor: 'ring-purple-400/50',
+    labelBg: 'bg-purple-50',
+    labelText: 'text-purple-700',
+  },
+  {
+    role: 'INTERVIEWER',
+    label: 'Interviewer',
+    email: 'interviewer@devlumiq.com',
+    icon: Star,
+    bg: 'bg-teal-500',
+    ringColor: 'ring-teal-400/50',
+    labelBg: 'bg-teal-50',
+    labelText: 'text-teal-700',
+  },
+  {
+    role: 'VIEWER',
+    label: 'Viewer',
+    email: 'viewer@devlumiq.com',
+    icon: Eye,
+    bg: 'bg-stone-500',
+    ringColor: 'ring-stone-400/50',
+    labelBg: 'bg-stone-100',
+    labelText: 'text-stone-700',
+  },
+] as const;
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -40,18 +92,21 @@ function GitHubIcon({ className }: { className?: string }) {
   );
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useLocale();
   const toast = useToast();
+  const justVerified = searchParams.get('verified') === '1';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoLoadingRole, setDemoLoadingRole] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [errorCode, setErrorCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({}); 
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -60,9 +115,10 @@ export default function LoginPage() {
     }
   }, []);
 
-  const doLogin = async (loginEmail: string, loginPassword: string, isDemo = false) => {
-    if (isDemo) setDemoLoading(true); else setLoading(true);
+  const doLogin = async (loginEmail: string, loginPassword: string, isDemo = false, demoRole?: string) => {
+    if (isDemo && demoRole) setDemoLoadingRole(demoRole); else if (!isDemo) setLoading(true);
     setError('');
+    setErrorCode('');
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -74,6 +130,7 @@ export default function LoginPage() {
       if (!res.ok) {
         const msg = data?.error ?? t('common.error');
         setError(msg);
+        setErrorCode(data?.code ?? '');
         toast.error(t('login.signIn') + ' failed', msg);
         return;
       }
@@ -87,7 +144,6 @@ export default function LoginPage() {
       } else if (!isDemo) {
         localStorage.removeItem('loginRememberEmail');
       }
-      // Clear welcome toast flag so dashboard will show it
       sessionStorage.removeItem('welcome-shown');
       router.push('/dashboard');
     } catch {
@@ -96,7 +152,7 @@ export default function LoginPage() {
       toast.error(t('login.signIn') + ' failed', msg);
     } finally {
       setLoading(false);
-      setDemoLoading(false);
+      setDemoLoadingRole(null);
     }
   };
 
@@ -117,17 +173,45 @@ export default function LoginPage() {
     await doLogin(email, password);
   };
 
-  const handleDemoLogin = async () => {
+  const handleDemoRoleLogin = async (_roleEmail: string, roleName: string) => {
     setFieldErrors({});
     setError('');
-    await doLogin(DEMO_EMAIL, DEMO_PASSWORD, true);
+    setDemoLoadingRole(roleName);
+    try {
+      const res = await fetch('/api/auth/demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: roleName }),
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = data?.error ?? t('common.error');
+        setError(msg);
+        toast.error(t('login.signIn') + ' failed', msg);
+        return;
+      }
+      const user = data?.user ?? {};
+      localStorage.setItem('token', 'demo-' + Date.now());
+      localStorage.setItem('userEmail', user.email ?? '');
+      localStorage.setItem('userName', user.name ?? '');
+      localStorage.setItem('isLoggedIn', 'true');
+      sessionStorage.removeItem('welcome-shown');
+      router.push('/dashboard');
+    } catch {
+      const msg = t('common.error');
+      setError(msg);
+      toast.error(t('login.signIn') + ' failed', msg);
+    } finally {
+      setDemoLoadingRole(null);
+    }
   };
 
   const handleSocialLogin = (provider: string) => {
     toast.info(`${provider} Sign-In`, 'Social authentication can be configured in your environment settings.');
   };
 
-  const isSubmitting = loading || demoLoading;
+  const isSubmitting = loading || !!demoLoadingRole;
 
   return (
     <div className="min-h-screen flex overflow-x-hidden w-full">
@@ -181,9 +265,9 @@ export default function LoginPage() {
             className="mt-10 grid grid-cols-3 gap-4"
           >
             {[
-              { icon: Users, label: '2,400+', desc: 'Candidates tracked' },
-              { icon: BarChart3, label: '98.5%', desc: 'Uptime guarantee' },
-              { icon: Shield, label: 'SOC 2', desc: 'Compliant security' },
+              { icon: Users, label: 'Smart', desc: 'Candidate tracking' },
+              { icon: BarChart3, label: 'Fast', desc: 'Real-time analytics' },
+              { icon: Shield, label: 'Secure', desc: 'Enterprise-grade' },
             ].map((stat, i) => (
               <div key={i} className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
                 <stat.icon className="w-5 h-5 text-brand-400 mb-2" />
@@ -203,7 +287,7 @@ export default function LoginPage() {
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
-        className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:p-12 bg-stone-50 min-w-0"
+        className="flex-1 flex items-start sm:items-center justify-center p-4 sm:p-8 lg:p-12 bg-stone-50 min-w-0 overflow-y-auto"
       >
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center justify-between mb-8">
@@ -226,8 +310,14 @@ export default function LoginPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="rounded-2xl p-8 sm:p-10 bg-white shadow-[var(--shadow-elevated)] border border-stone-200/80"
+            className="rounded-2xl p-5 sm:p-8 md:p-10 bg-white shadow-[var(--shadow-elevated)] border border-stone-200/80"
           >
+            {justVerified && (
+              <div className="flex items-start gap-3 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 mb-6">
+                <svg className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+                <p className="text-sm font-semibold text-emerald-800">Email verified! You can now sign in.</p>
+              </div>
+            )}
             <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900 mb-1">{t('login.welcomeBack')}</h2>
             <p className="text-stone-500 mb-7 font-medium text-sm">{t('login.signInDesc')}</p>
 
@@ -328,7 +418,23 @@ export default function LoginPage() {
                 />
                 <label htmlFor="remember" className="ml-2 text-sm font-medium text-stone-600">{t('login.rememberMe')}</label>
               </div>
-              {error && <p className="text-sm font-medium text-red-600" role="alert">{error}</p>}
+              {error && (
+                <div role="alert" className={`rounded-xl p-3.5 text-sm font-medium ${
+                  errorCode === 'EMAIL_UNVERIFIED' || errorCode === 'PENDING_INVITE'
+                    ? 'bg-amber-50 border border-amber-200 text-amber-800'
+                    : 'bg-red-50 border border-red-200 text-red-700'
+                }`}>
+                  <p>{error}</p>
+                  {errorCode === 'EMAIL_UNVERIFIED' && (
+                    <a
+                      href={`/verify-email-sent?email=${encodeURIComponent(email)}`}
+                      className="underline font-semibold mt-1 inline-block hover:opacity-80"
+                    >
+                      Resend verification email →
+                    </a>
+                  )}
+                </div>
+              )}
               <motion.button
                 type="submit"
                 disabled={isSubmitting}
@@ -349,60 +455,61 @@ export default function LoginPage() {
               </motion.button>
             </form>
 
-            {/* Demo Access */}
-            <div className="mt-5 pt-5 border-t border-stone-100">
-              {/* Demo Credentials Info Box - Premium Responsive Design */}
-              <div className="mb-4 p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-50 via-orange-50 to-amber-50 border border-amber-200/60 shadow-sm hover:shadow-md transition-shadow duration-300">
-                <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                  <div className="flex items-center sm:flex-col sm:items-center gap-3 sm:gap-2">
-                    <div className="p-3 bg-gradient-to-br from-amber-100 to-orange-100 rounded-xl shadow-sm">
+            {/* Live Demo Access Panel */}
+            <div className="mt-6 pt-6 border-t border-stone-100">
+              <div className="rounded-2xl bg-gradient-to-br from-amber-50 via-orange-50/50 to-yellow-50 border border-amber-200/60 shadow-sm p-5 sm:p-6">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-gradient-to-br from-amber-100 to-orange-100 rounded-xl shadow-sm flex-shrink-0">
                       <Sparkles className="w-5 h-5 text-amber-600" />
                     </div>
-                    <div className="sm:hidden">
-                      <h4 className="font-bold text-stone-900 text-sm">Demo Account</h4>
-                      <p className="text-xs text-stone-600">Use these credentials:</p>
+                    <div>
+                      <h4 className="font-bold text-stone-900 text-sm">Live Demo Access</h4>
+                      <p className="text-xs text-stone-500 mt-0.5">No sign-up required — pick a role to preview</p>
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <div className="hidden sm:block mb-3">
-                      <h4 className="font-bold text-stone-900 text-sm">Demo Account</h4>
-                      <p className="text-xs text-stone-600 mt-0.5">Use these credentials to explore:</p>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div className="flex flex-col gap-1 p-2.5 bg-white/80 backdrop-blur-sm rounded-xl border border-amber-100/50">
-                        <span className="text-[10px] uppercase tracking-wider font-semibold text-stone-400">Email</span>
-                        <code className="text-xs font-mono text-amber-700 break-all">{DEMO_EMAIL}</code>
-                      </div>
-                      <div className="flex flex-col gap-1 p-2.5 bg-white/80 backdrop-blur-sm rounded-xl border border-amber-100/50">
-                        <span className="text-[10px] uppercase tracking-wider font-semibold text-stone-400">Password</span>
-                        <code className="text-xs font-mono text-amber-700">{DEMO_PASSWORD}</code>
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-amber-100 font-mono text-xs w-fit">
+                    <span className="text-stone-400">pw:</span>
+                    <span className="font-semibold text-amber-700">Demo@1234</span>
                   </div>
                 </div>
-              </div>
 
-              <motion.button
-                type="button"
-                onClick={handleDemoLogin}
-                disabled={isSubmitting}
-                whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
-                className="btn-cta-primary w-full py-4 rounded-xl font-bold text-base shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 disabled:opacity-70"
-              >
-                {demoLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Launching demo...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-5 h-5" />
-                    Try Demo Account
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </motion.button>
-              <p className="text-center text-xs text-stone-400 mt-2.5">No sign-up required. Real database with sample data.</p>
+                {/* Role grid */}
+                <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-5 gap-2.5 sm:gap-3">
+                  {DEMO_ROLES.map((dr) => {
+                    const DRIcon = dr.icon;
+                    const isLoadingThis = demoLoadingRole === dr.role;
+                    return (
+                      <motion.button
+                        key={dr.role}
+                        type="button"
+                        onClick={() => handleDemoRoleLogin(dr.email, dr.role)}
+                        disabled={isSubmitting}
+                        whileTap={{ scale: isSubmitting ? 1 : 0.95 }}
+                        whileHover={{ scale: isSubmitting ? 1 : 1.03 }}
+                        title={`Sign in as ${dr.label}\n${dr.email}`}
+                        className={`flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition-all duration-200 ${
+                          isSubmitting && !isLoadingThis
+                            ? 'opacity-40 cursor-not-allowed border-transparent'
+                            : `cursor-pointer border-transparent hover:border-white/60 hover:shadow-md hover:ring-2 ${dr.ringColor}`
+                        }`}
+                      >
+                        <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl ${dr.bg} flex items-center justify-center shadow-sm flex-shrink-0`}>
+                          {isLoadingThis ? (
+                            <Loader2 className="w-5 h-5 text-white animate-spin" />
+                          ) : (
+                            <DRIcon className="w-5 h-5 text-white" />
+                          )}
+                        </div>
+                        <span className={`text-[11px] sm:text-xs font-semibold text-center leading-tight ${dr.labelText}`}>
+                          {dr.label}
+                        </span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             <p className="text-center mt-6 text-sm text-stone-500">
@@ -422,5 +529,17 @@ export default function LoginPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-stone-50">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

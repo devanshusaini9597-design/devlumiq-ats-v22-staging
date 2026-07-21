@@ -1,64 +1,96 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { withPermission } from '@/lib/with-permission';
+import {
+  normalizePhone,
+  findOrCreateCandidateThread,
+  appendOutboundMessage,
+  sendWhatsAppCloud,
+  whatsappConfigured,
+} from '@/lib/messaging';
 
 /**
  * POST /api/whatsapp/send
- *
- * Sends a WhatsApp message via the WhatsApp Business Cloud API.
- * Requires WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID environment variables.
- * If they are not configured the route returns a 503 so callers can show
- * a helpful error instead of silently failing.
+ * Legacy premium WhatsApp send — still supported.
+ * Now also persists into MessageThread when candidateId is provided.
+ * Prefer /api/messages/whatsapp/send for consent-gated inbox sync.
  */
-export async function POST(request: NextRequest) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export const POST = withPermission('USE_EMAIL_TEMPLATES', async (request: NextRequest, _ctx, session) => {
   const { phone, message, candidateId } = await request.json();
 
   if (!phone || !message) {
     return NextResponse.json({ error: 'phone and message are required' }, { status: 400 });
   }
 
-  const token = process.env.WHATSAPP_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-
-  if (!token || !phoneNumberId) {
+  if (!whatsappConfigured()) {
     return NextResponse.json(
       { error: 'WhatsApp Business API is not configured. Set WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID environment variables.' },
-      { status: 503 }
+      { status: 503 },
     );
   }
 
-  // Normalise phone: strip spaces / dashes, ensure leading +
-  const to = phone.replace(/[\s\-()]/g, '');
+  try {
+    const to = normalizePhone(phone);
 
-  const res = await fetch(
-    `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to,
-        type: 'text',
-        text: { body: message },
-      }),
+    // When linked to a candidate, require WhatsApp opt-in (TCPA). Phone-only legacy callers unchanged.
+    if (candidateId) {
+      const candidate = await prisma.candidate.findFirst({
+        where: {
+          id: candidateId,
+          ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+        },
+        select: { id: true, name: true, whatsappOptIn: true },
+      });
+      if (!candidate) {
+        return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
+      }
+      if (!candidate.whatsappOptIn) {
+        return NextResponse.json(
+          {
+            error: 'WhatsApp opt-in required for this candidate',
+            code: 'WHATSAPP_CONSENT_REQUIRED',
+          },
+          { status: 403 },
+        );
+      }
     }
-  );
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    console.error('WhatsApp API error', err);
+    const { id: wamid } = await sendWhatsAppCloud(to, message);
+
+    if (candidateId) {
+      const candidate = await prisma.candidate.findFirst({
+        where: {
+          id: candidateId,
+          ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+        },
+        select: { id: true, name: true },
+      });
+      if (candidate) {
+        const thread = await findOrCreateCandidateThread({
+          candidateId: candidate.id,
+          organizationId: session.organizationId,
+          subject: `WhatsApp · ${candidate.name}`,
+        });
+        await appendOutboundMessage({
+          threadId: thread.id,
+          fromUserId: session.id,
+          fromName: session.name,
+          fromEmail: session.email,
+          channel: 'WHATSAPP',
+          body: message,
+          toPhone: to,
+          externalId: wamid || null,
+          metadata: { provider: 'whatsapp_cloud', legacyRoute: true },
+        });
+      }
+    }
+
+    return NextResponse.json({ ok: true, candidateId, wamid });
+  } catch (e: unknown) {
+    console.error('WhatsApp API error', e);
     return NextResponse.json(
-      { error: 'WhatsApp delivery failed', detail: err },
-      { status: res.status }
+      { error: e instanceof Error ? e.message : 'WhatsApp delivery failed' },
+      { status: 502 },
     );
   }
-
-  return NextResponse.json({ ok: true, candidateId });
-}
+});

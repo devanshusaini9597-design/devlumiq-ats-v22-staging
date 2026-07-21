@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth, withPermission } from '@/lib/with-permission';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withAuth(async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await params;
     const raw = await prisma.comment.findMany({
@@ -20,9 +21,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   } catch {
     return NextResponse.json({ comments: [] }, { status: 500 });
   }
-}
+});
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withAuth(async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await params;
     const data = await req.json();
@@ -47,9 +48,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     console.error('POST /api/candidates/[id]/comments', error);
     return NextResponse.json({ error: 'Failed to add comment' }, { status: 500 });
   }
-}
+});
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const DELETE = withPermission('USE_TEAM_COMMENTS', async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
     const { searchParams } = new URL(req.url);
     const commentId = searchParams.get('commentId');
@@ -62,4 +63,4 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     console.error('DELETE /api/candidates/[id]/comments', error);
     return NextResponse.json({ error: 'Failed to delete comment' }, { status: 500 });
   }
-}
+});

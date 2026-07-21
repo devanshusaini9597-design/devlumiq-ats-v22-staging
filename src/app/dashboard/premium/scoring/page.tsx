@@ -13,6 +13,7 @@ import { CandidateSelector } from '@/components/ui/CandidateSelector';
 import { useToast } from '@/components/ui/Toast';
 import Link from 'next/link';
 import { useLocale } from '@/components/providers/LocaleProvider';
+import { InterviewTranscriptPanel, type ScorecardSuggestion } from '@/components/dashboard/InterviewTranscriptPanel';
 
 interface Candidate {
   id: string;
@@ -45,11 +46,29 @@ export default function InterviewScoringPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedScores, setSavedScores] = useState<any[]>([]);
+  const [interviewId, setInterviewId] = useState<string | null>(null);
   const toast = useToast();
 
   useEffect(() => {
     fetchCandidates();
   }, []);
+
+  useEffect(() => {
+    if (!selectedCandidate) {
+      setInterviewId(null);
+      return;
+    }
+    fetch(`/api/calendar/events?start=${new Date(0).toISOString()}&end=${new Date(Date.now() + 365 * 86400000).toISOString()}`, {
+      credentials: 'include',
+    })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list) => {
+        const events = Array.isArray(list) ? list : [];
+        const match = events.find((e: { candidateId?: string }) => e.candidateId === selectedCandidate.id);
+        setInterviewId(match?.id ?? null);
+      })
+      .catch(() => setInterviewId(null));
+  }, [selectedCandidate]);
 
   const fetchCandidates = async () => {
     try {
@@ -103,6 +122,30 @@ export default function InterviewScoringPage() {
     const newScores = [...scores];
     newScores[index].notes = notes;
     setScores(newScores);
+  };
+
+  const applyAiSuggestions = (suggestions: ScorecardSuggestion[]) => {
+    setScores((prev) =>
+      prev.map((row) => {
+        const match = suggestions.find(
+          (s) =>
+            s.name.trim().toLowerCase() === row.criteria.toLowerCase() ||
+            row.criteria.toLowerCase().includes(s.name.trim().toLowerCase()) ||
+            s.name.trim().toLowerCase().includes(row.criteria.toLowerCase()),
+        );
+        if (!match) return row;
+        const score = Math.max(0, Math.min(5, Math.round(Number(match.suggestedScore) || 0)));
+        return {
+          ...row,
+          score: score || row.score,
+          notes: match.rationale
+            ? row.notes
+              ? `${row.notes}\n\nAI: ${match.rationale}`
+              : match.rationale
+            : row.notes,
+        };
+      }),
+    );
   };
 
   const saveScores = async () => {
@@ -287,6 +330,13 @@ export default function InterviewScoringPage() {
               ))}
             </div>
           </div>
+
+          {interviewId && (
+            <InterviewTranscriptPanel
+              interviewId={interviewId}
+              onApplySuggestions={applyAiSuggestions}
+            />
+          )}
 
           {/* Previous Scores */}
           {savedScores.length > 0 && (

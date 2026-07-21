@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
+import { getSession, invalidateAllSessions } from '@/lib/auth';
 
 /**
  * PATCH /api/users/me/password
@@ -26,8 +26,8 @@ export async function PATCH(request: NextRequest) {
   if (!currentPassword) {
     return NextResponse.json({ error: 'Current password is required' }, { status: 400 });
   }
-  if (!newPassword || newPassword.length < 6) {
-    return NextResponse.json({ error: 'New password must be at least 6 characters' }, { status: 400 });
+  if (!newPassword || newPassword.length < 8) {
+    return NextResponse.json({ error: 'New password must be at least 8 characters' }, { status: 400 });
   }
 
   const user = await prisma.user.findUnique({ where: { id: session.id } });
@@ -48,5 +48,8 @@ export async function PATCH(request: NextRequest) {
     data: { password: hashed },
   });
 
-  return NextResponse.json({ success: true });
+  // Invalidate all sessions — forces re-login on all devices
+  await invalidateAllSessions(session.id);
+
+  return NextResponse.json({ success: true, message: 'Password changed. Please log in again.' });
 }

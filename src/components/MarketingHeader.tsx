@@ -195,7 +195,7 @@ export default function MarketingHeader() {
           </nav>
 
           {/* Desktop Right */}
-          <div className="hidden lg:flex items-center gap-1.5">
+          <div className="hidden lg:flex items-center gap-3">
             <LocaleSwitcher />
             <div className="w-px h-5 bg-stone-200/80 mx-1" />
             <Link href="/login">

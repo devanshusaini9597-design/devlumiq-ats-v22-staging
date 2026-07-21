@@ -1,24 +1,36 @@
+import { createHmac, timingSafeEqual } from 'crypto';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+
+function verifyCheckrSignature(rawBody: string, signature: string, secret: string): boolean {
+  try {
+    const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
+    const expectedBuf = Buffer.from(expected);
+    const signatureBuf = Buffer.from(signature);
+    if (expectedBuf.length !== signatureBuf.length) return false;
+    return timingSafeEqual(expectedBuf, signatureBuf);
+  } catch {
+    return false;
+  }
+}
 
 // POST /api/webhooks/checkr - Handle Checkr webhook events
 // This endpoint receives real-time updates from Checkr when background check status changes
 
 export async function POST(request: Request) {
   try {
-    // Verify webhook signature if CHECKR_WEBHOOK_SECRET is configured
-    const signature = request.headers.get('X-Checkr-Signature');
     const webhookSecret = process.env.CHECKR_WEBHOOK_SECRET;
-    
-    // Note: In production, implement signature verification
-    // if (webhookSecret && signature) {
-    //   const isValid = verifyCheckrSignature(await request.text(), signature, webhookSecret);
-    //   if (!isValid) {
-    //     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-    //   }
-    // }
+    const signature = request.headers.get('X-Checkr-Signature');
 
-    const payload = await request.json();
+    const rawBody = await request.text();
+
+    if (webhookSecret) {
+      if (!signature || !verifyCheckrSignature(rawBody, signature, webhookSecret)) {
+        return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+      }
+    }
+
+    const payload = JSON.parse(rawBody);
     const { type, data } = payload;
 
     console.log('Checkr webhook received:', { type, eventId: data?.id });
@@ -295,15 +307,3 @@ async function createNotification({
   }
 }
 
-// Helper: Verify Checkr webhook signature
-// function verifyCheckrSignature(payload: string, signature: string, secret: string): boolean {
-//   const crypto = require('crypto');
-//   const expectedSignature = crypto
-//     .createHmac('sha256', secret)
-//     .update(payload)
-//     .digest('hex');
-//   return crypto.timingSafeEqual(
-//     Buffer.from(signature),
-//     Buffer.from(expectedSignature)
-//   );
-// }

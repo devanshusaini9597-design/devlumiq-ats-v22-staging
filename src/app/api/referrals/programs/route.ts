@@ -1,35 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-
-const samplePrograms = [
-  {
-    id: 'prog-1',
-    name: 'Engineering Referral Program',
-    description: 'Refer talented engineers and earn cash rewards. Covers all engineering positions across frontend, backend, and DevOps.',
-    isActive: true,
-    rewardType: 'cash',
-    rewardAmount: 2500,
-    rewardCurrency: 'USD',
-    rewardTiming: 'hire',
-    minDaysEmployed: 90,
-  },
-  {
-    id: 'prog-2',
-    name: 'Product Referral Program',
-    description: 'Help us find exceptional product managers and designers. Premium reward for senior-level hires.',
-    isActive: true,
-    rewardType: 'cash',
-    rewardAmount: 3000,
-    rewardCurrency: 'USD',
-    rewardTiming: 'probation_end',
-    minDaysEmployed: 60,
-  },
-];
+import { withAuth, withPermission } from '@/lib/with-permission';
 
 // GET /api/referrals/programs - Get all referral programs
-export async function GET() {
+export const GET = withAuth(async (_req, _ctx, session) => {
   try {
+    const orgFilter = session.organizationId ? { organizationId: session.organizationId } : {};
     const programs = await prisma.referralProgram.findMany({
+      where: orgFilter,
       orderBy: { createdAt: 'desc' },
       include: {
         _count: {
@@ -38,19 +16,15 @@ export async function GET() {
       },
     });
 
-    if (!programs || programs.length === 0) {
-      return NextResponse.json({ programs: samplePrograms });
-    }
-
     return NextResponse.json({ programs });
   } catch (error) {
     console.error('Error fetching referral programs:', error);
-    return NextResponse.json({ programs: samplePrograms });
+    return NextResponse.json({ programs: [] });
   }
-}
+});
 
 // POST /api/referrals/programs - Create a new referral program
-export async function POST(request: Request) {
+export const POST = withPermission('MANAGE_REFERRALS', async (request: NextRequest, _ctx, session) => {
   try {
     const {
       name,
@@ -78,6 +52,7 @@ export async function POST(request: Request) {
         eligibleJobIds: eligibleJobIds || [],
         excludedJobIds: excludedJobIds || [],
         isActive: true,
+        organizationId: session.organizationId ?? undefined,
       },
     });
 
@@ -86,4 +61,4 @@ export async function POST(request: Request) {
     console.error('Error creating referral program:', error);
     return NextResponse.json({ error: 'Failed to create program' }, { status: 500 });
   }
-}
+});

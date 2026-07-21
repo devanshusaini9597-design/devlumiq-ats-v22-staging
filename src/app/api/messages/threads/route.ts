@@ -11,6 +11,7 @@ export async function GET() {
       orderBy: { lastMessageAt: 'desc' },
       where: {
         messages: { some: { isDeleted: false } },
+        ...(user.organizationId ? { organizationId: user.organizationId } : {}),
       },
       include: {
         messages: {
@@ -34,6 +35,7 @@ export async function GET() {
 
     const list = threads.map((t) => ({
       id: t.id,
+      candidateId: t.candidateId ?? null,
       subject: t.subject,
       createdAt: t.createdAt.toISOString(),
       lastMessageAt: t.lastMessageAt.toISOString(),
@@ -47,6 +49,7 @@ export async function GET() {
             direction: t.messages[0].direction,
             isRead: t.messages[0].isRead,
             sentAt: t.messages[0].sentAt.toISOString(),
+            channel: t.messages[0].channel,
           }
         : null,
     }));
@@ -72,6 +75,7 @@ export async function POST(request: Request) {
       data: {
         subject: subject || 'No Subject',
         lastMessageAt: new Date(),
+        ...(user.organizationId ? { organizationId: user.organizationId } : {}),
       },
     });
 
@@ -94,6 +98,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       thread: {
         id: thread.id,
+        candidateId: thread.candidateId ?? null,
         subject: thread.subject,
         createdAt: thread.createdAt.toISOString(),
         lastMessageAt: thread.lastMessageAt.toISOString(),
@@ -106,6 +111,7 @@ export async function POST(request: Request) {
           direction: msg.direction,
           isRead: true,
           sentAt: msg.sentAt.toISOString(),
+          channel: msg.channel,
         },
       },
     }, { status: 201 });

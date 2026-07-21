@@ -8,6 +8,7 @@ interface User {
   name: string;
   email: string;
   role: Role;
+  organizationId: string | null;
 }
 
 export function useAuth() {

@@ -1,7 +1,7 @@
 /**
  * Smart Search Page
  * ==================
- * AI-powered candidate search with real-time debounced filtering.
+ * Advanced candidate search with real-time debounced filtering.
  * Supports multi-criteria filters: query, skills, experience, source, status.
  * Results include a deterministic match-score indicator per candidate.
  */
@@ -282,7 +282,7 @@ export default function SmartSearchPage() {
           </div>
           <div>
             <h2 className="font-bold text-lg text-stone-900">{t('premium.smartSearch.advancedFilters')}</h2>
-            <p className="text-xs text-stone-500">Refine your search with AI-powered filters</p>
+            <p className="text-xs text-stone-500">Refine your search with advanced filters</p>
           </div>
         </div>
 

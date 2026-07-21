@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withPermission } from '@/lib/with-permission';
 import { ROLES } from '@/lib/roles';
+import { invalidateAllSessions } from '@/lib/auth';
 
 /** PATCH /api/users/[id] — update role or active status (ADMIN only) */
 export const PATCH = withPermission(
@@ -14,8 +15,11 @@ export const PATCH = withPermission(
         return NextResponse.json({ error: 'You cannot modify your own account here' }, { status: 400 });
       }
 
-      const target = await prisma.user.findUnique({ where: { id } });
+      const target = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true, organizationId: true } });
       if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      if (session.organizationId && target.organizationId !== session.organizationId) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
 
       const body = await request.json();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -45,17 +49,16 @@ export const PATCH = withPermission(
         select: { id: true, name: true, email: true, role: true, isActive: true },
       });
 
-      // Log the role change
+      // Log the role/status change and invalidate sessions so new permissions take effect immediately
+      if (updates.role || updates.isActive === false) {
+        await invalidateAllSessions(id);
+      }
       if (updates.role) {
         await prisma.userActivityLog.create({
           data: {
             userId: session.id,
             action: 'role_change',
-            metadata: {
-              targetUserId: id,
-              fromRole: target.role,
-              toRole: updates.role,
-            },
+            metadata: { targetUserId: id, fromRole: target.role, toRole: updates.role },
           },
         }).catch(() => {});
       }
@@ -79,10 +82,20 @@ export const DELETE = withPermission(
         return NextResponse.json({ error: 'You cannot deactivate your own account' }, { status: 400 });
       }
 
+      if (session.organizationId) {
+        const target = await prisma.user.findUnique({ where: { id }, select: { organizationId: true } });
+        if (!target || target.organizationId !== session.organizationId) {
+          return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+      }
+
       await prisma.user.update({
         where: { id },
         data: { isActive: false },
       });
+
+      // Kick the user out of all active sessions immediately
+      await invalidateAllSessions(id);
 
       await prisma.userActivityLog.create({
         data: {

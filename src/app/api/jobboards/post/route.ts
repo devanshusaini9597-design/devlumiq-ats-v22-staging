@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withPermission } from '@/lib/with-permission';
 
 // POST /api/jobboards/post - Post job to multiple boards
-export async function POST(request: Request) {
+export const POST = withPermission('MANAGE_INTEGRATIONS', async (request: NextRequest) => {
   try {
     const { jobId, boards } = await request.json();
 
@@ -19,14 +20,17 @@ export async function POST(request: Request) {
     // Create board postings
     const postings = await Promise.all(
       boards.map(async (board: string) => {
-        // In production, integrate with actual job board APIs
+        // ── Job Board API Integration (stub) ─────────────────────────
+        // To enable real posting, implement API calls to LinkedIn Jobs,
+        // Indeed Employer API, Glassdoor Partner API, etc.
+        // The DB record is created so the posting workflow is functional.
         const posting = await prisma.jobBoardIntegration.create({
           data: {
             jobId,
             board: board as any,
-            status: 'posted',
-            externalId: `mock-${Date.now()}`,
-            postUrl: `https://${board.toLowerCase()}.com/jobs/${jobId}`,
+            status: 'draft',
+            externalId: `stub-${board.toLowerCase()}-${Date.now()}`,
+            postUrl: '',
           },
         });
 
@@ -37,16 +41,16 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       postings,
-      message: `Job posted to ${postings.length} boards`,
+      message: `Job board records created for ${postings.length} boards (API integration required for live posting)`,
     });
   } catch (error) {
     console.error('Error posting to job boards:', error);
     return NextResponse.json({ error: 'Failed to post job' }, { status: 500 });
   }
-}
+});
 
 // GET /api/jobboards/post - Get job board postings for a job
-export async function GET(request: Request) {
+export const GET = withPermission('MANAGE_INTEGRATIONS', async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get('jobId');
@@ -65,10 +69,10 @@ export async function GET(request: Request) {
     console.error('Error fetching board postings:', error);
     return NextResponse.json({ error: 'Failed to fetch postings' }, { status: 500 });
   }
-}
+});
 
 // DELETE /api/jobboards/post - Remove job from board
-export async function DELETE(request: Request) {
+export const DELETE = withPermission('MANAGE_INTEGRATIONS', async (request: NextRequest) => {
   try {
     const { postingId } = await request.json();
 
@@ -81,4 +85,4 @@ export async function DELETE(request: Request) {
     console.error('Error removing job posting:', error);
     return NextResponse.json({ error: 'Failed to remove posting' }, { status: 500 });
   }
-}
+});

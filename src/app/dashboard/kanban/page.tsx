@@ -15,12 +15,15 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
+import { useAuth } from '@/hooks/useAuth';
+import { ROLE_PERMISSIONS, Role } from '@/lib/roles';
 import { 
   LayoutGrid, ChevronLeft, ChevronRight, ChevronDown, Users, Filter,
   ArrowLeftRight, Sparkles, ArrowRight, ArrowLeft
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { KanbanColumn } from '@/components/kanban/KanbanColumn';
+import { RejectKeepWarmModal, type RejectKeepWarmChoice } from '@/components/kanban/RejectKeepWarmModal';
 
 const CARDS_PER_PAGE = 8;
 
@@ -91,9 +94,28 @@ const stageConfig: Record<string, {
   },
 };
 
-type KanbanCardItem = { id: string; name: string; position: string; source: string; status: string };
+type KanbanCardItem = {
+  id: string;
+  candidateId: string;
+  name: string;
+  position: string;
+  source: string;
+  status: string;
+  email?: string;
+  phone?: string;
+  assessmentScore?: number | null;
+  latestAssessmentScore?: number | null;
+};
 
-function buildByStageFromApplications(applications: { id: string; stage: string; candidate: { name: string; source?: string }; job: { title: string } }[]): Record<string, KanbanCardItem[]> {
+function buildByStageFromApplications(applications: {
+  id: string;
+  candidateId?: string;
+  stage: string;
+  assessmentScore?: number | null;
+  latestAssessmentScore?: number | null;
+  candidate: { id?: string; name: string; source?: string; email?: string | null; phone?: string | null };
+  job: { title: string };
+}[]): Record<string, KanbanCardItem[]> {
   const map: Record<string, KanbanCardItem[]> = {};
   STAGES.forEach((s) => (map[s] = []));
   applications.forEach((a) => {
@@ -101,10 +123,15 @@ function buildByStageFromApplications(applications: { id: string; stage: string;
     if (!map[stage]) map[stage] = [];
     map[stage].push({
       id: a.id,
+      candidateId: a.candidateId || a.candidate.id || '',
       name: a.candidate.name,
       position: a.job?.title ?? '',
       source: a.candidate.source ?? '',
       status: stage,
+      email: a.candidate.email ?? undefined,
+      phone: a.candidate.phone ?? undefined,
+      assessmentScore: a.assessmentScore ?? a.latestAssessmentScore ?? null,
+      latestAssessmentScore: a.latestAssessmentScore ?? a.assessmentScore ?? null,
     });
   });
   return map;
@@ -119,6 +146,10 @@ function emptyByStage(): Record<string, KanbanCardItem[]> {
 export default function KanbanPage() {
   const { t } = useLocale();
   const toast = useToast();
+  const { user } = useAuth();
+  const userRole = user?.role as Role | undefined;
+  const userPermissions = userRole ? (ROLE_PERMISSIONS[userRole] ?? []) : [];
+  const canMoveApplication = userPermissions.includes('MOVE_APPLICATION');
   const [byStage, setByStage] = useState<Record<string, KanbanCardItem[]>>(emptyByStage);
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -127,6 +158,10 @@ export default function KanbanPage() {
   );
   const [cardsPerPageOptions] = useState([4, 6, 8, 10]);
   const [showCardsPerPage, setShowCardsPerPage] = useState(false);
+  const [rejectPrompt, setRejectPrompt] = useState<{
+    applicationId: string;
+    candidateName: string;
+  } | null>(null);
 
   const fetchApplications = async () => {
     setLoading(true);
@@ -181,15 +216,37 @@ export default function KanbanPage() {
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 10 } })
   );
 
-  const moveCardToStage = async (applicationId: string, targetStage: string) => {
+  const requestMoveToStage = (applicationId: string, targetStage: string) => {
+    if (targetStage === 'Rejected') {
+      const card = Object.values(byStage).flat().find((c) => c.id === applicationId);
+      setRejectPrompt({
+        applicationId,
+        candidateName: card?.name || 'Candidate',
+      });
+      return;
+    }
+    void moveCardToStage(applicationId, targetStage);
+  };
+
+  const moveCardToStage = async (
+    applicationId: string,
+    targetStage: string,
+    extras?: RejectKeepWarmChoice,
+  ) => {
     try {
+      const body: Record<string, unknown> = { stage: targetStage };
+      if (targetStage === 'Rejected' && extras?.addToTalentPool) {
+        body.addToTalentPool = true;
+        if (extras.grantConsent) body.grantConsent = true;
+      }
       const res = await fetch(`/api/applications/${applicationId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ stage: targetStage }),
+        body: JSON.stringify(body),
       });
       if (res.ok) {
+        const data = await res.json().catch(() => ({}));
         setByStage((prev) => {
           const next = JSON.parse(JSON.stringify(prev)) as Record<string, KanbanCardItem[]>;
           let card: KanbanCardItem | null = null;
@@ -206,7 +263,11 @@ export default function KanbanPage() {
           }
           return next;
         });
-        toast.success(t('kanban.title'), t('kanban.stageUpdated', { stage: targetStage }));
+        const poolNote =
+          targetStage === 'Rejected' && (data as { talentPoolId?: string | null }).talentPoolId
+            ? ' Added to talent pool.'
+            : '';
+        toast.success(t('kanban.title'), `${t('kanban.stageUpdated', { stage: targetStage })}${poolNote}`);
       } else {
         const data = await res.json().catch(() => ({}));
         toast.error(t('common.error'), (data as { error?: string })?.error ?? t('kanban.updateFailed'));
@@ -226,6 +287,10 @@ export default function KanbanPage() {
     const { active, over } = event;
     setActiveId(null);
     if (!over) return;
+    if (!canMoveApplication) {
+      toast.error(t('kanban.noPermission') || 'You do not have permission to move applications');
+      return;
+    }
     const overId = String(over.id);
     const applicationId = String(active.id);
     if (overId === applicationId) return;
@@ -239,7 +304,7 @@ export default function KanbanPage() {
       }
     }
     if (targetStage) {
-      await moveCardToStage(applicationId, targetStage);
+      requestMoveToStage(applicationId, targetStage);
     }
   };
 
@@ -403,7 +468,7 @@ export default function KanbanPage() {
                 count={totalCount}
                 allStages={STAGES}
                 currentStage={stage}
-                onMoveToStage={(cardId, targetStage) => moveCardToStage(cardId, targetStage)}
+                onMoveToStage={(cardId, targetStage) => requestMoveToStage(cardId, targetStage)}
                 footer={totalPages > 1 ? (
                   <div className="flex flex-col gap-2">
                     {/* Pagination Info */}
@@ -511,7 +576,17 @@ export default function KanbanPage() {
         </DragOverlay>
       </DndContext>
       )}
-      {/* --- Section: Kanban Root - end --- */}
+      {rejectPrompt && (
+        <RejectKeepWarmModal
+          candidateName={rejectPrompt.candidateName}
+          onCancel={() => setRejectPrompt(null)}
+          onConfirm={(choice) => {
+            const { applicationId } = rejectPrompt;
+            setRejectPrompt(null);
+            void moveCardToStage(applicationId, 'Rejected', choice);
+          }}
+        />
+      )}
     </div>
   );
 }

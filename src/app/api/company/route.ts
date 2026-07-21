@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth, withPermission } from '@/lib/with-permission';
 
 // GET /api/company - Get company profile
-export async function GET() {
+export const GET = withAuth(async () => {
   try {
     const company = await prisma.company.findFirst({
       include: {
@@ -21,10 +22,10 @@ export async function GET() {
     console.error('Error fetching company:', error);
     return NextResponse.json({ error: 'Failed to fetch company' }, { status: 500 });
   }
-}
+});
 
 // POST /api/company - Create or update company profile
-export async function POST(request: Request) {
+export const POST = withPermission('MANAGE_COMPANY', async (request: NextRequest) => {
   try {
     const data = await request.json();
     
@@ -185,10 +186,10 @@ export async function POST(request: Request) {
     console.error('Error saving company:', error);
     return NextResponse.json({ error: 'Failed to save company' }, { status: 500 });
   }
-}
+});
 
 // PATCH /api/company - Partial update
-export async function PATCH(request: Request) {
+export const PATCH = withPermission('MANAGE_COMPANY', async (request: NextRequest) => {
   try {
     const data = await request.json();
     const existing = await prisma.company.findFirst();
@@ -197,9 +198,40 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 });
     }
 
+    const allowed: Record<string, unknown> = {};
+    const scalarKeys = [
+      'name', 'slug', 'description', 'website', 'logoUrl', 'faviconUrl',
+      'primaryColor', 'secondaryColor', 'accentColor', 'fontFamily', 'customCss',
+      'metaTitle', 'metaDescription', 'ogImageUrl', 'twitterHandle', 'linkedinUrl',
+      'heroTitle', 'heroSubtitle', 'heroBackground', 'showBenefits', 'showTeamPhotos',
+      'customDomain', 'enableLinkedInShare', 'enableTwitterShare', 'enableFacebookShare',
+      'enableEmailShare', 'isPublished',
+    ] as const;
+    for (const k of scalarKeys) {
+      if (data[k] !== undefined) allowed[k] = data[k];
+    }
+    if (data.careersFaq !== undefined) {
+      if (data.careersFaq === null) {
+        allowed.careersFaq = null;
+      } else if (Array.isArray(data.careersFaq)) {
+        allowed.careersFaq = data.careersFaq
+          .map((item: { q?: string; a?: string; keywords?: string[] }) => ({
+            q: typeof item?.q === 'string' ? item.q.slice(0, 500) : '',
+            a: typeof item?.a === 'string' ? item.a.slice(0, 4000) : '',
+            keywords: Array.isArray(item?.keywords)
+              ? item.keywords.filter((k: unknown) => typeof k === 'string').slice(0, 20)
+              : [],
+          }))
+          .filter((i: { q: string; a: string }) => i.q && i.a)
+          .slice(0, 50);
+      } else {
+        return NextResponse.json({ error: 'careersFaq must be an array' }, { status: 400 });
+      }
+    }
+
     const company = await prisma.company.update({
       where: { id: existing.id },
-      data,
+      data: allowed,
     });
 
     return NextResponse.json(company);
@@ -207,4 +239,4 @@ export async function PATCH(request: Request) {
     console.error('Error updating company:', error);
     return NextResponse.json({ error: 'Failed to update company' }, { status: 500 });
   }
-}
+});

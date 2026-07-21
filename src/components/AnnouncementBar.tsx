@@ -24,7 +24,7 @@ export default function AnnouncementBar() {
             <div className="max-w-7xl mx-auto px-4 pr-10 py-2.5 flex items-center justify-center gap-2.5 text-center">
               <Sparkles className="w-3.5 h-3.5 text-teal-300 flex-shrink-0 hidden sm:block" />
               <span className="font-medium text-white/90">
-                <span className="font-bold text-white">New:</span> AI-powered resume screening is live.{' '}
+                <span className="font-bold text-white">New:</span> Smart resume screening is live.{' '}
                 <Link
                   href="/features"
                   className="inline-flex items-center gap-0.5 font-bold underline underline-offset-2 hover:text-teal-200 transition-colors"
@@ -33,7 +33,7 @@ export default function AnnouncementBar() {
                 </Link>
               </span>
               <span className="hidden sm:inline-flex items-center gap-1.5 ml-2 px-2 py-0.5 rounded-full bg-white/15 text-white/90 text-[11px] font-semibold border border-white/20">
-                14-day free trial
+                Self-hosted
               </span>
             </div>
             <button

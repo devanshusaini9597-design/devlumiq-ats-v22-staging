@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { sendEmail } from '@/lib/email';
+import { withPermission } from '@/lib/with-permission';
 
-export async function POST(req: NextRequest) {
+export const POST = withPermission('USE_EMAIL_TEMPLATES', async (req: NextRequest, _ctx, session) => {
   try {
     const data = await req.json();
     const { candidate, job, template, subject: preSubject, body: preBody } = data;
 
     const jobTitle = job?.title ?? candidate?.position ?? 'Position';
-    const companyName = 'Devlumiq ATS';
+
+    // Resolve org name dynamically — never hardcode
+    let companyName = 'Recruitment Team';
+    if (session.organizationId) {
+      const org = await prisma.company.findUnique({
+        where: { id: session.organizationId },
+        select: { name: true },
+      });
+      if (org?.name) companyName = org.name;
+    }
 
     let finalSubject: string;
     let finalBody: string;
@@ -38,18 +50,31 @@ export async function POST(req: NextRequest) {
       finalBody = 'Please see the details attached.';
     }
 
-    // In production, integrate with email service (SendGrid, AWS SES, etc.)
-    // For demo, we just return the composed email
+    const recipientEmail = candidate?.email ?? '';
+    const sentAt = new Date().toISOString();
+
+    // Attempt real send if SMTP is configured; degrade gracefully in dev
+    let emailSent = false;
+    if (recipientEmail && process.env.SMTP_HOST && process.env.SMTP_USER) {
+      emailSent = await sendEmail({
+        to: recipientEmail,
+        subject: finalSubject,
+        html: `<div style="font-family:sans-serif;line-height:1.6">${finalBody.replace(/\n/g, '<br>')}</div>`,
+        text: finalBody,
+      });
+    }
+
     return NextResponse.json({
       success: true,
+      delivered: emailSent,
       email: {
-        to: candidate?.email ?? '',
+        to: recipientEmail,
         subject: finalSubject,
         body: finalBody,
-        sentAt: new Date().toISOString()
-      }
+        sentAt,
+      },
     });
   } catch {
     return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
   }
-}
+});

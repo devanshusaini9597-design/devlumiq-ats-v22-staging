@@ -18,6 +18,10 @@ import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
 import { WeeklyChart, PipelineDoughnut } from '@/components/charts/DashboardCharts';
 import DashboardWelcomeModal, { getShouldShowWelcome } from '@/components/DashboardWelcomeModal';
+import { useAuth } from '@/hooks/useAuth';
+import AdminDashboard from '@/components/dashboard/AdminDashboard';
+import InterviewerDashboard from '@/components/dashboard/InterviewerDashboard';
+import ViewerDashboard from '@/components/dashboard/ViewerDashboard';
 
 // Animation variants - stable to prevent re-triggering on data refresh
 // Stable animation variants - only animate once on mount, never re-trigger
@@ -101,10 +105,11 @@ type AIInsight = {
 const DASHBOARD_CACHE_KEY = 'dashboard_data_cache';
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-export default function DashboardPage() {
+function RecruiterDashboard() {
   const router = useRouter();
   const { t } = useLocale();
   const toast = useToast();
+  const { user } = useAuth();
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const userEmail = typeof window !== 'undefined' ? localStorage.getItem('userEmail') ?? '' : '';
   const userName = typeof window !== 'undefined' ? localStorage.getItem('userName') ?? '' : '';
@@ -291,7 +296,7 @@ export default function DashboardPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [loadDashboardData]);
   
-  // Premium AI Insights Generator with enhanced logic
+  // Premium Smart Insights Generator with enhanced logic
   const generateAIInsights = useCallback((): AIInsight[] => {
     if (!displayData) return [];
     const insights: AIInsight[] = [];
@@ -611,7 +616,63 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Premium AI Insights Section - Glassmorphism Design */}
+      {/* Role Context Banner */}
+      {user?.role && (() => {
+        const roleMeta: Record<string, { label: string; desc: string; color: string; border: string; icon: string; actions: { label: string; href: string; }[] }> = {
+          ADMIN: {
+            label: 'Admin', desc: 'Full system access — manage users, settings, and all data.',
+            color: 'bg-orange-50', border: 'border-orange-200/70', icon: '👑',
+            actions: [{ label: 'Manage Users', href: '/dashboard/settings/users' }, { label: 'Audit Logs', href: '/dashboard/settings/audit-log' }, { label: 'Company Settings', href: '/dashboard/company' }],
+          },
+          RECRUITER: {
+            label: 'Recruiter', desc: 'Manage candidates, jobs, and the hiring pipeline.',
+            color: 'bg-blue-50', border: 'border-blue-200/70', icon: '💼',
+            actions: [{ label: 'Add Candidate', href: '/dashboard/candidates' }, { label: 'Post Job', href: '/dashboard/jobs' }, { label: 'Pipeline', href: '/dashboard/kanban' }],
+          },
+          HIRING_MANAGER: {
+            label: 'HR Manager', desc: 'Review candidates and manage interview stages for your team.',
+            color: 'bg-purple-50', border: 'border-purple-200/70', icon: '🧑‍💼',
+            actions: [{ label: 'View Candidates', href: '/dashboard/candidates' }, { label: 'Interviews', href: '/dashboard/calendar' }, { label: 'Analytics', href: '/dashboard/analytics' }],
+          },
+          INTERVIEWER: {
+            label: 'Interviewer', desc: 'View your assigned interviews and submit scorecards.',
+            color: 'bg-teal-50', border: 'border-teal-200/70', icon: '⭐',
+            actions: [{ label: 'My Interviews', href: '/dashboard/calendar' }, { label: 'Score Interviews', href: '/dashboard/premium/scoring' }, { label: 'Candidates', href: '/dashboard/candidates' }],
+          },
+          VIEWER: {
+            label: 'Viewer', desc: 'Read-only access — you can view data but cannot make changes.',
+            color: 'bg-stone-50', border: 'border-stone-200/70', icon: '👁️',
+            actions: [{ label: 'Candidates', href: '/dashboard/candidates' }, { label: 'Jobs', href: '/dashboard/jobs' }, { label: 'Analytics', href: '/dashboard/analytics' }],
+          },
+        };
+        const meta = roleMeta[user.role];
+        if (!meta) return null;
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className={`flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl px-4 py-3 border ${meta.color} ${meta.border}`}
+          >
+            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+              <span className="text-lg leading-none flex-shrink-0">{meta.icon}</span>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-stone-500 uppercase tracking-wide">{meta.label} View</span>
+                <p className="text-xs text-stone-600 truncate">{meta.desc}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
+              {meta.actions.map((a) => (
+                <Link key={a.href} href={a.href} className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-white/80 border border-stone-200 text-stone-700 hover:bg-white hover:border-stone-300 hover:text-stone-900 transition-all whitespace-nowrap">
+                  {a.label}
+                </Link>
+              ))}
+            </div>
+          </motion.div>
+        );
+      })()}
+
+      {/* Premium Smart Insights Section - Glassmorphism Design */}
       {generateAIInsights().length > 0 && (
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -636,7 +697,7 @@ export default function DashboardPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-bold text-violet-700 px-2.5 py-1 rounded-full bg-white/80 border border-violet-200 shadow-sm">
-                    AI INSIGHTS
+                    SMART INSIGHTS
                   </span>
                   {isRefreshing && (
                     <span className="flex items-center gap-1.5 text-xs text-violet-600 font-medium">
@@ -737,7 +798,7 @@ export default function DashboardPage() {
                 <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" />
                 <p className="text-sm sm:text-base font-bold text-amber-900">Premium Features</p>
               </div>
-              <p className="text-xs sm:text-sm text-amber-700/80 mt-0.5 leading-relaxed">9 advanced tools available - AI-powered recruitment at your fingertips</p>
+              <p className="text-xs sm:text-sm text-amber-700/80 mt-0.5 leading-relaxed">9 advanced tools available - Smart recruitment at your fingertips</p>
             </div>
           </div>
           <Link 
@@ -1355,3 +1416,11 @@ export default function DashboardPage() {
   );
 }
 
+export default function DashboardPage() {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (user?.role === 'ADMIN') return <AdminDashboard />;
+  if (user?.role === 'INTERVIEWER') return <InterviewerDashboard />;
+  if (user?.role === 'VIEWER') return <ViewerDashboard />;
+  return <RecruiterDashboard />;
+}

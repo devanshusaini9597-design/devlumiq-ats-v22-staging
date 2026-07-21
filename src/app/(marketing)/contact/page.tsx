@@ -28,9 +28,9 @@ const teamAvatars = [
 ];
 
 const trustBadges = [
-  { icon: Shield,       text: 'SOC 2 compliant'     },
-  { icon: CheckCircle2, text: 'GDPR ready'           },
-  { icon: Users,        text: '500+ companies trust' },
+  { icon: Shield,       text: 'GDPR ready'           },
+  { icon: CheckCircle2, text: 'CCPA ready'            },
+  { icon: Users,        text: 'Open-source template'  },
 ];
 
 /* â”€â”€â”€ Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */

@@ -13,10 +13,15 @@ This document will help you install, configure, and customize Devlumiq ATS. Foll
 5. [Customization](#5-customization)
 6. [Project Structure](#6-project-structure)
 7. [Database & Production](#7-database--production)
-8. [Translations](#8-translations)
-9. [Browser Support](#9-browser-support)
-10. [Asset Credits & Licenses](#10-asset-credits--licenses)
-11. [Troubleshooting](#11-troubleshooting)
+8. [Upgrading from v1](#8-upgrading-from-v1)
+9. [AI Features](#9-ai-features)
+10. [File Storage](#10-file-storage)
+11. [Integrations](#11-integrations)
+12. [Security](#12-security)
+13. [Translations](#13-translations)
+14. [Browser Support](#14-browser-support)
+15. [Asset Credits & Licenses](#15-asset-credits--licenses)
+16. [Troubleshooting](#16-troubleshooting)
 
 ---
 
@@ -30,7 +35,7 @@ Devlumiq ATS is a **full-stack** Applicant Tracking System built with:
 - **Prisma** (database ORM)
 - **Tailwind CSS**, **Framer Motion**, **Lucide Icons**
 
-It includes a real database (SQLite by default), REST API routes, a full recruitment dashboard, candidates, jobs, Kanban pipeline, calendar, analytics, reports, and a public marketing website. Every screen is wired to the database — no mock-only pages.
+It includes a real PostgreSQL database, REST API routes, a full recruitment dashboard, candidates, jobs, Kanban pipeline, calendar, analytics, reports, and a public marketing website. Every screen is wired to the database — no mock-only pages.
 
 ---
 
@@ -67,7 +72,7 @@ copy .env.example .env
 cp .env.example .env
 ```
 
-This creates a `.env` file with default settings using a local SQLite database. You can edit `.env` later to switch to PostgreSQL for production.
+This creates a `.env` file with default settings. Set `DATABASE_URL` to your PostgreSQL connection string (Neon, Supabase, and Railway all offer free tiers).
 
 ### Step 4: Install dependencies
 
@@ -77,23 +82,31 @@ npm install
 
 Wait until all packages are downloaded and installed.
 
-### Step 5: Create the database and apply migrations
+### Step 5: Create the database tables
 
 ```bash
-npx prisma migrate dev
+npx prisma db push
 ```
 
-This creates the SQLite database file at `prisma/dev.db` and applies all schema migrations. If prompted for a migration name, enter `init` and press Enter.
+This creates all tables from the schema (safe on both fresh and existing databases).
 
-### Step 6: Seed sample data (recommended)
+### Step 6: Record migration history
 
 ```bash
-npm run prisma:seed
+npx prisma migrate deploy
 ```
 
-This creates a sample user account, jobs, candidates, applications, and messages so you can explore the app immediately.
+This records all committed migrations so future upgrades run smoothly.
 
-### Step 7: Start the development server
+### Step 7: Seed sample data (recommended)
+
+```bash
+npm run seed
+```
+
+This creates sample user accounts (all roles), jobs, candidates, applications, and messages so you can explore the app immediately.
+
+### Step 8: Start the development server
 
 ```bash
 npm run dev
@@ -105,8 +118,14 @@ Open your browser and go to: **http://localhost:3000**
 
 ## 4. Logging In
 
-- **Default account**: `demo@devlumiq.com` / `demo`
-- Any email and password combination will work — a new user account is created automatically on first login.
+- **Default accounts** (all passwords: `Demo@1234`):
+  - `admin@devlumiq.com` → Admin
+  - `recruiter@devlumiq.com` → Recruiter
+  - `hiring@devlumiq.com` → Hiring Manager
+  - `interviewer@devlumiq.com` → Interviewer
+  - `viewer@devlumiq.com` → Viewer
+  - `demo@devlumiq.com` → Recruiter
+- New accounts require email verification and must be created via the registration page or invited by an admin.
 - After signing in you will see the **Dashboard**. Use the sidebar to navigate to Candidates, Jobs, Kanban, Calendar, Analytics, Reports, Settings, and more.
 
 ---
@@ -169,18 +188,19 @@ Edit **`src/app/layout.tsx`** and update the `metadata` object:
 
 ### Local Development
 
-By default the project uses **SQLite** stored at `prisma/dev.db`. No separate database server is required.
+The project requires **PostgreSQL**. For local development, use a free cloud PostgreSQL database (Neon, Supabase, or Railway) or install PostgreSQL locally.
 
 ### Production Deployment
 
-For a live site, switch to **PostgreSQL** or **MySQL**:
+For a live site, use **PostgreSQL**:
 
-1. Create a database with a provider such as Vercel Postgres, Railway, or PlanetScale.
-2. In **`prisma/schema.prisma`**, set `provider = "postgresql"` (or `"mysql"`).
+1. Create a PostgreSQL database with a provider such as Neon, Supabase, Railway, or Vercel Postgres.
+2. In **`prisma/schema.prisma`**, confirm `provider = "postgresql"`.
 3. In **`.env`** (or your host's environment variables panel), set `DATABASE_URL` to your connection string.
-4. Run migrations:
+4. Sync schema and run migrations:
 
    ```bash
+   npx prisma db push
    npx prisma migrate deploy
    ```
 
@@ -193,9 +213,122 @@ For a live site, switch to **PostgreSQL** or **MySQL**:
 
 > Do **not** run `prisma migrate dev` in production — always use `prisma migrate deploy`.
 
+### Database Compatibility
+
+Devlumiq ATS requires **PostgreSQL**. The schema uses PostgreSQL-specific features (`@db.Decimal` precision types, `Int[]` arrays) that are not compatible with MySQL or SQLite.
+
 ---
 
-## 8. Translations
+## 8. Upgrading from v1
+
+If you are updating from a v1 installation that already contains real candidates, jobs, or applications:
+
+### One-Command Upgrade (Recommended)
+
+1. **Back up your database** before doing anything.
+2. Run the upgrade helper:
+   ```bash
+   node scripts/upgrade-v1-to-v2.js
+   ```
+
+This script:
+- Generates the Prisma client with new v2 models
+- Runs `db push` to safely create all missing tables and columns
+- Runs `migrate deploy` to record migration history
+- Creates a default Company and backfills `organizationId` on all users, candidates, and jobs
+- Creates a FREE subscription for the company
+- Marks all existing users as email-verified
+
+**This script NEVER deletes data.**
+
+3. **Do NOT run `npm run seed`** after upgrading. The seed script will refuse to run if real data is detected. If you want to wipe everything and start fresh, use `npm run db:reset`.
+4. After the upgrade, existing v1 users must use **Forgot Password** to set a new password.
+5. Log in as an admin and review company settings at **Settings → Organization**.
+
+---
+
+## 9. AI Features
+
+Devlumiq ATS includes optional AI-powered features via OpenAI. All features work **without** an API key using rule-based fallbacks.
+
+### Setup
+
+1. Get an API key from [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+2. Add to your `.env`: `OPENAI_API_KEY="sk-..."`
+3. AI features activate automatically
+
+### Available AI Features
+
+| Feature | Without API Key | With API Key |
+|---------|----------------|---------------|
+| Resume Parsing | Regex keyword extraction | GPT-powered semantic extraction |
+| Candidate Ranking | Simple skill-match scoring | AI scoring with reasoning |
+| Candidate Screening | Rule-based verdict | AI assessment with recommendation |
+| Job Description | Template output | AI-written inclusive JD |
+| Email Drafting | Pre-built templates | AI-composed personalized emails |
+
+### API Endpoints
+
+- `POST /api/resume-parse` — Upload and parse resume
+- `POST /api/ai/rank` — Rank candidates against a job
+- `POST /api/ai/screen` — Screen candidate fit
+- `POST /api/ai/generate-jd` — Generate job description
+- `POST /api/ai/draft-email` — Draft professional email
+- `GET /api/ai/status` — Check if AI is configured
+
+**Cost:** ~$0.15 per 1M tokens with `gpt-4o-mini`. Typical usage: $1–5/month.
+
+---
+
+## 10. File Storage
+
+Resumes and uploaded files can be stored using three providers:
+
+| Provider | Config | Best For |
+|----------|--------|----------|
+| Local (default) | No config needed | Development |
+| AWS S3 | `FILE_STORAGE_PROVIDER=s3` + AWS credentials | Production |
+| Cloudflare R2 | `FILE_STORAGE_PROVIDER=r2` + R2 credentials | Production (cheaper egress) |
+
+See `.env.example` for the full list of environment variables for each provider.
+
+The file storage utility is at `src/lib/file-storage.ts`.
+
+---
+
+## 11. Integrations
+
+| Integration | Status | Configuration |
+|-------------|--------|---------------|
+| Email/SMTP | ✅ Working | Set SMTP_* vars in .env |
+| Checkr (background checks) | ✅ Working | Set CHECKR_API_KEY in .env |
+| Zapier | ✅ Working | Set ZAPIER_WEBHOOK_URL in .env |
+| Chrome Extension (LinkedIn) | ✅ Working | Set EXTENSION_API_KEY in .env |
+| WhatsApp | ✅ Working | Set WHATSAPP_TOKEN in .env |
+| AI (OpenAI) | ✅ Working (optional) | Set OPENAI_API_KEY in .env |
+| DocuSign | 🔧 Stub | Workflow works, real DocuSign SDK not integrated |
+| Job Boards (LinkedIn, Indeed) | 🔧 Stub | DB records created, board APIs not connected |
+| Google Calendar | 🔧 Local only | Events in DB, external sync needs OAuth |
+| Slack | ❌ Not connected | Planned |
+| Outlook | ❌ Not connected | Planned |
+
+---
+
+## 12. Security
+
+- **Authentication:** JWT stored in httpOnly cookie (`ats_session`)
+- **Passwords:** bcrypt hashed (12 rounds)
+- **RBAC:** 5 roles (Admin, Recruiter, Hiring Manager, Interviewer, Viewer) with 30+ granular permissions
+- **Rate Limiting:** Per-IP rate limiting on auth and upload endpoints
+- **CSRF:** Origin-based validation on mutating requests (production)
+- **Headers:** X-Frame-Options, CSP, HSTS, X-Content-Type-Options, Permissions-Policy
+- **Webhooks:** HMAC signature verification (Checkr, DocuSign)
+- **API Keys:** Hashed storage for integration keys
+- **Data Isolation:** Organization-scoped queries
+
+---
+
+## 13. Translations
 
 Devlumiq ATS supports 10 languages: English, Spanish, Arabic, French, German, Portuguese, Hindi, Chinese, Japanese, and Russian.
 
@@ -205,7 +338,7 @@ Devlumiq ATS supports 10 languages: English, Spanish, Arabic, French, German, Po
 
 ---
 
-## 9. Browser Support
+## 14. Browser Support
 
 Devlumiq ATS targets modern evergreen browsers:
 
@@ -216,7 +349,7 @@ Internet Explorer is not supported.
 
 ---
 
-## 10. Asset Credits & Licenses
+## 15. Asset Credits & Licenses
 
 - **Fonts**: Plus Jakarta Sans and JetBrains Mono via Google Fonts — [Google Fonts License](https://fonts.google.com/license)
 - **Icons**: Lucide Icons — [MIT License](https://github.com/lucide-icons/lucide/blob/main/LICENSE)
@@ -226,26 +359,27 @@ If you incorporate your own images, fonts, or third-party assets, ensure you hol
 
 ---
 
-## 11. Troubleshooting
+## 16. Troubleshooting
 
 **"Module not found" or install errors**
 
 - Delete `node_modules` and run `npm install` again.
 - Verify Node.js is version 18 or higher: `node -v`.
 
-**Database / Prisma errors**
+**2. Database / Prisma errors**
 
-- Confirm `.env` exists and `DATABASE_URL` is set (e.g. `file:./dev.db` for local SQLite).
-- Run `npx prisma generate` then `npx prisma migrate dev`.
-- If the database is corrupted, delete `prisma/dev.db` and re-run `npx prisma migrate dev` followed by `npm run prisma:seed`.
+- Confirm `.env` exists and `DATABASE_URL` is set.
+- Run `npx prisma generate` then `npx prisma db push` followed by `npx prisma migrate deploy`.
+- If the database is corrupted, reset it with `npx prisma migrate reset` followed by `npm run seed`.
+- **Warning:** `npm run seed` deletes all real candidates, jobs, and applications. Only run it on a fresh install or after a full reset.
 
-**Port 3000 already in use**
+**3. Port 3000 already in use**
 
 - Stop the conflicting process or start on a different port: `npm run dev -- -p 3001`.
 
 **Login not working**
 
-- Confirm you ran `npm run prisma:seed`. The default login is `demo@devlumiq.com` / `demo`. If you skipped seeding, enter any email and password — a new account will be created automatically.
+- Confirm you ran `npm run seed`. The default login is `demo@devlumiq.com` / `Demo@1234`. If you skipped seeding, you must register via the signup page or be invited by an admin.
 
 **Build fails**
 
@@ -253,6 +387,6 @@ If you incorporate your own images, fonts, or third-party assets, ensure you hol
 
 ---
 
-For technical details on API routes, database schema, and scripts, refer to **README.md**.
+For technical details on API routes, database schema, and scripts, refer to **README.md** and **docs/API.md**.
 
 **Thank you for choosing Devlumiq ATS.**

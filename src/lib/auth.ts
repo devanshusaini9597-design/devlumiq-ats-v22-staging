@@ -2,7 +2,10 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'devlumiq-ats-fallback-secret-change-in-production';
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('JWT_SECRET environment variable must be set in production');
+}
+const JWT_SECRET = process.env.JWT_SECRET || 'devlumiq-ats-dev-only-secret-do-not-use-in-production';
 export const SESSION_COOKIE = 'ats_session';
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
@@ -11,6 +14,7 @@ export interface SessionUser {
   name: string;
   email: string;
   role: string;
+  organizationId: string | null;
 }
 
 interface JwtPayload {
@@ -18,6 +22,8 @@ interface JwtPayload {
   email: string;
   name: string;
   role: string;
+  organizationId?: string | null;
+  tokenVersion?: number;
   iat?: number;
   exp?: number;
 }
@@ -47,43 +53,34 @@ export function sessionCookieOptions() {
   };
 }
 
-/** Resolve userId from cookie — supports JWT (new) and plain JSON (legacy) */
-function resolveUserId(cookieValue: string): string | null {
-  // Try JWT first
-  const payload = verifySession(cookieValue);
-  if (payload?.userId) return payload.userId;
-
-  // Fallback: legacy plain JSON (old sessions before this update)
-  try {
-    const legacy = JSON.parse(cookieValue) as { userId?: string };
-    return legacy?.userId ?? null;
-  } catch {
-    return null;
-  }
-}
-
 export async function getSession(): Promise<SessionUser | null> {
   try {
     const cookieStore = await cookies();
     const cookieValue = cookieStore.get(SESSION_COOKIE)?.value;
     if (!cookieValue) return null;
 
-    const userId = resolveUserId(cookieValue);
-    if (!userId) return null;
-
-    // Demo user — no DB record needed
-    if (userId === 'demo-user') {
-      return { id: 'demo-user', name: 'Demo User', email: 'demo@devlumiq.com', role: 'RECRUITER' };
-    }
+    const jwtPayload = verifySession(cookieValue);
+    if (!jwtPayload?.userId) return null;
 
     const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, name: true, email: true, role: true, isActive: true },
+      where: { id: jwtPayload.userId },
+      select: { id: true, name: true, email: true, role: true, isActive: true, organizationId: true, tokenVersion: true },
     });
 
     if (!user || !user.isActive) return null;
 
-    return { id: user.id, name: user.name, email: user.email, role: user.role };
+    // Phase B: tokenVersion guard — any password change or force-logout increments this
+    if (jwtPayload.tokenVersion !== undefined && user.tokenVersion !== jwtPayload.tokenVersion) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      organizationId: user.organizationId ?? null,
+    };
   } catch (error) {
     console.error('getSession error:', error);
     return null;
@@ -99,4 +96,28 @@ export async function requireRole(roles: string[]): Promise<SessionUser | null> 
   if (!user) return null;
   if (!roles.includes(user.role)) return null;
   return user;
+}
+
+/**
+ * Increment the user's tokenVersion — instantly invalidates ALL existing JWTs
+ * for that user (password change, admin force-logout, account deactivation).
+ */
+export async function invalidateAllSessions(userId: string): Promise<void> {
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: userId }, data: { tokenVersion: { increment: 1 } } }),
+    prisma.userSession.deleteMany({ where: { userId } }),
+  ]);
+}
+
+/** Record a new session in UserSession for active-session tracking */
+export async function createUserSession(
+  userId: string,
+  tokenVersion: number,
+  ipAddress: string | null,
+  userAgent: string | null,
+): Promise<void> {
+  const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);
+  await prisma.userSession.create({
+    data: { userId, tokenVersion, ipAddress, userAgent, expiresAt },
+  }).catch(() => {});
 }

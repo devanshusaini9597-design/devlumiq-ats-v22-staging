@@ -111,7 +111,7 @@ function QuickSearchWidget() {
         </div>
         <div>
           <h3 className="font-bold text-stone-800 text-sm">Smart Search</h3>
-          <p className="text-xs text-stone-500">AI-powered candidate finder</p>
+          <p className="text-xs text-stone-500">Smart candidate finder</p>
         </div>
         <button 
           onClick={() => setIsExpanded(!isExpanded)}
@@ -469,10 +469,10 @@ export default function PremiumDashboardSection() {
     {
       icon: Search,
       title: 'Smart Search',
-      description: 'AI-powered candidate search with filters for skills, experience & tags',
+      description: 'Advanced candidate search with filters for skills, experience & tags',
       color: 'bg-violet-500',
       gradient: 'bg-gradient-to-br from-violet-100 to-purple-100 hover:from-violet-200 hover:to-purple-200',
-      badge: 'AI',
+      badge: 'Pro',
       id: 'search'
     },
     {
@@ -510,11 +510,11 @@ export default function PremiumDashboardSection() {
     },
     {
       icon: Upload,
-      title: 'Resume AI',
+      title: 'Resume Parser',
       description: 'Parse PDFs and extract skills automatically',
       color: 'bg-indigo-500',
       gradient: 'bg-gradient-to-br from-indigo-100 to-violet-100 hover:from-indigo-200 hover:to-violet-200',
-      badge: 'AI',
+      badge: 'Pro',
       id: 'resume'
     },
     {

@@ -1,42 +1,29 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-permission';
 
-// GET /api/calendar/availability - Get user's availability
-export async function GET(request: Request) {
+export const GET = withAuth(async (_req, _ctx, session) => {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
-    }
-
     const availability = await prisma.interviewAvailability.findMany({
-      where: { userId },
+      where: { userId: session.id },
       orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
     });
-
     return NextResponse.json(availability);
   } catch (error) {
     console.error('Error fetching availability:', error);
     return NextResponse.json({ error: 'Failed to fetch availability' }, { status: 500 });
   }
-}
+});
 
-// POST /api/calendar/availability - Set availability
-export async function POST(request: Request) {
+export const POST = withAuth(async (request: NextRequest, _ctx, session) => {
   try {
-    const { userId, availability } = await request.json();
+    const { availability } = await request.json();
 
-    // Clear existing availability
-    await prisma.interviewAvailability.deleteMany({
-      where: { userId },
-    });
+    await prisma.interviewAvailability.deleteMany({ where: { userId: session.id } });
 
-    // Create new availability slots
     const slots = await prisma.interviewAvailability.createMany({
-      data: availability.map((slot: any) => ({
-        userId,
+      data: (availability as any[]).map((slot) => ({
+        userId: session.id,
         dayOfWeek: slot.dayOfWeek,
         startTime: slot.startTime,
         endTime: slot.endTime,
@@ -51,4 +38,4 @@ export async function POST(request: Request) {
     console.error('Error setting availability:', error);
     return NextResponse.json({ error: 'Failed to set availability' }, { status: 500 });
   }
-}
+});

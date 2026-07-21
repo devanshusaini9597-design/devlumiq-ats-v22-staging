@@ -6,6 +6,7 @@ import {
   Users, Plus, Shield, Search, ChevronDown, X, Check,
   Loader2, AlertTriangle, UserCheck, UserX, Edit2,
   Crown, Eye, Briefcase, UserCog, RefreshCw, Save,
+  Mail,
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { useAuth } from '@/hooks/useAuth';
@@ -114,7 +115,7 @@ function InviteModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
             <p className="mt-1.5 text-xs text-stone-400">{ROLE_DESCRIPTIONS[role]}</p>
           </div>
           <p className="text-xs text-stone-400 bg-stone-50 rounded-lg px-3 py-2">
-            A temporary password <span className="font-mono font-medium text-stone-600">Welcome123!</span> will be set. The user should change it after first login.
+            An invitation email with a secure setup link will be sent to this address. The user will set their own password.
           </p>
         </div>
 
@@ -213,6 +214,7 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState<Role | 'ALL'>('ALL');
   const [showInvite, setShowInvite] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -244,6 +246,25 @@ export default function UsersPage() {
       }
     } finally {
       setTogglingId(null);
+    }
+  };
+
+  const resendInvite = async (u: UserRow) => {
+    if (u.id === me?.id) return;
+    setResendingId(u.id);
+    try {
+      const res = await fetch(`/api/users/${u.id}/resend-invite`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        alert(`Invite resent to ${u.email}`);
+      } else {
+        alert(data?.error ?? 'Failed to resend invite');
+      }
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -404,20 +425,33 @@ export default function UsersPage() {
                   {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Never'}
                 </td>
                 <td className="px-5 py-3.5">
-                  {u.id !== me?.id && (
-                    <button
-                      onClick={() => toggleActive(u)}
-                      disabled={togglingId === u.id}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                        u.isActive
-                          ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                          : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                      } disabled:opacity-50`}
-                    >
-                      {togglingId === u.id ? <Loader2 className="w-3 h-3 animate-spin" /> : u.isActive ? <UserX className="w-3 h-3" /> : <UserCheck className="w-3 h-3" />}
-                      {u.isActive ? 'Deactivate' : 'Reactivate'}
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {u.id !== me?.id && !u.lastLoginAt && (
+                      <button
+                        onClick={() => resendInvite(u)}
+                        disabled={resendingId === u.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-50 text-brand-600 hover:bg-brand-100 transition-all disabled:opacity-50"
+                        title="Resend invitation email"
+                      >
+                        {resendingId === u.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
+                        Resend
+                      </button>
+                    )}
+                    {u.id !== me?.id && (
+                      <button
+                        onClick={() => toggleActive(u)}
+                        disabled={togglingId === u.id}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          u.isActive
+                            ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                            : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                        } disabled:opacity-50`}
+                      >
+                        {togglingId === u.id ? <Loader2 className="w-3 h-3 animate-spin" /> : u.isActive ? <UserX className="w-3 h-3" /> : <UserCheck className="w-3 h-3" />}
+                        {u.isActive ? 'Deactivate' : 'Reactivate'}
+                      </button>
+                    )}
+                  </div>
                 </td>
               </motion.tr>
             ))}
@@ -471,18 +505,30 @@ export default function UsersPage() {
                     />
                   )}
                 </div>
-                {u.id !== me?.id && (
-                  <button
-                    onClick={() => toggleActive(u)}
-                    disabled={togglingId === u.id}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 ${
-                      u.isActive ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'
-                    }`}
-                  >
-                    {togglingId === u.id ? <Loader2 className="w-3 h-3 animate-spin" /> : u.isActive ? <UserX className="w-3 h-3" /> : <UserCheck className="w-3 h-3" />}
-                    {u.isActive ? 'Deactivate' : 'Reactivate'}
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {u.id !== me?.id && !u.lastLoginAt && (
+                    <button
+                      onClick={() => resendInvite(u)}
+                      disabled={resendingId === u.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-50 text-brand-600 disabled:opacity-50"
+                    >
+                      {resendingId === u.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
+                      Resend
+                    </button>
+                  )}
+                  {u.id !== me?.id && (
+                    <button
+                      onClick={() => toggleActive(u)}
+                      disabled={togglingId === u.id}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 ${
+                        u.isActive ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'
+                      }`}
+                    >
+                      {togglingId === u.id ? <Loader2 className="w-3 h-3 animate-spin" /> : u.isActive ? <UserX className="w-3 h-3" /> : <UserCheck className="w-3 h-3" />}
+                      {u.isActive ? 'Deactivate' : 'Reactivate'}
+                    </button>
+                  )}
+                </div>
               </div>
 
               <p className="text-xs text-stone-400">

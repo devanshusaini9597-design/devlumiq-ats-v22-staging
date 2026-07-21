@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-permission';
 
-export async function GET(request: NextRequest) {
+// ── Calendar Events (local database only) ────────────────────────────────────
+// Events are stored in the local DB only. There is no sync with external
+// calendar providers (Google Calendar, Outlook 365, etc.).
+// To add external sync, use the CalendarIntegration model in the DB and
+// implement OAuth + Calendar API calls in /api/calendar/integrations.
+export const GET = withAuth(async (request: NextRequest, _ctx, session) => {
   try {
     const { searchParams } = new URL(request.url);
     const start = searchParams.get('start');
@@ -10,9 +16,13 @@ export async function GET(request: NextRequest) {
     const startDate = start ? new Date(start) : new Date(0);
     const endDate = end ? new Date(end) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
 
+    const orgJobIds = session.organizationId
+      ? (await prisma.job.findMany({ where: { companyId: session.organizationId }, select: { id: true } })).map(j => j.id)
+      : [];
     const events = await prisma.interviewEvent.findMany({
       where: {
         start: { gte: startDate, lte: endDate },
+        ...(orgJobIds.length > 0 ? { jobId: { in: orgJobIds } } : {}),
       },
       include: { candidate: true, job: true },
       orderBy: { start: 'asc' },
@@ -36,4 +46,4 @@ export async function GET(request: NextRequest) {
     console.error('GET /api/calendar/events', e);
     return NextResponse.json({ error: 'Failed to load calendar events' }, { status: 500 });
   }
-}
+});

@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { stageToDisplay } from '@/lib/api-helpers';
+import { withAuth, withPermission } from '@/lib/with-permission';
+import {
+  applyBlindScreening,
+  isOrgBlindScreeningEnabled,
+  shouldBlindScreen,
+} from '@/lib/blind-screening';
 
-export async function GET(
+export const GET = withAuth(async (
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+  { params }: { params: Promise<{ id: string }> },
+  session
+) => {
   try {
     const { id } = await params;
     const candidate = await prisma.candidate.findUnique({
@@ -19,11 +26,15 @@ export async function GET(
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
     }
 
+    if (session.organizationId && candidate.organizationId && candidate.organizationId !== session.organizationId) {
+      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
+    }
+
     const app = candidate.applications[0];
     const position = app?.job?.title ?? '';
     const status = app ? stageToDisplay(app.stage) : 'Applied';
 
-    return NextResponse.json({
+    let payload = {
       id: candidate.id,
       name: candidate.name,
       email: candidate.email,
@@ -53,19 +64,42 @@ export async function GET(
         stage: stageToDisplay(a.stage),
         createdAt: a.createdAt.toISOString(),
       })),
-    });
+      blindScreening: false,
+    };
+
+    if (
+      shouldBlindScreen(
+        session.role,
+        await isOrgBlindScreeningEnabled(session.organizationId),
+      )
+    ) {
+      payload = {
+        ...applyBlindScreening(payload, true),
+        blindScreening: true,
+      };
+    }
+
+    return NextResponse.json(payload);
   } catch (e) {
     console.error('GET /api/candidates/[id]', e);
     return NextResponse.json({ error: 'Failed to load candidate' }, { status: 500 });
   }
-}
+});
 
-export async function PATCH(
+export const PATCH = withPermission('EDIT_CANDIDATE', async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+  { params }: { params: Promise<{ id: string }> },
+  session
+) => {
   try {
     const { id } = await params;
+
+    const existing = await prisma.candidate.findUnique({ where: { id }, select: { organizationId: true } });
+    if (!existing) return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
+    if (session.organizationId && existing.organizationId && existing.organizationId !== session.organizationId) {
+      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
+    }
+
     const body = await request.json();
     const { name, email, phone, source } = body as {
       name?: string;
@@ -105,14 +139,22 @@ export async function PATCH(
     console.error('PATCH /api/candidates/[id]', e);
     return NextResponse.json({ error: 'Failed to update candidate' }, { status: 500 });
   }
-}
+});
 
-export async function DELETE(
+export const DELETE = withPermission('DELETE_CANDIDATE', async (
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+  { params }: { params: Promise<{ id: string }> },
+  session
+) => {
   try {
     const { id } = await params;
+
+    const existing = await prisma.candidate.findUnique({ where: { id }, select: { organizationId: true } });
+    if (!existing) return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
+    if (session.organizationId && existing.organizationId && existing.organizationId !== session.organizationId) {
+      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
+    }
+
     await prisma.application.deleteMany({ where: { candidateId: id } });
     await prisma.candidate.delete({ where: { id } });
     return NextResponse.json({ ok: true });
@@ -120,4 +162,4 @@ export async function DELETE(
     console.error('DELETE /api/candidates/[id]', e);
     return NextResponse.json({ error: 'Failed to delete candidate' }, { status: 500 });
   }
-}
+});

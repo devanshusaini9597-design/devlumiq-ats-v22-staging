@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth, withPermission } from '@/lib/with-permission';
 
-export async function GET(
+export const GET = withAuth(async (
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+  { params }: { params: Promise<{ id: string }> },
+  session
+) => {
   try {
     const { id } = await params;
-    const job = await prisma.job.findUnique({
-      where: { id },
+    const job = await prisma.job.findFirst({
+      where: {
+        id,
+        ...(session.organizationId ? { companyId: session.organizationId } : {}),
+      },
       include: { applications: { include: { candidate: true } } },
     });
 
@@ -42,16 +47,29 @@ export async function GET(
     console.error('GET /api/jobs/[id]', e);
     return NextResponse.json({ error: 'Failed to load job' }, { status: 500 });
   }
-}
+});
 
-export async function PATCH(
+export const PATCH = withPermission('EDIT_JOB', async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+  { params }: { params: Promise<{ id: string }> },
+  session
+) => {
   try {
     const { id } = await params;
     const body = await request.json();
     const { title, department, location, type, status, description, requirements, salaryMin, salaryMax, currency } = body;
+
+    // Verify ownership before updating
+    const existing = await prisma.job.findFirst({
+      where: {
+        id,
+        ...(session.organizationId ? { companyId: session.organizationId } : {}),
+      },
+      select: { id: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    }
 
     const job = await prisma.job.update({
       where: { id },
@@ -83,14 +101,28 @@ export async function PATCH(
     console.error('PATCH /api/jobs/[id]', e);
     return NextResponse.json({ error: 'Failed to update job' }, { status: 500 });
   }
-}
+});
 
-export async function DELETE(
+export const DELETE = withPermission('DELETE_JOB', async (
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+  { params }: { params: Promise<{ id: string }> },
+  session
+) => {
   try {
     const { id } = await params;
+
+    // Verify ownership before deleting
+    const existing = await prisma.job.findFirst({
+      where: {
+        id,
+        ...(session.organizationId ? { companyId: session.organizationId } : {}),
+      },
+      select: { id: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    }
+
     await prisma.application.deleteMany({ where: { jobId: id } });
     await prisma.job.delete({ where: { id } });
     return NextResponse.json({ ok: true });
@@ -98,4 +130,4 @@ export async function DELETE(
     console.error('DELETE /api/jobs/[id]', e);
     return NextResponse.json({ error: 'Failed to delete job' }, { status: 500 });
   }
-}
+});

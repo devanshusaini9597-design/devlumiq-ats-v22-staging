@@ -20,18 +20,33 @@ model User {
   avatar        String?
   isActive      Boolean   @default(true)
   lastLoginAt   DateTime?
+  tokenVersion  Int       @default(0)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Auth tokens
+  isEmailVerified         Boolean   @default(false)
+  verificationToken       String?   @unique
+  verificationTokenExpiry DateTime?
+  resetToken              String?   @unique
+  resetTokenExpiry        DateTime?
+  inviteToken             String?   @unique
+  inviteTokenExpiry       DateTime?
+
+  // Multi-tenancy
+  organizationId String?
+  organization   Company? @relation("CompanyUsers", fields: [organizationId], references: [id])
+
   // Relations
-  ownedJobs        Job[] @relation("JobOwner")
-  assignedInterviews InterviewEvent[] @relation("InterviewAssignee")
-  referralSubmissions Referral[] @relation("Referrer")
-  scoreSubmissions   InterviewScore[]
-  activityLogs       UserActivityLog[]
-  apiKeys            ApiKey[]
-  savedSearches      SavedSearch[]
-  webhookEvents      WebhookEvent[]
+  ownedJobs           Job[]          @relation("JobOwner")
+  assignedInterviews  InterviewEvent[] @relation("InterviewAssignee")
+  referralSubmissions Referral[]     @relation("Referrer")
+  scoreSubmissions    InterviewScore[]
+  activityLogs        UserActivityLog[]
+  apiKeys             ApiKey[]
+  savedSearches       SavedSearch[]
+  webhookEvents       WebhookEvent[]
+  sessions            UserSession[]
 }
 
 enum UserRole {
@@ -40,6 +55,19 @@ enum UserRole {
   HIRING_MANAGER
   INTERVIEWER
   VIEWER
+}
+
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenVersion Int
+  ipAddress    String?
+  userAgent    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
 }
 
 // ============================================
@@ -77,6 +105,9 @@ model Company {
   showTeamPhotos Boolean  @default(false)
   customDomain    String?  @unique
 
+  // Careers chatbot FAQ override: [{ q, a, keywords: string[] }]
+  careersFaq      Json?
+
   // Social Sharing
   enableLinkedInShare  Boolean @default(true)
   enableTwitterShare   Boolean @default(true)
@@ -92,6 +123,12 @@ model Company {
   teamMembers TeamMember[]
   jobs        Job[]
   socialLinks CompanySocialLink[]
+  users       User[]      @relation("CompanyUsers")
+  candidates  Candidate[] @relation("CompanyCandidates")
+  subscription Subscription?
+  orgApiKeys   OrgApiKeyConfig[]
+  customSkills Skill[]    @relation("OrgSkills")
+  talentPools  TalentPool[]
 }
 
 model CompanyBenefit {
@@ -233,21 +270,21 @@ model SavedSearch {
   // Search Parameters
   query           String?
   booleanQuery    String?  // Advanced boolean search
-  skills          String[]
+  skills          Json
   experienceMin   Int?
   experienceMax   Int?
-  education       String[]
+  education       Json
   location        String?
   remoteOnly      Boolean  @default(false)
   salaryMin       Int?
   salaryMax       Int?
-  source          String[]
-  tags            String[]
+  source          Json
+  tags            Json
   datePosted      String?  // last24h, last7d, last30d, all
 
   // Filters
-  statusFilters   String[]
-  stageFilters    String[]
+  statusFilters   Json
+  stageFilters    Json
 
   // Settings
   isAlertEnabled  Boolean  @default(false)
@@ -264,7 +301,7 @@ model SearchIndex {
   candidateId  String @unique
   candidate    Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   content      String   // Full text content for searching
-  skills       String[]
+  skills       Json
   experience   Json?    // Structured experience data
   education    Json?    // Structured education data
   updatedAt    DateTime @updatedAt
@@ -326,7 +363,7 @@ model FormField {
   options     FormFieldOption[]
 
   // File upload settings
-  allowedFileTypes String[] // pdf, doc, docx, jpg, png, etc.
+  allowedFileTypes Json // pdf, doc, docx, jpg, png, etc.
   maxFileSize      Int?      // in bytes
 
   // Conditional logic
@@ -426,18 +463,21 @@ enum JobBoard {
 }
 
 model JobBoardCredential {
-  id           String   @id @default(cuid())
-  board        JobBoard
-  accountName  String?
-  apiKey       String?
-  apiSecret    String?
-  accessToken  String?
-  refreshToken String?
-  expiresAt    DateTime?
-  isActive     Boolean  @default(true)
-  settings     Json?    // Board-specific settings
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String   @id @default(cuid())
+  board          JobBoard
+  accountName    String?
+  apiKey         String?
+  apiSecret      String?
+  accessToken    String?
+  refreshToken   String?
+  expiresAt      DateTime?
+  isActive       Boolean  @default(true)
+  organizationId String?
+  settings       Json?    // Board-specific settings
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
 }
 
 // ============================================
@@ -445,20 +485,23 @@ model JobBoardCredential {
 // ============================================
 
 model ScorecardTemplate {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  category    String   @default("general") // technical, cultural, behavioral, leadership
-  isDefault   Boolean  @default(false)
-  isActive    Boolean  @default(true)
-  createdById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  category       String   @default("general") // technical, cultural, behavioral, leadership
+  isDefault      Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  createdById    String?
+  organizationId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relations
   criteria ScorecardCriteria[]
   interviews InterviewEvent[]
   jobs Job[]
+
+  @@index([organizationId])
 }
 
 model ScorecardCriteria {
@@ -472,7 +515,7 @@ model ScorecardCriteria {
   sortOrder     Int      @default(0)
 
   // Interview guide
-  suggestedQuestions String[]
+  suggestedQuestions Json
   whatToLookFor      String?
   redFlags           String?
 }
@@ -482,16 +525,16 @@ model InterviewScore {
   interviewId   String
   interview     InterviewEvent @relation(fields: [interviewId], references: [id], onDelete: Cascade)
   criteriaId    String?
-  criteriaName  String
+  criteriaName  String?
   criteriaDescription String?
   score         Int
   maxScore      Int      @default(5)
   weight        Decimal  @default(1.0) @db.Decimal(3, 2)
   notes         String?
-  scoredById    String
-  scoredBy      User     @relation(fields: [scoredById], references: [id])
+  scoredById    String?
+  scoredBy      User?    @relation(fields: [scoredById], references: [id])
   createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  updatedAt     DateTime @updatedAt @default(now())
 
   // Overall recommendation
   recommendation String?  @default("pending") // strong_hire, hire, leaning_hire, neutral, leaning_no, no_hire
@@ -541,6 +584,7 @@ model EmailSequenceStep {
   subject     String?
   body        String?
   condition   String?  // Conditional logic (e.g., "stage == 'phone_screen'")
+  channel     MessageChannel @default(EMAIL)
 }
 
 model EmailSequenceEnrollment {
@@ -639,6 +683,9 @@ model SourceQualityMetric {
   hireRate      Decimal? @db.Decimal(5, 2)
   avgTimeToHire Int?     // Average hours
   costPerHire   Decimal? @db.Decimal(10, 2)
+  organizationId String?
+
+  @@index([organizationId])
 }
 
 model AnalyticsDashboard {
@@ -657,21 +704,29 @@ model AnalyticsDashboard {
 // ============================================
 
 model AssessmentTemplate {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  category    String   @default("technical") // technical, cognitive, personality, language
-  type        AssessmentType
-  duration    Int?     // Duration in minutes
-  difficulty  String   @default("intermediate") // beginner, intermediate, advanced
-  isActive    Boolean  @default(true)
-  passingScore Int     @default(70)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  category       String   @default("technical") // technical, cognitive, personality, language
+  type           AssessmentType
+  duration       Int?     // Duration in minutes
+  difficulty     String   @default("intermediate") // beginner, intermediate, advanced
+  isActive       Boolean  @default(true)
+  passingScore   Int      @default(70)
+  organizationId String?
+  // Proctoring (additive — off by default for existing buyers)
+  proctoringEnabled Boolean @default(false)
+  proctoringStrictness String @default("standard") // off, standard, strict
+  requireFullscreen Boolean @default(false)
+  snapshotIntervalSec Int   @default(30)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relations
   questions AssessmentQuestion[]
   assignments AssessmentAssignment[]
+
+  @@index([organizationId])
 }
 
 enum AssessmentType {
@@ -711,6 +766,8 @@ model AssessmentAssignment {
   applicationId String?
   application   Application? @relation(fields: [applicationId], references: [id])
   assignedById  String
+  // Public take-link token (additive)
+  accessToken   String?  @unique
 
   status        String   @default("pending") // pending, in_progress, completed, expired
   startedAt     DateTime?
@@ -721,12 +778,37 @@ model AssessmentAssignment {
   percentage    Decimal? @db.Decimal(5, 2)
   passed        Boolean?
   feedback      String?
+  // pending_review when open-ended/personality still need recruiter scores; reviewed when done
+  reviewStatus  String?
+  reminderSentAt DateTime?
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   // Relations
   responses AssessmentResponse[]
+  proctoringSession ProctoringSession?
+
+  @@index([accessToken])
+  @@index([status, expiresAt])
+}
+
+model ProctoringSession {
+  id              String   @id @default(cuid())
+  assignmentId    String   @unique
+  assignment      AssessmentAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  webcamSnapshots Json     @default("[]") // [{url|dataUrl, at, risk?}]
+  tabSwitchCount  Int      @default(0)
+  copyPasteEvents Json     @default("[]") // [{type, at, questionId?}]
+  blurEvents      Json     @default("[]")
+  timeline        Json     @default("[]") // unified integrity events
+  flagged         Boolean  @default(false)
+  riskScore       Int      @default(0) // 0–100
+  plagiarismScore Float?
+  plagiarismNotes String?
+  fullscreenExits Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model AssessmentResponse {
@@ -739,7 +821,11 @@ model AssessmentResponse {
   isCorrect    Boolean?
   pointsEarned Int      @default(0)
   timeSpent    Int?     // Seconds spent on this question
+  feedback     String?  // Recruiter feedback (manual review)
   submittedAt  DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([assignmentId, questionId])
 }
 
 // ============================================
@@ -811,19 +897,22 @@ model ESignatureRequest {
 }
 
 model OfferLetterTemplate {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  category    String   @default("full_time") // full_time, part_time, contract, internship
-  content     String   // HTML template
-  variables   String[] // List of available variables
-  isDefault   Boolean  @default(false)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  category       String   @default("full_time") // full_time, part_time, contract, internship
+  content        String   // HTML template
+  variables      Json // List of available variables
+  isDefault      Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  organizationId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relations
   offerLetters OfferLetter[]
+
+  @@index([organizationId])
 }
 
 // ============================================
@@ -835,6 +924,7 @@ model ReferralProgram {
   name            String
   description     String?
   isActive        Boolean  @default(true)
+  organizationId  String?
 
   // Reward settings
   rewardType      String   @default("cash") // cash, gift_card, points, days_off
@@ -847,14 +937,16 @@ model ReferralProgram {
   maxReferralsPerMonth Int? // Limit referrals per employee
 
   // Job eligibility
-  eligibleJobIds  String[] // Empty = all jobs eligible
-  excludedJobIds  String[]
+  eligibleJobIds  Json // Empty = all jobs eligible
+  excludedJobIds  Json
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   // Relations
   referrals Referral[]
+
+  @@index([organizationId])
 }
 
 model Referral {
@@ -919,7 +1011,7 @@ model BackgroundCheck {
   requestedById String?
 
   // Check configuration
-  checkTypes    String[] // criminal, employment, education, identity, credit, motor_vehicle, drug
+  checkTypes    Json // criminal, employment, education, identity, credit, motor_vehicle, drug
   packageType   String?  // standard, premium, etc.
   externalId    String?  // Provider's check ID
   providerCandidateId String?  // Checkr candidate ID
@@ -960,7 +1052,8 @@ model ApiKey {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String
   key         String   @unique
-  permissions String[] // read, write, delete, admin
+  keyHash     String?  @unique // SHA-256 hex hash of the raw key — used for secure lookup
+  permissions Json // read, write, delete, admin
   lastUsedAt  DateTime?
   expiresAt   DateTime?
   isActive    Boolean  @default(true)
@@ -968,20 +1061,23 @@ model ApiKey {
 }
 
 model Webhook {
-  id          String   @id @default(cuid())
-  name        String
-  url         String
-  secret      String   // For signature verification
-  events      String[] // application.created, candidate.updated, etc.
-  isActive    Boolean  @default(true)
-  headers     Json?    // Custom headers
-  retryCount  Int      @default(3)
-  timeout     Int      @default(30) // Seconds
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  url            String
+  secret         String   // For signature verification
+  events         Json // application.created, candidate.updated, etc.
+  isActive       Boolean  @default(true)
+  headers        Json?    // Custom headers
+  retryCount     Int      @default(3)
+  timeout        Int      @default(30) // Seconds
+  organizationId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relations
   eventsLog   WebhookEvent[]
+
+  @@index([organizationId])
 }
 
 model WebhookEvent {
@@ -1007,8 +1103,8 @@ model WebhookEvent {
 
 model Job {
   id            String   @id @default(cuid())
-  companyId     String
-  company       Company  @relation(fields: [companyId], references: [id])
+  companyId     String?
+  company       Company? @relation(fields: [companyId], references: [id])
   title         String
   department    String
   location      String
@@ -1055,11 +1151,12 @@ model Job {
   pipelineStages  Json?    // Custom pipeline stages for this job
 
   createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  updatedAt       DateTime @updatedAt @default(now())
   
   // Analytics relations
   pipelineMetrics PipelineMetric[]
   timeToHireMetrics TimeToHireMetric[]
+  jobSkills       JobSkill[]
 }
 
 model Candidate {
@@ -1074,9 +1171,20 @@ model Candidate {
   // Profile
   source       String?  @default("direct") // direct, linkedin, indeed, referral, etc.
   sourceDetail String?  // Specific source detail
-  skills       String[]
-  tags         String[]
+  skills       Json     @default("[]")
+  tags         Json     @default("[]")
   experience   Int?     // Years of experience
+
+  // Messaging consent (TCPA / WhatsApp opt-in) — additive, default false
+  smsOptIn           Boolean   @default(false)
+  whatsappOptIn      Boolean   @default(false)
+  phoneVerifiedAt    DateTime?
+  messagingConsentAt DateTime?
+  messagingConsentIp String?
+
+  // Talent pool retention consent (GDPR) — default false; must opt-in
+  talentPoolConsent   Boolean   @default(false)
+  talentPoolConsentAt DateTime?
   
   // Location
   location     String?
@@ -1101,6 +1209,10 @@ model Candidate {
   // Social
   linkedInImports LinkedInImport[]
   
+  // Multi-tenancy
+  organizationId String?
+  organization   Company? @relation("CompanyCandidates", fields: [organizationId], references: [id])
+
   // Portal
   portalUserId String? @unique
   portalUser   CandidatePortalUser? @relation(fields: [portalUserId], references: [id])
@@ -1120,13 +1232,16 @@ model Candidate {
   backgroundChecks BackgroundCheck[]
   eSignatureRequests ESignatureRequest[]
   searchIndex     SearchIndex?
+  candidateSkills CandidateSkill[]
+  talentPoolMembers TalentPoolMember[]
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  @@unique([email])
+  @@unique([email, organizationId])
   @@index([skills])
   @@index([source])
+  @@index([email])
 }
 
 model Application {
@@ -1156,8 +1271,7 @@ model Application {
   
   // Timestamps
   appliedAt   DateTime @default(now())
-  lastActivityAt DateTime @updatedAt
-  
+  lastActivityAt DateTime @updatedAt @default(now())
   // Stage timestamps for analytics
   screeningAt DateTime?
   interviewAt DateTime?
@@ -1244,9 +1358,86 @@ model InterviewEvent {
   // Feedback
   feedbackSummary String?
   nextSteps   String?
+
+  // Recording / AI notes (additive)
+  recordingConsent Boolean @default(false)
+  recordingConsentAt DateTime?
+  transcriptRetentionDays Int @default(90)
+  transcript InterviewTranscript?
+
+  // Meeting join bot (Recall.ai BYOK)
+  meetingBotId       String?
+  meetingBotProvider String?  // recall | other
+  meetingBotStatus   String?  // pending | joining | done | failed
   
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime @updatedAt @default(now())
+}
+
+model InterviewTranscript {
+  id              String   @id @default(cuid())
+  interviewEventId String  @unique
+  interview       InterviewEvent @relation(fields: [interviewEventId], references: [id], onDelete: Cascade)
+  rawTranscript   String
+  speakers        Json     @default("[]") // [{speaker, text, startMs?, endMs?}]
+  timestamps      Json     @default("[]") // key moments [{label, startMs, endMs?}]
+  source          String   @default("manual") // manual, zoom, meet, teams, webhook
+  aiSummary       String?
+  suggestedScore  Float?
+  suggestedRecommendation String?
+  scorecardSuggestions Json? // [{criteriaId|name, suggestedScore, rationale}]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================
+// 20. DEI — Self-ID (separate from hiring data)
+// ============================================
+// NEVER join self-ID into scorecards or AI ranking.
+
+model CandidateSelfId {
+  id             String   @id @default(cuid())
+  // Soft link only — not used in hiring decision queries
+  candidateId    String?
+  applicationId  String?
+  organizationId String
+  // Voluntary self-ID (all optional)
+  gender         String?
+  ethnicity      String?
+  veteranStatus  String?
+  disability     String?
+  declinedToSelfId Boolean @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([candidateId])
+  @@index([applicationId])
+}
+
+model DiversityMetric {
+  id             String   @id @default(cuid())
+  organizationId String
+  jobId          String?
+  stage          String   // Applied, Screening, Interview, Offer, Hired
+  period         String   @default("monthly")
+  date           DateTime @default(now())
+  // Aggregated counts only — never individual
+  breakdown      Json     // { gender: {..}, ethnicity: {..} }
+  totalCount     Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, stage])
+  @@index([jobId])
+}
+
+model OrgDeiSettings {
+  id             String  @id @default(cuid())
+  organizationId String  @unique
+  blindScreeningEnabled Boolean @default(false)
+  diverseSlateAlerts    Boolean @default(false)
+  selfIdFormEnabled     Boolean @default(true)
+  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now())
 }
 
 model OfferLetter {
@@ -1302,7 +1493,7 @@ model CandidateNote {
   body        String
   isPrivate   Boolean    @default(false)
   createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  updatedAt   DateTime   @updatedAt @default(now())
 }
 
 model Comment {
@@ -1312,7 +1503,7 @@ model Comment {
   authorName  String
   authorEmail String
   authorAvatar String?
-  mentions    String[]   // Array of mentioned user IDs
+  mentions    Json?  // Array of mentioned user IDs
   candidateId String?
   candidate   Candidate? @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   jobId       String?
@@ -1325,7 +1516,7 @@ model Resume {
   candidateId String
   candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   fileName    String
-  fileUrl     String
+  fileUrl     String?
   fileSize    Int?
   mimeType    String?
   parsedData  Json?
@@ -1336,30 +1527,45 @@ model Resume {
 }
 
 model EmailTemplate {
-  id          String   @id @default(cuid())
-  name        String
-  subject     String
-  body        String   // HTML content
-  category    String   @default("general") // general, interview, offer, rejection, onboarding
-  variables   String[] // Available template variables
-  isDefault   Boolean  @default(false)
-  isSystem    Boolean  @default(false) // Can't be deleted
-  createdById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  subject        String
+  body           String   // HTML content
+  // Short-form channel copies (additive — email body remains primary)
+  smsBody        String?
+  whatsappBody   String?
+  category       String   @default("general") // general, interview, offer, rejection, onboarding
+  variables      Json? // Available template variables
+  isDefault      Boolean  @default(false)
+  isSystem       Boolean  @default(false) // Can't be deleted
+  createdById    String?
+  organizationId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relations
   sequenceSteps EmailSequenceStep[]
+
+  @@index([organizationId])
 }
 
 model MessageThread {
-  id          String    @id @default(cuid())
-  candidateId String?
-  subject     String
-  lastMessageAt DateTime @default(now())
-  createdAt   DateTime  @default(now())
+  id             String    @id @default(cuid())
+  candidateId    String?
+  subject        String
+  organizationId String?
+  lastMessageAt  DateTime  @default(now())
+  createdAt      DateTime  @default(now())
 
   messages    Message[]
+
+  @@index([organizationId])
+}
+
+enum MessageChannel {
+  EMAIL
+  SMS
+  WHATSAPP
 }
 
 model Message {
@@ -1368,8 +1574,13 @@ model Message {
   thread      MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
   fromUserId  String?
   fromName    String
-  fromEmail   String
+  fromEmail   String        @default("")
   toEmail     String?
+  // Multi-channel (defaults preserve existing email-only buyers)
+  channel     MessageChannel @default(EMAIL)
+  toPhone     String?
+  fromPhone   String?
+  externalId  String?       // Twilio SID / WhatsApp wamid
   body        String
   bodyHtml    String?
   direction   String        @default("INBOUND") // INBOUND, OUTBOUND
@@ -1388,6 +1599,9 @@ model Message {
   @@index([isRead])
   @@index([isDeleted])
   @@index([sentAt])
+  @@index([channel])
+  @@index([toPhone])
+  @@index([externalId])
 }
 
 model Notification {
@@ -1444,9 +1658,12 @@ model Announcement {
   cta       String?
   href      String?
   isActive  Boolean  @default(true)
+  organizationId String?
   startDate DateTime @default(now())
   endDate   DateTime?
   createdAt DateTime @default(now())
+
+  @@index([organizationId])
 }
 
 model UserSettings {
@@ -1477,6 +1694,20 @@ model UserSettings {
   
   updatedAt             DateTime @updatedAt
   createdAt             DateTime @default(now())
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, endpoint])
+  @@index([userId])
 }
 
 // ============================================
@@ -1520,17 +1751,168 @@ model Integration {
 
 // Webhook subscriptions (for Zapier and other integrations)
 model WebhookSubscription {
-  id          String   @id @default(cuid())
-  url         String
-  events      String[] // Array of event types
-  secret      String?  // For signature verification
-  name        String?
-  description String?
-  isActive    Boolean  @default(true)
+  id             String   @id @default(cuid())
+  url            String
+  events         Json // Array of event types
+  secret         String?  // For signature verification
+  name           String?
+  description    String?
+  isActive       Boolean  @default(true)
+  organizationId String?
   lastTriggeredAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([isActive])
   @@index([events])
+  @@index([organizationId])
+}
+
+// ============================================
+// 16. SUBSCRIPTION BILLING
+// ============================================
+
+enum Plan {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum SubStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
+}
+
+model Subscription {
+  id               String    @id @default(cuid())
+  organizationId   String    @unique
+  organization     Company   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stripeCustomerId String?   @unique
+  stripeSubId      String?   @unique
+  plan             Plan      @default(FREE)
+  status           SubStatus @default(ACTIVE)
+  currentPeriodEnd DateTime?
+  cancelAtPeriodEnd Boolean  @default(false)
+  seats            Int       @default(3)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+// ============================================
+// 17. BYOK (Bring Your Own Key) CONFIG
+// ============================================
+
+model OrgApiKeyConfig {
+  id             String  @id @default(cuid())
+  organizationId String
+  organization   Company @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  provider       String  // "openai", "checkr", "smtp", "whatsapp", etc.
+  encryptedKey   String  // AES-256-GCM encrypted API key
+  isActive       Boolean @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, provider])
+}
+
+// ============================================
+// 18. SKILLS TAXONOMY
+// ============================================
+// Additive: Candidate.skills / Job.requirements JSON remain for backward compatibility.
+// CandidateSkill / JobSkill are the canonical source when present.
+
+model Skill {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  category       String   @default("General") // Engineering, Design, Product, Soft Skills, etc.
+  description    String?
+  isSystem       Boolean  @default(false) // seeded system taxonomy
+  organizationId String?  // null = global/system; set for org-custom skills
+  organization   Company? @relation("OrgSkills", fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  candidateSkills CandidateSkill[]
+  jobSkills       JobSkill[]
+
+  @@index([name])
+  @@index([category])
+  @@index([organizationId])
+}
+
+model CandidateSkill {
+  id           String   @id @default(cuid())
+  candidateId  String
+  candidate    Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  skillId      String
+  skill        Skill     @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  proficiency  Int       @default(3) // 1–5
+  yearsUsed    Float?
+  source       String    @default("manual") // manual, resume, import, csv
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([candidateId, skillId])
+  @@index([skillId])
+}
+
+model JobSkill {
+  id             String  @id @default(cuid())
+  jobId          String
+  job            Job     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  skillId        String
+  skill          Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  required       Boolean @default(true)
+  minProficiency Int     @default(1)
+  weight         Float   @default(1)
+  createdAt      DateTime @default(now())
+
+  @@unique([jobId, skillId])
+  @@index([skillId])
+}
+
+// ============================================
+// 19. TALENT CRM / SILVER-MEDALIST POOLS
+// ============================================
+
+model TalentPool {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Company  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  poolType       String   @default("general") // general, silver_medalist, skill, keep_warm, future_fit
+  tags           Json     @default("[]")
+  isActive       Boolean  @default(true)
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  members TalentPoolMember[]
+
+  @@index([organizationId])
+  @@index([poolType])
+}
+
+model TalentPoolMember {
+  id          String     @id @default(cuid())
+  poolId      String
+  pool        TalentPool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  candidateId String
+  candidate   Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  tags        Json       @default("[]")
+  addedReason String?
+  addedById   String?
+  lastContactedAt DateTime?
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([poolId, candidateId])
+  @@index([candidateId])
+  @@index([lastContactedAt])
 }

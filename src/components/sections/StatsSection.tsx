@@ -5,10 +5,10 @@ import { motion, useInView } from 'framer-motion';
 import { useLocale } from '@/components/providers/LocaleProvider';
 
 const statConfigs = [
-  { value: 500, suffix: '+', labelKey: 'stats.companies', duration: 1800 },
-  { value: 50, suffix: 'K+', labelKey: 'stats.candidates', duration: 2000 },
-  { value: 40, suffix: '%', labelKey: 'stats.fasterHiring', duration: 1600 },
-  { value: 99.9, suffix: '%', labelKey: 'stats.uptime', duration: 2200 },
+  { value: 50, suffix: '+', labelKey: 'stats.models', duration: 1800 },
+  { value: 10, suffix: '', labelKey: 'stats.languages', duration: 2000 },
+  { value: 5, suffix: '', labelKey: 'stats.roles', duration: 1600 },
+  { value: 33, suffix: '', labelKey: 'stats.permissions', duration: 2200 },
 ];
 
 function useCountUp(end: number, duration: number, startOn: boolean) {

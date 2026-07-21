@@ -7,7 +7,7 @@ import {
   ArrowRight, CheckCircle2, Clock, Headphones, Lock,
   Building2, Globe, Star, Award, PhoneCall,
   ChevronRight, Sparkles, MessageSquare, CalendarDays,
-  Rocket, Target, Quote, X
+  Rocket, Target, X
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import CTASection from '@/components/sections/CTASection';
@@ -56,7 +56,7 @@ export default function EnterprisePage() {
   const [monthlyHires, setMonthlyHires] = useState(50);
   const [recruiterRate, setRecruiterRate] = useState(75);
 
-  const hoursSaved = Math.round(monthlyHires * 8.5);
+  const hoursSaved = Math.round(monthlyHires * 2.5);
   const costSaved = hoursSaved * recruiterRate;
 
   const featureIcons = [Shield, Users, Network, BarChart3, Zap, Server];
@@ -69,7 +69,7 @@ export default function EnterprisePage() {
     'from-sky-500 to-indigo-500',
   ];
   const secIcons = [Award, Lock, Globe, Building2, Users, Server];
-  const logos = ['Acme Corp', 'Nexus Inc', 'Orbital', 'Stratum', 'Vortex HQ', 'Pinnacle', 'Apex Global', 'Meridian'];
+  const logos = ['Next.js', 'React', 'TypeScript', 'Prisma', 'Tailwind CSS', 'PostgreSQL', 'OpenAI', 'Vercel'];
   const logosDoubled = [...logos, ...logos];
 
   const processIcons = [MessageSquare, CalendarDays, Rocket, Target];
@@ -79,14 +79,6 @@ export default function EnterprisePage() {
     { text: 'text-violet-600', lightText: 'text-violet-700', bg: 'bg-violet-50', border: 'border-violet-200', numBg: 'bg-violet-50' },
     { text: 'text-amber-600', lightText: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', numBg: 'bg-amber-50' },
   ];
-
-  const testimonialColors = [
-    'from-teal-500 to-cyan-500',
-    'from-brand-500 to-violet-500',
-    'from-amber-500 to-orange-500',
-  ];
-  const testimonialInitials = ['JM', 'SR', 'KP'];
-  const testimonialTextColors = ['text-teal-600', 'text-brand-600', 'text-amber-600'];
 
   const compareFeatureKeys = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6'];
   const compareData = [
@@ -293,52 +285,6 @@ export default function EnterprisePage() {
         </div>
       </section>
 
-      {/* ── TESTIMONIALS ── stone-50 */}
-      <section className="py-16 sm:py-24 lg:py-28 px-4 sm:px-6 bg-stone-50 relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-amber-100/60 rounded-full blur-[120px] pointer-events-none" />
-        <div className="max-w-6xl mx-auto relative z-10">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} variants={stagger} className="text-center mb-16">
-            <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-200 bg-amber-50 text-amber-700 text-xs font-semibold uppercase tracking-widest mb-4">
-              {t('enterprise.testimonials.badge')}
-            </motion.div>
-            <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight mb-4 text-slate-900">{t('enterprise.testimonials.title')}</motion.h2>
-            <motion.p variants={fadeUp} className="text-stone-500 max-w-2xl mx-auto">{t('enterprise.testimonials.subtitle')}</motion.p>
-          </motion.div>
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {[0, 1, 2].map(i => (
-              <motion.div key={i} variants={scaleIn} whileHover={{ y: -5, scale: 1.01 }} transition={{ type: 'spring', stiffness: 280 }}
-                className="relative p-8 rounded-2xl border border-stone-200 bg-white shadow-sm hover:shadow-md transition-all group flex flex-col">
-                <Quote className="w-6 h-6 text-stone-200 mb-5 flex-shrink-0" />
-                <div className="flex gap-0.5 mb-4">
-                  {[...Array(5)].map((_, s) => (
-                    <Star key={s} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <p className="text-stone-600 text-sm leading-relaxed mb-auto italic">
-                  &ldquo;{t(`enterprise.t${i + 1}.quote`)}&rdquo;
-                </p>
-                <div className="mt-6 pt-6 border-t border-stone-100 flex items-end justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${testimonialColors[i]} flex items-center justify-center text-white text-xs font-black flex-shrink-0 shadow-md`}>
-                      {testimonialInitials[i]}
-                    </div>
-                    <div>
-                      <div className="text-slate-900 font-semibold text-sm leading-tight">{t(`enterprise.t${i + 1}.author`)}</div>
-                      <div className="text-stone-500 text-xs">{t(`enterprise.t${i + 1}.role`)}</div>
-                      <div className="text-stone-400 text-xs">{t(`enterprise.t${i + 1}.company`)}</div>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <div className={`text-2xl font-black ${testimonialTextColors[i]}`}>{t(`enterprise.t${i + 1}.metric`)}</div>
-                    <div className="text-stone-400 text-xs">{t(`enterprise.t${i + 1}.metricLabel`)}</div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
       {/* ── SECURITY GRID ── white */}
       <section className="py-16 sm:py-24 lg:py-28 px-4 sm:px-6 bg-white">
         <div className="max-w-6xl mx-auto">
@@ -450,7 +396,7 @@ export default function EnterprisePage() {
               {[
                 { icon: Clock, label: t('enterprise.support.hours'), sub: 'Dedicated Support', color: 'text-violet-400', bg: 'bg-violet-500/10' },
                 { icon: Star, label: t('enterprise.support.nps'), sub: 'Satisfaction Score', color: 'text-amber-400', bg: 'bg-amber-500/10' },
-                { icon: Headphones, label: t('enterprise.support.time'), sub: 'Response Time SLA', color: 'text-teal-400', bg: 'bg-teal-500/10' },
+                { icon: Headphones, label: t('enterprise.support.time'), sub: 'Response Time', color: 'text-teal-400', bg: 'bg-teal-500/10' },
               ].map((card, i) => (
                 <motion.div key={i} variants={scaleIn}
                   className="flex items-center gap-5 p-5 rounded-2xl border border-white/10 bg-white/[0.05] hover:bg-white/[0.08] transition-colors backdrop-blur-sm">

@@ -9,6 +9,7 @@ import {
   CheckCircle2, Globe, Clock, DollarSign, FileText 
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { JobSkillEditor } from '@/components/dashboard/JobSkillEditor';
 
 interface JobData {
   id: string;
@@ -284,6 +285,13 @@ export default function EditJobPage() {
                 className="w-full px-3 py-2.5 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none resize-none"
                 placeholder="List the required skills, experience, and qualifications..."
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-2">
+                Taxonomy skills
+              </label>
+              <JobSkillEditor jobId={id} />
             </div>
           </div>
         </div>

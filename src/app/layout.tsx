@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from 'next';
+import { validateEnv } from '@/lib/env';
+validateEnv();
 import { Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import { LocaleProvider } from '@/components/providers/LocaleProvider';
 import { MotionProvider } from '@/components/providers/MotionProvider';
@@ -6,6 +8,7 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { GlobalPreloaderWrapper } from '@/components/GlobalPreloaderWrapper';
 import { GlobalRouteLoadingBar } from '@/components/GlobalRouteLoadingBar';
 import ScrollToTop from '@/components/ScrollToTop';
+import { PwaRegister } from '@/components/PwaRegister';
 import './globals.css';
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -65,8 +68,14 @@ export const metadata: Metadata = {
     icon: '/logo.png',
     apple: '/logo.png',
   },
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'DevLumiq ATS',
+  },
   other: {
-    'theme-color': '#fafaf9',
+    'theme-color': '#0d9488',
     'msapplication-TileColor': '#0d9488',
   },
 };
@@ -94,6 +103,7 @@ export default function RootLayout({
               <GlobalRouteLoadingBar />
               {children}
               <ScrollToTop />
+              <PwaRegister />
             </GlobalPreloaderWrapper>
           </ToastProvider>
           </MotionProvider>

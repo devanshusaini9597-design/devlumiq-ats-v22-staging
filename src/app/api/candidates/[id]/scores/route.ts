@@ -1,17 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
-
-/** Returns the session user, or falls back to the first user in the DB (for seeded/legacy data). */
-async function resolveUser(req: NextRequest) {
-  const session = await getSession();
-  if (session?.id) {
-    const user = await prisma.user.findUnique({ where: { id: session.id } });
-    if (user) return user;
-  }
-  // Fallback: use the first existing user (never creates a phantom record)
-  return prisma.user.findFirst();
-}
+import { withAuth, withPermission } from '@/lib/with-permission';
 
 async function getOrCreateInterview(candidateId: string, userId: string) {
   let interview = await prisma.interviewEvent.findFirst({
@@ -35,7 +24,7 @@ async function getOrCreateInterview(candidateId: string, userId: string) {
   return interview;
 }
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withAuth(async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await params;
 
@@ -71,19 +60,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     console.error('GET /api/candidates/[id]/scores', error);
     return NextResponse.json({ scores: [] });
   }
-}
+});
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withPermission('SCORE_INTERVIEW', async (req: NextRequest, { params }: { params: Promise<{ id: string }> }, session) => {
   try {
     const { id } = await params;
     const data = await req.json();
 
-    const user = await resolveUser(req);
-    if (!user) {
-      return NextResponse.json({ error: 'No user found to record score' }, { status: 500 });
-    }
-
-    const interview = await getOrCreateInterview(id, user.id);
+    const interview = await getOrCreateInterview(id, session.id);
 
     // Upsert: update if same criteria exists, else create
     const existing = await prisma.interviewScore.findFirst({
@@ -111,7 +95,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           score: data.score,
           maxScore: data.maxScore || 5,
           notes: data.notes || '',
-          scoredById: user.id,
+          scoredById: session.id,
           weight: 1.0,
         },
         include: { scoredBy: { select: { name: true } } },
@@ -124,16 +108,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       score: score.score,
       maxScore: score.maxScore,
       notes: score.notes || '',
-      scoredBy: score.scoredBy?.name ?? user.name,
+      scoredBy: score.scoredBy?.name ?? session.name,
       createdAt: score.createdAt.toISOString(),
     }, { status: 201 });
   } catch (error) {
     console.error('POST /api/candidates/[id]/scores', error);
     return NextResponse.json({ error: 'Failed to save score' }, { status: 500 });
   }
-}
+});
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const DELETE = withPermission('SCORE_INTERVIEW', async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await params;
 
@@ -154,4 +138,4 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     console.error('DELETE /api/candidates/[id]/scores', error);
     return NextResponse.json({ error: 'Failed to delete scores' }, { status: 500 });
   }
-}
+});

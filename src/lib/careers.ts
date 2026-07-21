@@ -7,8 +7,21 @@ export async function getJobs(filters?: {
   location?: string;
   type?: string;
   search?: string;
+  companySlug?: string;
 }) {
+  let companyId: string | undefined;
+  if (filters?.companySlug) {
+    const company = await prisma.company.findUnique({
+      where: { slug: filters.companySlug },
+      select: { id: true },
+    });
+    companyId = company?.id;
+  }
+
   const where: any = { status: 'Active' };
+  if (companyId) {
+    where.companyId = companyId;
+  }
 
   if (filters?.department && filters.department !== 'all') {
     where.department = filters.department;
@@ -42,12 +55,12 @@ export async function getJobs(filters?: {
       },
     }),
     prisma.job.findMany({
-      where: { status: 'Active' },
+      where: { status: 'Active', ...(companyId ? { companyId } : {}) },
       distinct: ['department'],
       select: { department: true },
     }),
     prisma.job.findMany({
-      where: { status: 'Active' },
+      where: { status: 'Active', ...(companyId ? { companyId } : {}) },
       distinct: ['location'],
       select: { location: true },
     }),
@@ -63,9 +76,18 @@ export async function getJobs(filters?: {
   };
 }
 
-export async function getJobById(id: string) {
+export async function getJobById(id: string, companySlug?: string) {
+  let companyId: string | undefined;
+  if (companySlug) {
+    const company = await prisma.company.findUnique({
+      where: { slug: companySlug },
+      select: { id: true },
+    });
+    companyId = company?.id;
+  }
+
   const job = await prisma.job.findFirst({
-    where: { id, status: 'Active' },
+    where: { id, status: 'Active', ...(companyId ? { companyId } : {}) },
     select: {
       id: true,
       title: true,
@@ -74,6 +96,7 @@ export async function getJobById(id: string) {
       type: true,
       postedAt: true,
       applicants: true,
+      companyId: true,
     },
   });
 

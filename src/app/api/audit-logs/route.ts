@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { withPermission } from '@/lib/with-permission';
 
 /** GET /api/audit-logs — view activity logs (ADMIN only) */
-export const GET = withPermission('VIEW_AUDIT_LOGS', async (request: NextRequest) => {
+export const GET = withPermission('VIEW_AUDIT_LOGS', async (request: NextRequest, _ctx, session) => {
   try {
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1'));
@@ -11,7 +11,18 @@ export const GET = withPermission('VIEW_AUDIT_LOGS', async (request: NextRequest
     const userId = searchParams.get('userId') ?? undefined;
     const action = searchParams.get('action') ?? undefined;
 
+    // Scope logs to users in the same org
+    let orgUserIds: string[] | undefined;
+    if (session.organizationId) {
+      const orgUsers = await prisma.user.findMany({
+        where: { organizationId: session.organizationId },
+        select: { id: true },
+      });
+      orgUserIds = orgUsers.map((u) => u.id);
+    }
+
     const where = {
+      ...(orgUserIds ? { userId: { in: orgUserIds } } : {}),
       ...(userId ? { userId } : {}),
       ...(action ? { action } : {}),
     };

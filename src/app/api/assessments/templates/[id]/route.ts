@@ -35,7 +35,10 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, description, category, type, duration, difficulty, passingScore, isActive } = body;
+    const {
+      name, description, category, type, duration, difficulty, passingScore, isActive,
+      proctoringEnabled, proctoringStrictness, requireFullscreen, snapshotIntervalSec,
+    } = body;
 
     const template = await prisma.assessmentTemplate.update({
       where: { id },
@@ -48,6 +51,10 @@ export async function PATCH(
         ...(difficulty !== undefined && { difficulty }),
         ...(passingScore !== undefined && { passingScore }),
         ...(isActive !== undefined && { isActive }),
+        ...(proctoringEnabled !== undefined && { proctoringEnabled: !!proctoringEnabled }),
+        ...(proctoringStrictness !== undefined && { proctoringStrictness }),
+        ...(requireFullscreen !== undefined && { requireFullscreen: !!requireFullscreen }),
+        ...(snapshotIntervalSec !== undefined && { snapshotIntervalSec: Number(snapshotIntervalSec) || 30 }),
       },
       include: {
         questions: { orderBy: { sortOrder: 'asc' } },

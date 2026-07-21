@@ -21,6 +21,8 @@ All licenses are respected and acknowledged below.
 |---------|---------|------|
 | [Prisma](https://www.prisma.io) | Apache-2.0 | https://github.com/prisma/prisma |
 | [bcryptjs](https://www.npmjs.com/package/bcryptjs) | MIT | https://github.com/dcodeIO/bcrypt.js |
+| [jsonwebtoken](https://www.npmjs.com/package/jsonwebtoken) | MIT | https://github.com/auth0/node-jsonwebtoken |
+| [date-fns](https://date-fns.org) | MIT | https://github.com/date-fns/date-fns |
 
 ---
 
@@ -42,10 +44,11 @@ All licenses are respected and acknowledged below.
 | Package | License | Link |
 |---------|---------|------|
 | [jspdf](https://www.npmjs.com/package/jspdf) | MIT | https://github.com/parallax/jsPDF |
+| [jspdf-autotable](https://www.npmjs.com/package/jspdf-autotable) | MIT | https://github.com/simonbengtsson/jsPDF-AutoTable |
 | [xlsx](https://www.npmjs.com/package/xlsx) | Apache-2.0 | https://github.com/SheetJS/sheetjs |
 | [nodemailer](https://nodemailer.com) | MIT | https://github.com/nodemailer/nodemailer |
 | [pdf-parse](https://www.npmjs.com/package/pdf-parse) | MIT | https://gitlab.com/autokent/pdf-parse |
-| [qrcode](https://www.npmjs.com/package/qrcode) | MIT | https://github.com/soldair/node-qrcode |
+| [mammoth](https://www.npmjs.com/package/mammoth) | BSD-2-Clause | https://github.com/mwilliamson/mammoth.js |
 
 ---
 
@@ -57,6 +60,34 @@ All licenses are respected and acknowledged below.
 | JetBrains Mono | SIL Open Font License 1.1 | https://fonts.google.com/specimen/JetBrains+Mono |
 
 Both fonts are served via [Google Fonts](https://fonts.google.com) under their respective SIL OFL licenses.
+
+---
+
+## State Management
+
+| Package | License | Link |
+|---------|---------|------|
+| [Zustand](https://zustand-demo.pmnd.rs) | MIT | https://github.com/pmndrs/zustand |
+| [Chart.js](https://www.chartjs.org) | MIT | https://github.com/chartjs/Chart.js |
+| [react-chartjs-2](https://react-chartjs-2.js.org) | MIT | https://github.com/reactchartjs/react-chartjs-2 |
+| [@tanstack/react-table](https://tanstack.com/table) | MIT | https://github.com/TanStack/table |
+
+---
+
+## Rich Text Editor
+
+| Package | License | Link |
+|---------|---------|------|
+| [Tiptap](https://tiptap.dev) | MIT | https://github.com/ueberdosis/tiptap |
+
+---
+
+## Testing
+
+| Package | License | Link |
+|---------|---------|------|
+| [Vitest](https://vitest.dev) | MIT | https://github.com/vitest-dev/vitest |
+| [Playwright](https://playwright.dev) | Apache-2.0 | https://github.com/microsoft/playwright |
 
 ---
 

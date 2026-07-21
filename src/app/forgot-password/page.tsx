@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -28,11 +30,24 @@ export default function ForgotPasswordPage() {
     }
 
     setLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setLoading(false);
-    setSubmitted(true);
-    toast.success('Reset link sent!', `Check ${email} for password reset instructions.`);
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setFieldError(data?.error ?? 'Request failed. Please try again.');
+        return;
+      }
+      setSubmitted(true);
+      toast.success('Reset link sent!', `Check ${email} for password reset instructions.`);
+    } catch {
+      setFieldError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

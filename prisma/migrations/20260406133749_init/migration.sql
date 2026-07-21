@@ -1,5 +1,5 @@
 -- CreateTable
-CREATE TABLE "User" (
+CREATE TABLE IF NOT EXISTS "User" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE "User" (
 );
 
 -- CreateTable
-CREATE TABLE "Job" (
+CREATE TABLE IF NOT EXISTS "Job" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "department" TEXT NOT NULL,
@@ -25,7 +25,7 @@ CREATE TABLE "Job" (
 );
 
 -- CreateTable
-CREATE TABLE "Candidate" (
+CREATE TABLE IF NOT EXISTS "Candidate" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE "Candidate" (
 );
 
 -- CreateTable
-CREATE TABLE "Application" (
+CREATE TABLE IF NOT EXISTS "Application" (
     "id" TEXT NOT NULL,
     "candidateId" TEXT NOT NULL,
     "jobId" TEXT NOT NULL,
@@ -50,7 +50,7 @@ CREATE TABLE "Application" (
 );
 
 -- CreateTable
-CREATE TABLE "InterviewEvent" (
+CREATE TABLE IF NOT EXISTS "InterviewEvent" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "type" TEXT NOT NULL,
@@ -66,7 +66,7 @@ CREATE TABLE "InterviewEvent" (
 );
 
 -- CreateTable
-CREATE TABLE "MessageThread" (
+CREATE TABLE IF NOT EXISTS "MessageThread" (
     "id" TEXT NOT NULL,
     "subject" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -75,7 +75,7 @@ CREATE TABLE "MessageThread" (
 );
 
 -- CreateTable
-CREATE TABLE "Message" (
+CREATE TABLE IF NOT EXISTS "Message" (
     "id" TEXT NOT NULL,
     "threadId" TEXT NOT NULL,
     "fromName" TEXT NOT NULL,
@@ -88,7 +88,7 @@ CREATE TABLE "Message" (
 );
 
 -- CreateTable
-CREATE TABLE "ActivityLog" (
+CREATE TABLE IF NOT EXISTS "ActivityLog" (
     "id" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "payload" JSONB NOT NULL,
@@ -98,7 +98,7 @@ CREATE TABLE "ActivityLog" (
 );
 
 -- CreateTable
-CREATE TABLE "Announcement" (
+CREATE TABLE IF NOT EXISTS "Announcement" (
     "id" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "title" TEXT NOT NULL,
@@ -112,7 +112,7 @@ CREATE TABLE "Announcement" (
 );
 
 -- CreateTable
-CREATE TABLE "CandidateNote" (
+CREATE TABLE IF NOT EXISTS "CandidateNote" (
     "id" TEXT NOT NULL,
     "candidateId" TEXT NOT NULL,
     "authorName" TEXT NOT NULL,
@@ -123,7 +123,7 @@ CREATE TABLE "CandidateNote" (
 );
 
 -- CreateTable
-CREATE TABLE "Notification" (
+CREATE TABLE IF NOT EXISTS "Notification" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "message" TEXT NOT NULL,
@@ -136,25 +136,55 @@ CREATE TABLE "Notification" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Candidate_email_key" ON "Candidate"("email");
+CREATE UNIQUE INDEX IF NOT EXISTS "Candidate_email_key" ON "Candidate"("email");
 
 -- AddForeignKey
-ALTER TABLE "Application" ADD CONSTRAINT "Application_candidateId_fkey" FOREIGN KEY ("candidateId") REFERENCES "Candidate"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Application_candidateId_fkey') THEN
+        ALTER TABLE "Application" ADD CONSTRAINT "Application_candidateId_fkey" FOREIGN KEY ("candidateId") REFERENCES "Candidate"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+    END IF;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "Application" ADD CONSTRAINT "Application_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "Job"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Application_jobId_fkey') THEN
+        ALTER TABLE "Application" ADD CONSTRAINT "Application_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "Job"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+    END IF;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "InterviewEvent" ADD CONSTRAINT "InterviewEvent_candidateId_fkey" FOREIGN KEY ("candidateId") REFERENCES "Candidate"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'InterviewEvent_candidateId_fkey') THEN
+        ALTER TABLE "InterviewEvent" ADD CONSTRAINT "InterviewEvent_candidateId_fkey" FOREIGN KEY ("candidateId") REFERENCES "Candidate"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+    END IF;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "InterviewEvent" ADD CONSTRAINT "InterviewEvent_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "Job"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'InterviewEvent_jobId_fkey') THEN
+        ALTER TABLE "InterviewEvent" ADD CONSTRAINT "InterviewEvent_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "Job"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+    END IF;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "Message" ADD CONSTRAINT "Message_threadId_fkey" FOREIGN KEY ("threadId") REFERENCES "MessageThread"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Message_threadId_fkey') THEN
+        ALTER TABLE "Message" ADD CONSTRAINT "Message_threadId_fkey" FOREIGN KEY ("threadId") REFERENCES "MessageThread"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+    END IF;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "CandidateNote" ADD CONSTRAINT "CandidateNote_candidateId_fkey" FOREIGN KEY ("candidateId") REFERENCES "Candidate"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'CandidateNote_candidateId_fkey') THEN
+        ALTER TABLE "CandidateNote" ADD CONSTRAINT "CandidateNote_candidateId_fkey" FOREIGN KEY ("candidateId") REFERENCES "Candidate"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+END $$;

@@ -9,7 +9,7 @@ import {
   ArrowLeft, Mail, Phone, Calendar, FileText, MessageSquare, Sparkles,
   User, Briefcase, Building2, Star, FileCheck, MapPin, Globe, Linkedin,
   Github, ExternalLink, Clock, Tag, Hash, Save, X, CheckCircle,
-  ChevronRight, TrendingUp, Award, Upload,
+  ChevronRight, TrendingUp, Award, Upload, ClipboardList,
 } from 'lucide-react';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
@@ -20,6 +20,10 @@ import { InterviewScoringPanel, InterviewScoreModal } from '@/components/premium
 import { ResumeParserPanel } from '@/components/premium/ResumeParser';
 import { OfferLetterGenerator } from '@/components/premium/OfferLetter';
 import { TeamComments } from '@/components/premium/TeamComments';
+import { SkillMatchBadge } from '@/components/dashboard/SkillMatchBadge';
+import { AssignmentDetailModal } from '@/components/dashboard/AssignmentDetailModal';
+import { SkillEditor } from '@/components/dashboard/SkillEditor';
+import { InterviewTranscriptPanel } from '@/components/dashboard/InterviewTranscriptPanel';
 
 const statusColors: Record<string, string> = {
   Applied: 'bg-brand-100 text-brand-700',
@@ -47,7 +51,7 @@ function getSmartMatchScore(id: string): number {
   return 65 + (n % 34);
 }
 
-type AppItem = { id: string; jobTitle: string; stage: string; createdAt?: string };
+type AppItem = { id: string; jobId?: string; jobTitle: string; stage: string; createdAt?: string };
 type CandidateData = {
   id: string; name: string; email: string; position?: string; source?: string; status?: string;
   phone?: string; createdAt?: string; applications?: AppItem[]; skills?: string[]; tags?: string[];
@@ -57,6 +61,18 @@ type CandidateData = {
 };
 type NoteItem = { id: string; authorName: string; body: string; createdAt: string; mentions?: string[] };
 type ScoreItem = { id: string; criteria: string; score: number; maxScore: number; notes: string; scoredBy: string; createdAt: string };
+type AssessmentItem = {
+  id: string;
+  status: string;
+  score: number | null;
+  maxScore: number | null;
+  percentage: number | null;
+  passed: boolean | null;
+  reviewStatus: string | null;
+  submittedAt: string | null;
+  createdAt: string;
+  template: { name: string; category: string; duration: number | null };
+};
 
 export default function CandidateProfilePage() {
   const params = useParams();
@@ -66,8 +82,12 @@ export default function CandidateProfilePage() {
   const [candidate, setCandidate] = useState<CandidateData | null>(null);
   const [notes, setNotes] = useState<NoteItem[]>([]);
   const [scores, setScores] = useState<ScoreItem[]>([]);
+  const [assessments, setAssessments] = useState<AssessmentItem[]>([]);
+  const [assessmentDetailId, setAssessmentDetailId] = useState<string | null>(null);
+  const [interviewEvents, setInterviewEvents] = useState<Array<{ id: string; title: string; start: string }>>([]);
+  const [selectedInterviewId, setSelectedInterviewId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'resume' | 'timeline' | 'comments' | 'score' | 'offer'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'resume' | 'timeline' | 'comments' | 'score' | 'assessments' | 'offer'>('overview');
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', source: '' });
 
@@ -107,6 +127,37 @@ export default function CandidateProfilePage() {
       .catch(() => setScores([]));
   }, [id]);
 
+  useEffect(() => {
+    if (!id) return;
+    fetch(`/api/assessments/assign?candidateId=${encodeURIComponent(id)}`, { credentials: 'include', cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { assignments: [] }))
+      .then((data: { assignments: AssessmentItem[] }) => setAssessments(data.assignments || []))
+      .catch(() => setAssessments([]));
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    const start = new Date(0).toISOString();
+    const end = new Date(Date.now() + 365 * 86400000).toISOString();
+    fetch(`/api/calendar/events?start=${start}&end=${end}`, { credentials: 'include', cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list: Array<{ id: string; title: string; start: string; candidateId?: string }>) => {
+        const events = (Array.isArray(list) ? list : []).filter((e) => e.candidateId === id);
+        setInterviewEvents(events.map((e) => ({ id: e.id, title: e.title, start: e.start })));
+        setSelectedInterviewId((prev) => prev || events[0]?.id || null);
+      })
+      .catch(() => {
+        setInterviewEvents([]);
+        setSelectedInterviewId(null);
+      });
+  }, [id]);
+
+  const refreshAssessments = () => {
+    if (!id) return;
+    fetch(`/api/assessments/assign?candidateId=${encodeURIComponent(id)}`, { credentials: 'include', cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { assignments: [] }))
+      .then((data: { assignments: AssessmentItem[] }) => setAssessments(data.assignments || []));
+  };
   const refreshScores = () => {
     if (!id) return;
     fetch(`/api/interviews/${id}/scores`, { credentials: 'include', cache: 'no-store' })
@@ -250,6 +301,7 @@ export default function CandidateProfilePage() {
     { key: 'timeline' as const, label: t('profile.timeline'), icon: Calendar },
     { key: 'comments' as const, label: t('profile.comments'), icon: MessageSquare, count: notes.length },
     { key: 'score' as const, label: 'Interview Score', icon: Star, count: scores.length },
+    { key: 'assessments' as const, label: 'Assessments', icon: ClipboardList, count: assessments.length },
     ...(showOfferTab ? [{ key: 'offer' as const, label: 'Offer Letter', icon: FileCheck }] : []),
   ];
 
@@ -292,6 +344,9 @@ export default function CandidateProfilePage() {
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-700">
                   <Sparkles className="w-3 h-3" /> Smart Match {smartMatch}%
                 </span>
+                {candidate.applications?.[0]?.jobId && (
+                  <SkillMatchBadge jobId={candidate.applications[0].jobId} candidateId={candidate.id} />
+                )}
                 {candidate.experience != null && candidate.experience > 0 && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
                     <TrendingUp className="w-3 h-3" /> {candidate.experience} yrs exp
@@ -327,7 +382,7 @@ export default function CandidateProfilePage() {
           </div>
         </div>
 
-        {/* AI Insights */}
+        {/* Smart Insights */}
         <div className="px-5 sm:px-8 py-4 bg-gradient-to-br from-brand-50/60 via-white to-teal-50/30 border-b border-stone-100">
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0 shadow-md shadow-amber-500/20">
@@ -335,7 +390,7 @@ export default function CandidateProfilePage() {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-bold text-stone-800 flex items-center gap-2">
-                AI-Powered Insights
+                Smart Insights
                 <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-semibold">Beta</span>
               </h3>
               <p className="text-sm text-stone-600 mt-1.5 leading-relaxed">
@@ -467,14 +522,15 @@ export default function CandidateProfilePage() {
                 <div>
                   <p className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-2 flex items-center gap-1.5"><Hash className="w-3.5 h-3.5" /> Skills & Technologies</p>
                   {(candidate.skills && candidate.skills.length > 0) ? (
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1.5 mb-3">
                       {candidate.skills.map((s, i) => (
                         <span key={i} className="px-2.5 py-1 bg-brand-50 text-brand-700 rounded-lg text-xs font-medium border border-brand-200">{s}</span>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-stone-400 italic">No skills recorded — upload a resume to extract skills</p>
+                    <p className="text-sm text-stone-400 italic mb-3">No resume skills recorded — upload a resume to extract skills</p>
                   )}
+                  <SkillEditor candidateId={candidate.id} />
                 </div>
 
                 {/* Tags */}
@@ -508,14 +564,17 @@ export default function CandidateProfilePage() {
                     <p className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-2 flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5" /> Applications</p>
                     <div className="space-y-2">
                       {candidate.applications!.map(app => (
-                        <div key={app.id} className="flex items-center justify-between p-3 rounded-xl border border-stone-200 hover:border-brand-200 transition-colors">
+                        <div key={app.id} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-stone-200 hover:border-brand-200 transition-colors">
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center flex-shrink-0">
                               <Briefcase className="w-4 h-4 text-brand-500" />
                             </div>
                             <div className="min-w-0">
                               <p className="font-semibold text-stone-900 text-sm truncate">{app.jobTitle}</p>
-                              <p className="text-xs text-stone-500">{app.createdAt ? format(new Date(app.createdAt), 'MMM d, yyyy') : ''}</p>
+                              <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                                <p className="text-xs text-stone-500">{app.createdAt ? format(new Date(app.createdAt), 'MMM d, yyyy') : ''}</p>
+                                {app.jobId && <SkillMatchBadge jobId={app.jobId} candidateId={candidate.id} />}
+                              </div>
                             </div>
                           </div>
                           <span className={`px-2.5 py-1 rounded-lg text-xs font-bold flex-shrink-0 ${statusColors[app.stage] || 'bg-stone-100 text-stone-700'}`}>
@@ -598,9 +657,9 @@ export default function CandidateProfilePage() {
 
             {/* ==================== INTERVIEW SCORE ==================== */}
             {activeTab === 'score' && (
-              <motion.div key="score" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+              <motion.div key="score" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="space-y-4">
                 {scores.length === 0 && (
-                  <div className="mb-4">
+                  <div>
                     <button
                       onClick={() => setScoreModalOpen(true)}
                       className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 transition-all"
@@ -610,9 +669,100 @@ export default function CandidateProfilePage() {
                   </div>
                 )}
                 <InterviewScoringPanel scores={scores} loading={false} />
+
+                {interviewEvents.length > 0 ? (
+                  <div className="space-y-3">
+                    {interviewEvents.length > 1 && (
+                      <label className="block text-xs font-semibold text-stone-500">
+                        Interview for transcript
+                        <select
+                          value={selectedInterviewId || ''}
+                          onChange={(e) => setSelectedInterviewId(e.target.value || null)}
+                          className="mt-1 w-full px-3 py-2 rounded-xl border border-stone-200 text-sm text-stone-800 font-medium"
+                        >
+                          {interviewEvents.map((ev) => (
+                            <option key={ev.id} value={ev.id}>
+                              {ev.title} · {ev.start ? format(new Date(ev.start), 'MMM d, yyyy') : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+                    {selectedInterviewId && (
+                      <InterviewTranscriptPanel interviewId={selectedInterviewId} />
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-stone-500 rounded-xl border border-dashed border-stone-200 bg-stone-50 px-4 py-3">
+                    Schedule an interview on the{' '}
+                    <Link href="/dashboard/calendar" className="text-brand-600 font-medium hover:underline">
+                      calendar
+                    </Link>{' '}
+                    to attach transcripts, AI notes, or a meeting bot.
+                  </p>
+                )}
               </motion.div>
             )}
 
+            {/* ==================== ASSESSMENTS ==================== */}
+            {activeTab === 'assessments' && (
+              <motion.div key="assessments" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="space-y-3">
+                {assessments.length === 0 ? (
+                  <div className="text-center py-12">
+                    <ClipboardList className="w-12 h-12 text-stone-300 mx-auto mb-3" />
+                    <p className="font-semibold text-stone-600">No assessments yet</p>
+                    <p className="text-sm text-stone-500 mt-1">
+                      Assign from{' '}
+                      <Link href="/dashboard/assessments" className="text-brand-600 font-medium hover:underline">
+                        Assessments
+                      </Link>
+                    </p>
+                  </div>
+                ) : (
+                  assessments.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => setAssessmentDetailId(a.id)}
+                      className="w-full text-left rounded-xl border border-stone-200 p-4 hover:border-brand-300 hover:bg-brand-50/30 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-stone-900 truncate">{a.template.name}</p>
+                          <p className="text-xs text-stone-500 mt-0.5 capitalize">
+                            {a.template.category} · {a.status.replace('_', ' ')}
+                            {a.submittedAt ? ` · submitted ${format(new Date(a.submittedAt), 'MMM d, yyyy')}` : ''}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          {a.percentage != null ? (
+                            <>
+                              <p className="text-lg font-bold text-stone-900">{Math.round(a.percentage)}%</p>
+                              <p className={`text-xs font-medium ${a.passed ? 'text-emerald-600' : a.passed === false ? 'text-red-600' : 'text-amber-600'}`}>
+                                {a.reviewStatus === 'pending_review'
+                                  ? 'Pending review'
+                                  : a.passed == null
+                                    ? '—'
+                                    : a.passed
+                                      ? 'Passed'
+                                      : 'Failed'}
+                              </p>
+                            </>
+                          ) : (
+                            <p className="text-sm text-stone-400 capitalize">{a.status.replace('_', ' ')}</p>
+                          )}
+                        </div>
+                      </div>
+                      {a.score != null && a.maxScore != null && (
+                        <p className="text-xs text-stone-500 mt-2">
+                          {a.score}/{a.maxScore} points
+                        </p>
+                      )}
+                    </button>
+                  ))
+                )}
+              </motion.div>
+            )}
             {/* ==================== OFFER ==================== */}
             {activeTab === 'offer' && showOfferTab && (
               <motion.div key="offer" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
@@ -626,6 +776,12 @@ export default function CandidateProfilePage() {
       {/* Modals */}
       <EmailTemplatesModal isOpen={emailModalOpen} onClose={() => setEmailModalOpen(false)} candidate={candidate} />
       <InterviewScoreModal isOpen={scoreModalOpen} onClose={() => setScoreModalOpen(false)} candidateId={candidate.id} onSave={refreshScores} />
+      <AssignmentDetailModal
+        assignmentId={assessmentDetailId}
+        open={!!assessmentDetailId}
+        onClose={() => setAssessmentDetailId(null)}
+        onGraded={refreshAssessments}
+      />
     </motion.div>
   );
 }

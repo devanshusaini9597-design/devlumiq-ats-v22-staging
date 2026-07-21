@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -95,6 +97,11 @@ export default function SignupPage() {
         toast.error('Registration failed', msg);
         return;
       }
+      if (data?.requiresVerification) {
+        toast.success('Almost there!', 'Check your email to verify your address and activate your account.');
+        router.push(`/verify-email-sent?email=${encodeURIComponent(data.email ?? email)}`);
+        return;
+      }
       const user = data?.user ?? {};
       localStorage.setItem('token', data?.token ?? 'demo-' + Date.now());
       localStorage.setItem('userEmail', user.email ?? email);
@@ -170,10 +177,10 @@ export default function SignupPage() {
             className="mt-10 space-y-4"
           >
             {[
-              { icon: CheckCircle2, text: 'Free to get started — no credit card required' },
+              { icon: CheckCircle2, text: 'Self-hosted — full source code included' },
               { icon: CheckCircle2, text: 'Kanban pipeline, analytics, and smart matching' },
               { icon: CheckCircle2, text: 'Team collaboration with role-based access' },
-              { icon: CheckCircle2, text: 'SOC 2 compliant & enterprise-grade security' },
+              { icon: CheckCircle2, text: 'Enterprise-grade security & encryption' },
             ].map((item, i) => (
               <motion.div
                 key={i}
@@ -406,7 +413,7 @@ export default function SignupPage() {
 
           <p className="text-center text-xs text-stone-400 mt-6">
             Protected by enterprise-grade encryption.{' '}
-            <Shield className="w-3 h-3 inline -mt-0.5" /> SOC 2 Compliant
+            <Shield className="w-3 h-3 inline -mt-0.5" /> Secure by Default
           </p>
         </div>
       </motion.div>

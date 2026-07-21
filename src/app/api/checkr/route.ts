@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth, withPermission } from '@/lib/with-permission';
 
 // Checkr API Configuration
 const CHECKR_API_URL = process.env.CHECKR_API_URL || 'https://api.checkr.com/v1';
@@ -27,7 +28,7 @@ async function checkrApi(endpoint: string, options: RequestInit = {}) {
 }
 
 // POST /api/checkr - Create a background check
-export async function POST(request: Request) {
+export const POST = withPermission('VIEW_BACKGROUND_CHECKS', async (request: NextRequest) => {
   try {
     if (!CHECKR_API_KEY) {
       return NextResponse.json(
@@ -110,86 +111,11 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});
 
-// Sample background checks data for demo
-const sampleBackgroundChecks = [
-  {
-    id: 'bgc-1',
-    candidateId: 'cand-1',
-    provider: 'CHECKR',
-    providerCandidateId: 'checkr-cand-001',
-    providerInvitationId: 'checkr-inv-001',
-    status: 'clear',
-    packageType: 'standard',
-    invitationUrl: 'https://checkr.com/invitation/001',
-    reportUrl: 'https://checkr.com/report/001',
-    checkTypes: ['criminal', 'employment', 'education'],
-    notes: 'All checks passed successfully',
-    createdAt: new Date('2024-03-10').toISOString(),
-    updatedAt: new Date('2024-03-15').toISOString(),
-    completedAt: new Date('2024-03-15').toISOString(),
-    expiresAt: new Date('2024-04-10').toISOString(),
-    candidate: { name: 'Sarah Johnson', email: 'sarah.johnson@email.com', phone: '+1 555-0101' }
-  },
-  {
-    id: 'bgc-2',
-    candidateId: 'cand-2',
-    provider: 'CHECKR',
-    providerCandidateId: 'checkr-cand-002',
-    providerInvitationId: 'checkr-inv-002',
-    status: 'pending',
-    packageType: 'standard',
-    invitationUrl: 'https://checkr.com/invitation/002',
-    reportUrl: null,
-    checkTypes: ['criminal', 'employment', 'education'],
-    notes: null,
-    createdAt: new Date('2024-03-20').toISOString(),
-    updatedAt: new Date('2024-03-20').toISOString(),
-    completedAt: null,
-    expiresAt: new Date('2024-04-20').toISOString(),
-    candidate: { name: 'Michael Chen', email: 'michael.chen@email.com', phone: '+1 555-0102' }
-  },
-  {
-    id: 'bgc-3',
-    candidateId: 'cand-3',
-    provider: 'CHECKR',
-    providerCandidateId: 'checkr-cand-003',
-    providerInvitationId: 'checkr-inv-003',
-    status: 'consider',
-    packageType: 'comprehensive',
-    invitationUrl: 'https://checkr.com/invitation/003',
-    reportUrl: 'https://checkr.com/report/003',
-    checkTypes: ['criminal', 'employment', 'education', 'mvr', 'credit'],
-    notes: 'Minor discrepancy found in employment history',
-    createdAt: new Date('2024-03-22').toISOString(),
-    updatedAt: new Date('2024-03-25').toISOString(),
-    completedAt: new Date('2024-03-25').toISOString(),
-    expiresAt: new Date('2024-04-22').toISOString(),
-    candidate: { name: 'David Williams', email: 'david.williams@email.com', phone: '+1 555-0103' }
-  },
-  {
-    id: 'bgc-4',
-    candidateId: 'cand-4',
-    provider: 'CHECKR',
-    providerCandidateId: 'checkr-cand-004',
-    providerInvitationId: 'checkr-inv-004',
-    status: 'in_progress',
-    packageType: 'standard',
-    invitationUrl: 'https://checkr.com/invitation/004',
-    reportUrl: null,
-    checkTypes: ['criminal', 'employment'],
-    notes: null,
-    createdAt: new Date('2024-03-28').toISOString(),
-    updatedAt: new Date('2024-03-28').toISOString(),
-    completedAt: null,
-    expiresAt: new Date('2024-04-28').toISOString(),
-    candidate: { name: 'Jennifer Martinez', email: 'jennifer.martinez@email.com', phone: '+1 555-0104' }
-  },
-];
 
 // GET /api/checkr - List background checks
-export async function GET(request: Request) {
+export const GET = withAuth(async (request: NextRequest, _ctx, session) => {
   try {
     const { searchParams } = new URL(request.url);
     const candidateId = searchParams.get('candidateId');
@@ -200,6 +126,7 @@ export async function GET(request: Request) {
         ...(candidateId && { candidateId }),
         ...(status && { status }),
         provider: 'CHECKR',
+        ...(session.organizationId ? { candidate: { organizationId: session.organizationId } } : {}),
       },
       include: {
         candidate: {
@@ -213,13 +140,6 @@ export async function GET(request: Request) {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Return sample data if no checks in database
-    if (!checks || checks.length === 0) {
-      return NextResponse.json({
-        success: true,
-        checks: sampleBackgroundChecks,
-      });
-    }
 
     // If real-time sync is needed, fetch from Checkr API
     if (CHECKR_API_KEY) {
@@ -266,16 +186,12 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('Error fetching background checks:', error);
-    // Return sample data on error
-    return NextResponse.json({
-      success: true,
-      checks: sampleBackgroundChecks,
-    });
+    return NextResponse.json({ success: true, checks: [] }, { status: 500 });
   }
-}
+});
 
 // PATCH /api/checkr - Update background check status
-export async function PATCH(request: Request) {
+export const PATCH = withPermission('RUN_BACKGROUND_CHECKS', async (request: NextRequest) => {
   try {
     const { checkId, status, reportUrl, notes } = await request.json();
 
@@ -307,7 +223,7 @@ export async function PATCH(request: Request) {
       { status: 500 }
     );
   }
-}
+});
 
 // Helper: Map Checkr status to our status
 function mapCheckrStatus(checkrStatus: string): string {

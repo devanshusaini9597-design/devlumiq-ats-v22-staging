@@ -3,6 +3,7 @@
 import type React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ArrowRight,
   Home,
@@ -293,9 +294,11 @@ export default function HeroDashboardPreview() {
                 <p className="text-xs font-bold text-white leading-tight">{t('hero.socialProof')}</p>
                 <div className="flex items-center gap-1 mt-0.5">
                   {[...Array(5)].map((_, i) => (
-                    <svg key={i} className="w-3 h-3 fill-amber-400" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                    <svg key={i} className="w-3 h-3 fill-amber-400" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
                   ))}
-                  <span className="text-[10px] text-stone-400 ml-0.5">4.9/5</span>
+                  <span className="text-[10px] text-stone-400 ml-0.5">Customer-loved</span>
                 </div>
               </div>
             </div>
@@ -367,20 +370,32 @@ export default function HeroDashboardPreview() {
                   <div className="h-1.5 sm:h-2 w-2/3 bg-stone-300/80 rounded" />
                   <div className="h-1.5 sm:h-2 w-1/3 bg-stone-300/60 rounded" />
                 </div>
-                <div className="flex-1 min-h-0 overflow-auto overscroll-contain">
+                <div className="flex-1 min-h-0 overflow-auto overscroll-contain relative">
                   <AnimatePresence mode="wait">
                     {(() => {
-                      const View = viewMap[active] || DashboardView;
+                      const imageMap: Record<string, string> = {
+                        dashboard: '/images/website-dashboard-preview.png',
+                        candidates: '/images/website-candidates-search-preview.png',
+                        jobs: '/images/website-open-positions-preview.png',
+                        analytics: '/images/webite-analytics-preview.png',
+                      };
+                      const imageSrc = imageMap[active] || '/images/website-dashboard-preview.png';
                       return (
                         <motion.div
                           key={active}
                           initial={reduced ? false : { opacity: 0 }}
                           animate={{ opacity: 1 }}
                           exit={reduced ? undefined : { opacity: 0 }}
-                          transition={viewTransition}
-                          className="h-full min-h-0"
+                          transition={reduced ? { duration: 0.01 } : { ...spring.tight }}
+                          className="h-full min-h-0 relative flex items-center justify-center bg-stone-50"
                         >
-                          <View reduced={reduced} />
+                          <Image
+                            src={imageSrc}
+                            alt={`${active} view`}
+                            fill
+                            className="object-contain object-center p-2 sm:p-4"
+                            priority
+                          />
                         </motion.div>
                       );
                     })()}

@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Pricing - Devlumiq ATS | Simple, Transparent Pricing',
+  title: 'Pricing - Devlumiq ATS | License Options',
   description:
-    'Choose the perfect plan for your team. Starter at $29/mo, Professional at $79/mo, Enterprise at $199/mo. 14-day free trial.',
+    'Choose a license type that fits your team: Regular or Extended. Includes a 14-day trial.',
 };
 
 export default function PricingLayout({

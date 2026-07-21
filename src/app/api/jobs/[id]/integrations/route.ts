@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth, withPermission } from '@/lib/with-permission';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withAuth(async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await params;
     const integrations = await prisma.jobBoardIntegration.findMany({
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   } catch {
     return NextResponse.json({ integrations: [] }, { status: 500 });
   }
-}
+});
 
 const BOARD_MAP: Record<string, string> = {
   linkedin: 'LINKEDIN',
@@ -23,7 +24,7 @@ const BOARD_MAP: Record<string, string> = {
   monster: 'MONSTER',
 };
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withPermission('MANAGE_INTEGRATIONS', async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await params;
     const data = await req.json();
@@ -52,9 +53,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   } catch (error) {
     return NextResponse.json({ error: 'Failed to create integration' }, { status: 500 });
   }
-}
+});
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const PATCH = withPermission('MANAGE_INTEGRATIONS', async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await params;
     const data = await req.json();
@@ -73,4 +74,4 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   } catch {
     return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
   }
-}
+});

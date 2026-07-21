@@ -17,6 +17,7 @@ interface Job {
   type: string;
   postedAt: string;
   applicants: number;
+  companyId?: string | null;
 }
 
 interface JobDetailClientProps {
@@ -37,6 +38,11 @@ export default function JobDetailClient({ job }: JobDetailClientProps) {
     linkedin: '',
     portfolio: '',
     coverLetter: '',
+    gender: '',
+    ethnicity: '',
+    veteranStatus: '',
+    disability: '',
+    declinedToSelfId: false,
   });
   const [resume, setResume] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -113,6 +119,11 @@ export default function JobDetailClient({ job }: JobDetailClientProps) {
       data.append('linkedin', formData.linkedin);
       data.append('portfolio', formData.portfolio);
       data.append('coverLetter', formData.coverLetter);
+      data.append('gender', formData.gender);
+      data.append('ethnicity', formData.ethnicity);
+      data.append('veteranStatus', formData.veteranStatus);
+      data.append('disability', formData.disability);
+      data.append('declinedToSelfId', formData.declinedToSelfId ? 'true' : 'false');
       if (resume) {
         data.append('resume', resume);
       }
@@ -460,6 +471,70 @@ export default function JobDetailClient({ job }: JobDetailClientProps) {
                           className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 outline-none transition-all resize-none"
                           placeholder="Tell us why you're a great fit for this role..."
                         />
+                      </div>
+
+                      {/* Voluntary EEO self-ID — optional, stored separately from hiring decisions */}
+                      <div className="rounded-xl border border-stone-200 bg-stone-50/80 p-4 space-y-3">
+                        <p className="text-sm font-semibold text-stone-800">Voluntary self-identification (optional)</p>
+                        <p className="text-xs text-stone-500">
+                          This information is voluntary, kept separate from hiring decisions, and used only for aggregated equal-opportunity reporting.
+                        </p>
+                        <label className="flex items-center gap-2 text-sm text-stone-700">
+                          <input
+                            type="checkbox"
+                            checked={formData.declinedToSelfId}
+                            onChange={(e) => setFormData({ ...formData, declinedToSelfId: e.target.checked, gender: '', ethnicity: '', veteranStatus: '', disability: '' })}
+                          />
+                          I prefer not to self-identify
+                        </label>
+                        {!formData.declinedToSelfId && (
+                          <div className="grid sm:grid-cols-2 gap-3">
+                            <select
+                              value={formData.gender}
+                              onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                              className="w-full px-3 py-2.5 rounded-xl border border-stone-200 bg-white text-sm"
+                            >
+                              <option value="">Gender (optional)</option>
+                              <option value="female">Female</option>
+                              <option value="male">Male</option>
+                              <option value="non_binary">Non-binary</option>
+                              <option value="prefer_not">Prefer not to say</option>
+                            </select>
+                            <select
+                              value={formData.ethnicity}
+                              onChange={(e) => setFormData({ ...formData, ethnicity: e.target.value })}
+                              className="w-full px-3 py-2.5 rounded-xl border border-stone-200 bg-white text-sm"
+                            >
+                              <option value="">Ethnicity (optional)</option>
+                              <option value="asian">Asian</option>
+                              <option value="black">Black / African American</option>
+                              <option value="hispanic">Hispanic / Latino</option>
+                              <option value="white">White</option>
+                              <option value="two_or_more">Two or more</option>
+                              <option value="prefer_not">Prefer not to say</option>
+                            </select>
+                            <select
+                              value={formData.veteranStatus}
+                              onChange={(e) => setFormData({ ...formData, veteranStatus: e.target.value })}
+                              className="w-full px-3 py-2.5 rounded-xl border border-stone-200 bg-white text-sm"
+                            >
+                              <option value="">Veteran status (optional)</option>
+                              <option value="protected_veteran">Protected veteran</option>
+                              <option value="not_veteran">Not a veteran</option>
+                              <option value="prefer_not">Prefer not to say</option>
+                            </select>
+                            <select
+                              value={formData.disability}
+                              onChange={(e) => setFormData({ ...formData, disability: e.target.value })}
+                              className="w-full px-3 py-2.5 rounded-xl border border-stone-200 bg-white text-sm"
+                            >
+                              <option value="">Disability (optional)</option>
+                              <option value="yes">Yes, I have a disability</option>
+                              <option value="no">No</option>
+                              <option value="prefer_not">Prefer not to say</option>
+                            </select>
+                          </div>
+                        )}
                       </div>
 
                       {/* Submit */}

@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-permission';
 
-export async function GET() {
+export const GET = withAuth(async (_req, _ctx, session) => {
   try {
     const items = await prisma.announcement.findMany({
+      where: session.organizationId
+        ? { OR: [{ organizationId: session.organizationId }, { organizationId: null }] }
+        : { organizationId: null },
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
@@ -23,4 +27,4 @@ export async function GET() {
     console.error('GET /api/announcements', e);
     return NextResponse.json({ error: 'Failed to load announcements' }, { status: 500 });
   }
-}
+});

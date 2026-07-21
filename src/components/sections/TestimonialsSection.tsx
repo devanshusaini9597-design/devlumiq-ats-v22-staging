@@ -8,79 +8,79 @@ import { useLocale } from '@/components/providers/LocaleProvider';
 // ─── Data ────────────────────────────────────────────────────────────────────
 const testimonials = [
   {
-    quote: "We've cut time-to-hire from 47 days to 18. The AI screening consistently surfaces candidates we'd have missed with manual review. It's genuinely transformative.",
-    author: 'Sarah Chen',
+    quote: "We like how the pipeline stays organized and keeps the team aligned during hiring.",
+    author: 'Beta User',
     role: 'HR Director',
-    company: 'TechFlow',
-    avatar: 'SC',
+    company: 'Early Adopter',
+    avatar: 'BU',
     gradient: 'from-brand-500 to-teal-600',
     rating: 5,
     featured: true,
   },
   {
-    quote: "The kanban pipeline changed how our whole team collaborates. Interview scheduling that took 3 back-and-forth emails now happens in a single click.",
-    author: 'Marcus Johnson',
+    quote: "The Kanban workflow makes it easier to review candidates and move them forward without confusion.",
+    author: 'Beta User',
     role: 'Head of Talent',
-    company: 'Nexora',
-    avatar: 'MJ',
+    company: 'Early Adopter',
+    avatar: 'BU',
     gradient: 'from-violet-500 to-purple-600',
     rating: 5,
     featured: false,
   },
   {
-    quote: "We scaled from 40 to 180 employees in 14 months. Without Devlumiq ATS handling the pipeline, that growth would have required two additional full-time recruiters.",
-    author: 'Priya Patel',
+    quote: "We scaled our recruiting processes and kept collaboration smooth across teams.",
+    author: 'Beta User',
     role: 'VP of People',
-    company: 'DataFirst',
-    avatar: 'PP',
+    company: 'Early Adopter',
+    avatar: 'BU',
     gradient: 'from-rose-500 to-pink-600',
     rating: 5,
     featured: false,
   },
   {
-    quote: "The analytics dashboard gives our leadership team the hiring visibility they always wanted. Our offer acceptance rate jumped from 71% to 89% in one quarter.",
-    author: 'Jake Martinez',
+    quote: "The reporting helps us understand what's happening in the hiring pipeline and plan next steps.",
+    author: 'Beta User',
     role: 'Recruiting Lead',
-    company: 'CloudScale',
-    avatar: 'JM',
+    company: 'Early Adopter',
+    avatar: 'BU',
     gradient: 'from-amber-500 to-orange-600',
     rating: 5,
     featured: false,
   },
   {
-    quote: "Migration from our old ATS took one afternoon. The career page builder made our job posts look genuinely premium — candidates actually comment on it during interviews.",
-    author: 'Emily Park',
+    quote: "The migration experience was manageable, and our job posts look polished for candidates.",
+    author: 'Beta User',
     role: 'Talent Operations',
-    company: 'InnovateLab',
-    avatar: 'EP',
+    company: 'Early Adopter',
+    avatar: 'BU',
     gradient: 'from-cyan-500 to-blue-600',
     rating: 5,
     featured: false,
   },
   {
-    quote: "Every recruiter on my team calls it the best tool they've ever used. The ROI justified the full annual cost within the first month. It's not close.",
-    author: 'David Kim',
+    quote: "Our recruiters find the system intuitive and useful day to day.",
+    author: 'Beta User',
     role: 'Chief People Officer',
-    company: 'GrowthHQ',
-    avatar: 'DK',
+    company: 'Early Adopter',
+    avatar: 'BU',
     gradient: 'from-emerald-500 to-teal-600',
     rating: 5,
   },
   {
-    quote: "The smart match score alone has saved us dozens of hours per hire. We stopped guessing and started hiring with confidence. An incredible product.",
-    author: 'Aisha Greene',
+    quote: "Candidate matching and scoring help our team focus on the most relevant profiles.",
+    author: 'Beta User',
     role: 'Talent Acquisition Lead',
-    company: 'AlphaTech',
-    avatar: 'AG',
+    company: 'Early Adopter',
+    avatar: 'BU',
     gradient: 'from-fuchsia-500 to-pink-600',
     rating: 5,
   },
   {
-    quote: "Setup was effortless and the onboarding wizard actually works. We went from spreadsheets to a professional ATS in an afternoon. Our team is 3× more productive.",
-    author: 'Tom Rivera',
+    quote: "Onboarding was straightforward and our team became productive quickly.",
+    author: 'Beta User',
     role: 'Recruiting Manager',
-    company: 'NextGen',
-    avatar: 'TR',
+    company: 'Early Adopter',
+    avatar: 'BU',
     gradient: 'from-sky-500 to-blue-600',
     rating: 5,
   },
@@ -169,6 +169,9 @@ export default function TestimonialsSection() {
           title={t('home.testimonialsTitle')}
           subtitle={t('home.testimonialsDesc')}
         />
+        <p className="mt-3 text-xs text-stone-400 font-medium">
+          Example testimonials — customize with your own customer feedback
+        </p>
       </div>
 
       {/* Trust bar */}
@@ -183,17 +186,17 @@ export default function TestimonialsSection() {
           <div className="flex gap-0.5">
             {[...Array(5)].map((_, i) => <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />)}
           </div>
-          <span className="font-bold text-stone-900 text-sm">4.9/5</span>
-          <span className="text-stone-500 text-xs">avg rating</span>
+          <span className="font-bold text-stone-900 text-sm">Trusted</span>
+          <span className="text-stone-500 text-xs">by teams</span>
         </div>
         <div className="w-px h-4 bg-stone-200 hidden sm:block" />
-        <span className="text-sm text-stone-500"><span className="font-bold text-stone-800">500+</span> companies</span>
+        <span className="text-sm text-stone-500">Customer feedback</span>
         <div className="w-px h-4 bg-stone-200 hidden sm:block" />
-        <span className="text-sm text-stone-500"><span className="font-bold text-stone-800">50K+</span> hires made</span>
+        <span className="text-sm text-stone-500">Real-world hiring teams</span>
         <div className="w-px h-4 bg-stone-200 hidden sm:block" />
         <span className="text-sm text-stone-500 flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-bold text-stone-800">98%</span> satisfaction
+          <span className="font-bold text-stone-800">Satisfaction-focused</span>
         </span>
       </motion.div>
 

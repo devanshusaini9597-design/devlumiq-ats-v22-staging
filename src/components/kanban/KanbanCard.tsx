@@ -84,6 +84,7 @@ function MoveStagePortal({
 
 type Candidate = {
   id: string;
+  candidateId?: string;
   name: string;
   position: string;
   source: string;
@@ -91,6 +92,8 @@ type Candidate = {
   email?: string;
   createdAt?: string;
   phone?: string;
+  assessmentScore?: number | null;
+  latestAssessmentScore?: number | null;
 };
 
 export function KanbanCard({
@@ -124,20 +127,54 @@ export function KanbanCard({
   const isOfferStage = candidate.status === 'Offer';
   const isHired = candidate.status === 'Hired';
   const colorClass = stageColor || 'text-stone-600';
+  const profileId = candidate.candidateId || candidate.id;
+  const showContact =
+    Boolean(candidate.email) &&
+    candidate.email !== 'hidden@blind.local' &&
+    !candidate.name.startsWith('Candidate ');
   const [showMoveMenu, setShowMoveMenu] = useState(false);
+  const [swipeHint, setSwipeHint] = useState<'left' | 'right' | null>(null);
   const otherStages = allStages ? allStages.filter((s) => s !== (currentStage || candidate.status)) : [];
+  const stageList = allStages || [];
+  const stageIdx = stageList.indexOf(currentStage || candidate.status);
+
+  const swipeToAdjacent = (dir: 'left' | 'right') => {
+    if (!onMoveToStage || stageIdx < 0) {
+      setShowMoveMenu(true);
+      return;
+    }
+    const next = dir === 'right' ? stageList[stageIdx + 1] : stageList[stageIdx - 1];
+    if (next) onMoveToStage(next);
+    else setShowMoveMenu(true);
+  };
 
   return (
     <motion.div
       ref={setNodeRef}
       style={style}
       initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={{ opacity: 1, y: 0, x: 0 }}
       whileHover={{ y: -2 }}
-      className={`group relative rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm hover:shadow-lg hover:border-stone-300 transition-all duration-300 ${
+      drag="x"
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.35}
+      onDrag={(_, info) => {
+        if (info.offset.x > 40) setSwipeHint('right');
+        else if (info.offset.x < -40) setSwipeHint('left');
+        else setSwipeHint(null);
+      }}
+      onDragEnd={(_, info) => {
+        setSwipeHint(null);
+        if (info.offset.x > 80) swipeToAdjacent('right');
+        else if (info.offset.x < -80) swipeToAdjacent('left');
+      }}
+      className={`group relative rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm hover:shadow-lg hover:border-stone-300 transition-all duration-300 touch-pan-y ${
         isDragging ? 'opacity-90 shadow-2xl ring-2 ring-brand-500 rotate-2 scale-105 z-50' : ''
       }`}
     >
+      {swipeHint && (
+        <div className={`absolute inset-y-0 ${swipeHint === 'right' ? 'left-0' : 'right-0'} w-1.5 rounded-full bg-brand-500`} />
+      )}
       {/* Drag Handle */}
       <button
         type="button"
@@ -151,7 +188,7 @@ export function KanbanCard({
 
       {/* Card Content */}
       <Link 
-        href={`/dashboard/candidates/${candidate.id}`} 
+        href={`/dashboard/candidates/${profileId}`} 
         className="flex items-start gap-3 pr-8"
       >
         <motion.div
@@ -168,10 +205,20 @@ export function KanbanCard({
           <p className="text-xs text-stone-500 truncate mt-0.5">
             {candidate.position}
           </p>
-          <div className="flex items-center gap-2 mt-1.5">
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <span className="text-[10px] text-stone-400 bg-stone-50 px-1.5 py-0.5 rounded">
               {candidate.source}
             </span>
+            {(candidate.assessmentScore != null || candidate.latestAssessmentScore != null) && (
+              <Link
+                href={`/dashboard/candidates/${profileId}#assessments`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-[10px] font-semibold text-teal-700 bg-teal-50 border border-teal-100 px-1.5 py-0.5 rounded hover:bg-teal-100"
+                title="View candidate assessments"
+              >
+                Assess {Math.round(Number(candidate.assessmentScore ?? candidate.latestAssessmentScore))}%
+              </Link>
+            )}
           </div>
         </div>
       </Link>
@@ -182,7 +229,7 @@ export function KanbanCard({
           <div className="flex items-center gap-1.5">
             {isInterviewStage && (
               <Link
-                href={`/dashboard/premium/scoring?candidate=${candidate.id}`}
+                href={`/dashboard/premium/scoring?candidate=${profileId}`}
                 className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-semibold hover:bg-amber-100 transition-colors"
               >
                 <Star className="w-3 h-3" />
@@ -191,7 +238,7 @@ export function KanbanCard({
             )}
             {isOfferStage && (
               <Link
-                href={`/dashboard/premium/offers?candidate=${candidate.id}`}
+                href={`/dashboard/premium/offers?candidate=${profileId}`}
                 className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-semibold hover:bg-emerald-100 transition-colors"
               >
                 <FileText className="w-3 h-3" />
@@ -207,7 +254,7 @@ export function KanbanCard({
           </div>
 
           <div className="flex items-center gap-1">
-            {candidate.phone && (
+            {showContact && candidate.phone && (
               <a
                 href={`https://wa.me/${candidate.phone.replace(/\D/g, '')}`}
                 target="_blank"
@@ -220,7 +267,7 @@ export function KanbanCard({
                 </svg>
               </a>
             )}
-            {candidate.email && (
+            {showContact && candidate.email && (
               <a
                 href={`mailto:${candidate.email}`}
                 className="p-1.5 rounded-lg text-brand-500 hover:bg-brand-50 hover:text-brand-600 transition-colors"
@@ -230,7 +277,7 @@ export function KanbanCard({
               </a>
             )}
             <Link
-              href={`/dashboard/candidates/${candidate.id}`}
+              href={`/dashboard/candidates/${profileId}`}
               className="p-1.5 rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-colors"
               title="View Profile"
             >

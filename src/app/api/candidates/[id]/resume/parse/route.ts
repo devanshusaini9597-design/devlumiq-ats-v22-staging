@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withPermission } from '@/lib/with-permission';
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withPermission('USE_RESUME_PARSER', async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await params;
     const data = await req.json();
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   } catch (error) {
     return NextResponse.json({ error: 'Failed to parse resume' }, { status: 500 });
   }
-}
+});
 
 // Simple extraction functions (in production, use AI/ML)
 function extractSkills(text: string): string[] {

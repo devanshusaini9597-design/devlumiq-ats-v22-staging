@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import { type ElementType } from 'react';
 import {
   Users, BarChart3, Briefcase, Zap, LayoutDashboard, Shield,
@@ -60,119 +61,17 @@ const highlightKeys = ['features.h1', 'features.h2', 'features.h3', 'features.h4
 
 /* ─── Mockup Components ─────────────────────────────────────────────── */
 
-function ScoreMockup() {
-  const candidates = [
-    { name: 'Sarah Chen',   role: 'Product Designer', score: 94, color: 'bg-emerald-500', text: 'text-emerald-400' },
-    { name: 'Marcus Lee',   role: 'UX Lead',           score: 87, color: 'bg-brand-500',   text: 'text-brand-400'   },
-    { name: 'Priya Sharma', role: 'Designer',          score: 76, color: 'bg-amber-500',   text: 'text-amber-400'   },
-  ];
+function ScreenshotImage({ src, alt }: { src: string; alt: string }) {
   return (
-    <div className="rounded-2xl bg-[#0f0f0f] border border-white/10 p-5 shadow-2xl">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-3 h-3 rounded-full bg-red-500/70" />
-        <div className="w-3 h-3 rounded-full bg-amber-500/70" />
-        <div className="w-3 h-3 rounded-full bg-emerald-500/70" />
-        <span className="ml-2 text-[11px] text-stone-500 font-medium">Smart Match · AI Scoring</span>
-      </div>
-      <div className="space-y-3">
-        {candidates.map((c, i) => (
-          <motion.div key={c.name} initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.15 }}
-            className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.04] border border-white/[0.06]"
-          >
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-white/10`}>
-              <span className={`text-xs font-black ${c.text}`}>{c.name[0]}</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-white truncate">{c.name}</p>
-              <p className="text-[10px] text-stone-500">{c.role}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-16 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                <motion.div initial={{ width: 0 }} whileInView={{ width: `${c.score}%` }} viewport={{ once: true }} transition={{ delay: i * 0.15 + 0.3, duration: 0.8 }}
-                  className={`h-full rounded-full ${c.color}`} style={{ width: `${c.score}%` }}
-                />
-              </div>
-              <span className="text-xs font-black text-white w-6 text-right">{c.score}</span>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-      <div className="mt-3 pt-3 border-t border-white/[0.06] flex items-center justify-between">
-        <span className="text-[10px] text-stone-600">94 applicants scored</span>
-        <span className="text-[10px] font-bold text-emerald-400">3 top matches found</span>
-      </div>
-    </div>
-  );
-}
-
-function KanbanMockup() {
-  const columns = [
-    { label: 'Applied',   count: 12, color: 'text-stone-400',   cards: ['Mia Torres', 'James Park'] },
-    { label: 'Interview', count: 5,  color: 'text-brand-400',   cards: ['Sarah Chen', 'Ravi Kumar'] },
-    { label: 'Offer',     count: 2,  color: 'text-emerald-400', cards: ['Marcus Lee'] },
-  ];
-  return (
-    <div className="rounded-2xl bg-[#0f0f0f] border border-white/10 p-4 shadow-2xl">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-3 h-3 rounded-full bg-red-500/70" />
-        <div className="w-3 h-3 rounded-full bg-amber-500/70" />
-        <div className="w-3 h-3 rounded-full bg-emerald-500/70" />
-        <span className="ml-2 text-[11px] text-stone-500 font-medium">Pipeline Board</span>
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        {columns.map((col) => (
-          <div key={col.label} className="space-y-1.5">
-            <div className="flex items-center justify-between px-1">
-              <span className={`text-[10px] font-black uppercase tracking-wide ${col.color}`}>{col.label}</span>
-              <span className={`text-[10px] font-bold px-1.5 rounded-full bg-white/[0.07] ${col.color}`}>{col.count}</span>
-            </div>
-            {col.cards.map((name) => (
-              <div key={name} className="p-2 rounded-lg bg-white/[0.05] border border-white/[0.07]">
-                <p className="text-[10px] font-semibold text-stone-300 truncate">{name}</p>
-                <div className="mt-1 h-1 rounded-full bg-white/10 w-3/4" />
-              </div>
-            ))}
-            <div className="p-2 rounded-lg border border-dashed border-white/10 flex items-center justify-center">
-              <span className="text-[10px] text-stone-700">+ drop here</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ChartMockup() {
-  const bars = [65, 80, 55, 90, 72, 85, 95];
-  const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  return (
-    <div className="rounded-2xl bg-[#0f0f0f] border border-white/10 p-5 shadow-2xl">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-3 h-3 rounded-full bg-red-500/70" />
-        <div className="w-3 h-3 rounded-full bg-amber-500/70" />
-        <div className="w-3 h-3 rounded-full bg-emerald-500/70" />
-        <span className="ml-2 text-[11px] text-stone-500 font-medium">Analytics · This week</span>
-      </div>
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        {[{ label: 'Applications', value: '142', delta: '+12%' }, { label: 'Interviews', value: '38', delta: '+8%' }, { label: 'Time-to-hire', value: '11d', delta: '-3d' }].map(s => (
-          <div key={s.label} className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
-            <p className="text-[9px] text-stone-500 uppercase tracking-wide leading-tight">{s.label}</p>
-            <p className="text-sm font-black text-white mt-0.5">{s.value}</p>
-            <p className="text-[10px] text-emerald-400 font-bold">{s.delta}</p>
-          </div>
-        ))}
-      </div>
-      <div className="flex items-end gap-1 h-14">
-        {bars.map((h, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-            <motion.div initial={{ scaleY: 0 }} whileInView={{ scaleY: 1 }} viewport={{ once: true }} transition={{ delay: i * 0.07, duration: 0.5 }}
-              className="w-full rounded-t bg-gradient-to-t from-brand-600 to-teal-500 origin-bottom"
-              style={{ height: `${h}%` }}
-            />
-            <span className="text-[8px] text-stone-600">{labels[i]}</span>
-          </div>
-        ))}
-      </div>
+    <div className="rounded-2xl overflow-hidden border border-stone-200/80 shadow-2xl bg-white">
+      <Image
+        src={src}
+        alt={alt}
+        width={1200}
+        height={750}
+        className="w-full h-auto"
+        priority
+      />
     </div>
   );
 }
@@ -249,7 +148,7 @@ export default function FeaturesPage() {
           >
             {[
               { icon: Sparkles, value: '12',   label: 'core features' },
-              { icon: Star,     value: '50+',  label: 'integrations'  },
+              { icon: Star,     value: '50+',  label: 'db models'     },
               { icon: Globe,    value: '10',   label: 'languages'     },
               { icon: Clock,    value: '<30m', label: 'to set up'     },
             ].map(({ icon: Icon, value, label }) => (
@@ -414,16 +313,16 @@ export default function FeaturesPage() {
                       ))}
                     </ul>
                     <Link href="/signup" className="inline-flex items-center gap-2 text-sm font-black text-brand-600 hover:text-brand-700 group">
-                      Start free trial
+                      Get Started
                       <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </Link>
                   </div>
                   <div className="relative">
                     <div className={`absolute -inset-6 rounded-3xl bg-gradient-to-br ${s.iconGradient} opacity-[0.06] blur-2xl`} />
                     <div className="relative">
-                      {s.mockupType === 'score'  && <ScoreMockup />}
-                      {s.mockupType === 'kanban' && <KanbanMockup />}
-                      {s.mockupType === 'chart'  && <ChartMockup />}
+                      {s.mockupType === 'score'  && <ScreenshotImage src="/images/website-candidates-scoring-preview.png" alt="Candidate scoring screenshot" />}
+                      {s.mockupType === 'kanban' && <ScreenshotImage src="/images/website-pipeline-preview.png" alt="Pipeline board screenshot" />}
+                      {s.mockupType === 'chart'  && <ScreenshotImage src="/images/webite-analytics-preview.png" alt="Analytics dashboard screenshot" />}
                     </div>
                   </div>
                 </motion.div>
@@ -472,7 +371,7 @@ export default function FeaturesPage() {
                 {t('features.tryFree')} <ArrowRight className="w-5 h-5" />
               </motion.button>
             </Link>
-            <p className="text-xs text-stone-400 mt-3">14-day free trial · No credit card required · Cancel anytime</p>
+            <p className="text-xs text-stone-400 mt-3">One-time purchase · Full source code · Self-hosted</p>
           </motion.div>
         </div>
       </section>

@@ -126,8 +126,8 @@ const INITIAL_BOARDS: JobBoard[] = [
     connected: false,
     clicks: 0,
     applications: 0,
-    description: 'AI-powered matching for quality hires',
-    tag: 'AI Match',
+    description: 'Smart matching for quality hires',
+    tag: 'Smart Match',
   },
 ];
 

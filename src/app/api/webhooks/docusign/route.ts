@@ -1,19 +1,36 @@
+import { createHmac, timingSafeEqual } from 'crypto';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+
+function verifyDocuSignSignature(rawBody: string, signature: string, secret: string): boolean {
+  try {
+    const expected = createHmac('sha256', secret).update(rawBody).digest('base64');
+    const expectedBuf = Buffer.from(expected);
+    const signatureBuf = Buffer.from(signature);
+    if (expectedBuf.length !== signatureBuf.length) return false;
+    return timingSafeEqual(expectedBuf, signatureBuf);
+  } catch {
+    return false;
+  }
+}
 
 // POST /api/webhooks/docusign - Handle DocuSign Connect webhook events
 // This endpoint receives envelope status updates from DocuSign
 
 export async function POST(request: Request) {
   try {
-    // Verify webhook authentication if DOCUSIGN_WEBHOOK_SECRET is configured
-    const authHeader = request.headers.get('Authorization');
     const webhookSecret = process.env.DOCUSIGN_WEBHOOK_SECRET;
-    
-    // Note: In production, implement signature verification per DocuSign Connect docs
-    // DocuSign Connect can use HMAC-SHA256 signature verification
+    const signature = request.headers.get('X-DocuSign-Signature-1');
 
-    const payload = await request.json();
+    const rawBody = await request.text();
+
+    if (webhookSecret) {
+      if (!signature || !verifyDocuSignSignature(rawBody, signature, webhookSecret)) {
+        return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+      }
+    }
+
+    const payload = JSON.parse(rawBody);
     
     // DocuSign Connect sends an array of events
     const events = Array.isArray(payload) ? payload : [payload];

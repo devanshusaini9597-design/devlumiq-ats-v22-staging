@@ -32,13 +32,13 @@ type Feature = {
   bullets: string[];
 };
 
-const categories = ['All', 'AI & Search', 'Communication', 'Documents', 'Collaboration'];
+const categories = ['All', 'Search & Tools', 'Communication', 'Documents', 'Collaboration'];
 
 const premiumFeatures: Feature[] = [
   {
     id: 'smart-search',
     name: 'Smart Search',
-    description: 'AI-powered candidate discovery with advanced multi-filter querying across skills, experience level, tags, source channel, and pipeline stage.',
+    description: 'Advanced candidate discovery with multi-filter querying across skills, experience level, tags, source channel, and pipeline stage.',
     icon: Search,
     gradient: 'from-blue-500 to-indigo-600',
     iconBg: 'bg-blue-500/10',
@@ -46,7 +46,7 @@ const premiumFeatures: Feature[] = [
     link: '/dashboard/premium/search',
     stat: '5+ filters',
     statColor: 'bg-blue-50 text-blue-700 border-blue-200',
-    category: 'AI & Search',
+    category: 'Search & Tools',
     featured: true,
     bullets: ['Boolean-style filter logic', 'Skill & keyword matching', 'Pipeline stage filters', 'Export filtered results'],
   },
@@ -67,17 +67,17 @@ const premiumFeatures: Feature[] = [
   },
   {
     id: 'whatsapp-templates',
-    name: 'WhatsApp Templates',
-    description: 'Reach candidates instantly on WhatsApp with branded message templates for scheduling, follow-ups, and status updates.',
+    name: 'WhatsApp Messaging',
+    description: 'Reach candidates instantly on WhatsApp from the unified Messages inbox — templates, consent, and replies in one place.',
     icon: MessageCircle,
     gradient: 'from-green-500 to-teal-500',
     iconBg: 'bg-green-500/10',
     iconColor: 'text-green-600',
-    link: '/dashboard/premium/whatsapp',
+    link: '/dashboard/messages',
     stat: 'Instant messaging',
     statColor: 'bg-green-50 text-green-700 border-green-200',
     category: 'Communication',
-    bullets: ['WhatsApp Business API', 'Scheduling reminders', 'Status update messages', 'Template library'],
+    bullets: ['WhatsApp Business API', 'Scheduling reminders', 'Status update messages', 'Unified inbox'],
   },
   {
     id: 'interview-scoring',
@@ -90,7 +90,7 @@ const premiumFeatures: Feature[] = [
     link: '/dashboard/premium/scoring',
     stat: '5-dimension rating',
     statColor: 'bg-amber-50 text-amber-700 border-amber-200',
-    category: 'AI & Search',
+    category: 'Search & Tools',
     featured: true,
     bullets: ['Per-criterion scoring', 'Team-wide score visibility', 'Score history & trends', 'PDF scorecard export'],
   },
@@ -124,16 +124,16 @@ const premiumFeatures: Feature[] = [
   },
   {
     id: 'resume-parser',
-    name: 'Resume AI Parser',
-    description: 'Upload a PDF résumé and let our AI automatically extract and structure skills, work history, education, and contact details into the candidate record.',
+    name: 'Resume Parser',
+    description: 'Upload a PDF résumé and automatically extract and structure skills, work history, education, and contact details into the candidate record.',
     icon: Upload,
     gradient: 'from-cyan-500 to-blue-600',
     iconBg: 'bg-cyan-500/10',
     iconColor: 'text-cyan-600',
     link: '/dashboard/premium/resume',
-    stat: 'AI extraction',
+    stat: 'Auto extraction',
     statColor: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-    category: 'AI & Search',
+    category: 'Search & Tools',
     bullets: ['PDF parsing & extraction', 'Skills auto-tagging', 'Education & experience', 'Instant profile population'],
   },
   {
@@ -174,7 +174,7 @@ const statCards = [
 ];
 
 const accessSteps = [
-  { step: '01', title: 'Candidate Profiles', desc: 'Open any candidate to access Email Templates, Interview Scoring, Team Comments & Resume AI.', icon: Users },
+  { step: '01', title: 'Candidate Profiles', desc: 'Open any candidate to access Email Templates, Interview Scoring, Team Comments & Resume Parser.', icon: Users },
   { step: '02', title: 'Jobs Section', desc: 'Open a job listing to manage Job Posting details and syndicate to external Job Boards.', icon: Briefcase },
   { step: '03', title: 'Smart Search', desc: 'Use the Advanced Search button on the Candidates list to unlock multi-criteria filtering.', icon: Search },
 ];
@@ -215,12 +215,12 @@ export default function PremiumFeaturesPage() {
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">Premium Features</h1>
               <p className="text-stone-400 mt-1.5 text-sm sm:text-base max-w-lg">
-                The full suite of advanced recruitment tools — AI-powered, collaborative, and built for professional hiring teams.
+                The full suite of advanced recruitment tools — collaborative and built for professional hiring teams.
               </p>
             </div>
           </div>
           <div className="flex flex-col gap-2 sm:items-end flex-shrink-0">
-            {['AI Candidate Search', 'Interview Scoring', 'Resume AI Parser'].map((f) => (
+            {['Smart Candidate Search', 'Interview Scoring', 'Resume Parser'].map((f) => (
               <div key={f} className="flex items-center gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
                 <span className="text-xs text-stone-400">{f}</span>

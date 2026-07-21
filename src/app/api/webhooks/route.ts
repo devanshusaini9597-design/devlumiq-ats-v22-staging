@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withPermission } from '@/lib/with-permission';
 
 // GET /api/webhooks - Get all webhooks
-export async function GET() {
+export const GET = withPermission('MANAGE_INTEGRATIONS', async () => {
   try {
     const webhooks = await prisma.webhook.findMany({
       orderBy: { createdAt: 'desc' },
@@ -18,10 +19,10 @@ export async function GET() {
     console.error('Error fetching webhooks:', error);
     return NextResponse.json({ error: 'Failed to fetch webhooks' }, { status: 500 });
   }
-}
+});
 
 // POST /api/webhooks - Create webhook
-export async function POST(request: Request) {
+export const POST = withPermission('MANAGE_INTEGRATIONS', async (request: NextRequest) => {
   try {
     const { name, url, secret, events, headers, retryCount, timeout } = await request.json();
 
@@ -42,10 +43,10 @@ export async function POST(request: Request) {
     console.error('Error creating webhook:', error);
     return NextResponse.json({ error: 'Failed to create webhook' }, { status: 500 });
   }
-}
+});
 
 // DELETE /api/webhooks - Delete webhook
-export async function DELETE(request: Request) {
+export const DELETE = withPermission('MANAGE_INTEGRATIONS', async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -61,4 +62,4 @@ export async function DELETE(request: Request) {
     console.error('Error deleting webhook:', error);
     return NextResponse.json({ error: 'Failed to delete webhook' }, { status: 500 });
   }
-}
+});

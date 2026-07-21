@@ -18,8 +18,9 @@ import {
   Bell, Search, ChevronDown, ChevronLeft, Command, FolderOpen, FileText,
   LayoutGrid, Mail, MessageCircle, Calendar, ChevronRight,
   Sparkles, Crown, Star, Zap, FileCheck, MessageSquare, Upload, Share2, Briefcase, Shield,
-  Building, Puzzle, Info, CheckCircle2, AlertTriangle, Inbox, Clock
+  Building, Puzzle, Info, CheckCircle2, AlertTriangle, Inbox, Clock, Lock, Tags, Archive
 } from 'lucide-react';
+import { ROLE_PERMISSIONS, Role } from '@/lib/roles';
 import LocaleSwitcher from './LocaleSwitcher';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
@@ -44,11 +45,11 @@ export default function DashboardLayout({
   const getInitialOpenGroups = () => {
     const set = new Set<string>();
     const path = pathname;
-    if (['/dashboard/candidates', '/dashboard/kanban', '/dashboard/jobs'].includes(path)) set.add('recruitment');
-    else if (['/dashboard/analytics', '/dashboard/reports'].includes(path)) set.add('analytics');
+    if (['/dashboard/candidates', '/dashboard/kanban', '/dashboard/jobs', '/dashboard/talent-pools'].includes(path)) set.add('recruitment');
+    else if (['/dashboard/analytics', '/dashboard/reports', '/dashboard/dei'].includes(path)) set.add('analytics');
     else if (['/dashboard/inbox', '/dashboard/messages'].includes(path)) set.add('communication');
     else if (path.startsWith('/dashboard/premium') || path === '/dashboard/company' || path === '/dashboard/integrations') set.add('premium');
-    else if (['/dashboard/assessments', '/dashboard/referrals', '/dashboard/esignature', '/dashboard/background-checks'].includes(path)) set.add('tools');
+    else if (['/dashboard/assessments', '/dashboard/skills', '/dashboard/referrals', '/dashboard/esignature', '/dashboard/background-checks'].includes(path)) set.add('tools');
     else { set.add('recruitment'); set.add('analytics'); set.add('communication'); }
     return set;
   };
@@ -181,43 +182,49 @@ export default function DashboardLayout({
   };
   const _ALL  = ['ADMIN','RECRUITER','HIRING_MANAGER','INTERVIEWER','VIEWER'];
   const _STAFF = ['ADMIN','RECRUITER','HIRING_MANAGER'];
-  type NavItem = { labelKey: string; icon: React.ElementType; path: string; badge?: number };
+  type NavItem = { labelKey: string; icon: React.ElementType; path: string; badge?: number; requiredPermission?: string };
   type NavGroup = { key: string; labelKey: string; icon: React.ElementType; roles: string[]; items: NavItem[] };
+  const userPermissions: string[] = userRole ? ((ROLE_PERMISSIONS[userRole as Role] ?? []) as string[]) : [];
+  const canAccessItem = (perm?: string) => !perm || !userRole || userPermissions.includes(perm);
   const navGroups: NavGroup[] = [
     { key: 'recruitment', labelKey: 'dashboard.navRecruitment', icon: Users, roles: _ALL, items: [
-      { labelKey: 'dashboard.candidates', icon: Users, path: '/dashboard/candidates' },
-      { labelKey: 'dashboard.kanban', icon: LayoutGrid, path: '/dashboard/kanban' },
-      { labelKey: 'dashboard.jobs', icon: FolderOpen, path: '/dashboard/jobs' },
+      { labelKey: 'dashboard.candidates', icon: Users, path: '/dashboard/candidates', requiredPermission: 'VIEW_CANDIDATES' },
+      { labelKey: 'dashboard.kanban', icon: LayoutGrid, path: '/dashboard/kanban', requiredPermission: 'VIEW_APPLICATIONS' },
+      { labelKey: 'dashboard.jobs', icon: FolderOpen, path: '/dashboard/jobs', requiredPermission: 'VIEW_JOBS' },
+      { labelKey: 'dashboard.talentPools', icon: Archive, path: '/dashboard/talent-pools', requiredPermission: 'VIEW_CANDIDATES' },
     ]},
     { key: 'premium', labelKey: 'premium.title', icon: Crown, roles: _STAFF, items: [
-      { labelKey: 'premium.smartSearch.title', icon: Search, path: '/dashboard/premium/search' },
-      { labelKey: 'premium.emailTemplates.title', icon: Mail, path: '/dashboard/premium/email' },
-      { labelKey: 'premium.whatsappTemplates.title', icon: MessageCircle, path: '/dashboard/premium/whatsapp' },
-      { labelKey: 'premium.interviewScoring.title', icon: Star, path: '/dashboard/premium/scoring' },
-      { labelKey: 'premium.offerLetters.title', icon: FileCheck, path: '/dashboard/premium/offers' },
-      { labelKey: 'premium.teamComments.title', icon: MessageSquare, path: '/dashboard/premium/comments' },
-      { labelKey: 'premium.resumeParser.title', icon: Upload, path: '/dashboard/premium/resume' },
-      { labelKey: 'premium.jobPosting.title', icon: Briefcase, path: '/dashboard/premium/jobposting' },
-      { labelKey: 'premium.jobBoards.title', icon: Share2, path: '/dashboard/premium/jobboards' },
-      { labelKey: 'dashboard.integrations', icon: Puzzle, path: '/dashboard/integrations' },
-      { labelKey: 'dashboard.company', icon: Building, path: '/dashboard/company' },
+      { labelKey: 'premium.smartSearch.title', icon: Search, path: '/dashboard/premium/search', requiredPermission: 'USE_SMART_SEARCH' },
+      { labelKey: 'premium.emailTemplates.title', icon: Mail, path: '/dashboard/premium/email', requiredPermission: 'USE_EMAIL_TEMPLATES' },
+      { labelKey: 'premium.interviewScoring.title', icon: Star, path: '/dashboard/premium/scoring', requiredPermission: 'SCORE_INTERVIEW' },
+      { labelKey: 'premium.offerLetters.title', icon: FileCheck, path: '/dashboard/premium/offers', requiredPermission: 'GENERATE_OFFER_LETTER' },
+      { labelKey: 'premium.teamComments.title', icon: MessageSquare, path: '/dashboard/premium/comments', requiredPermission: 'USE_TEAM_COMMENTS' },
+      { labelKey: 'premium.resumeParser.title', icon: Upload, path: '/dashboard/premium/resume', requiredPermission: 'USE_RESUME_PARSER' },
+      { labelKey: 'premium.jobPosting.title', icon: Briefcase, path: '/dashboard/premium/jobposting', requiredPermission: 'CREATE_JOB' },
+      { labelKey: 'premium.jobBoards.title', icon: Share2, path: '/dashboard/premium/jobboards', requiredPermission: 'MANAGE_INTEGRATIONS' },
+      { labelKey: 'dashboard.integrations', icon: Puzzle, path: '/dashboard/integrations', requiredPermission: 'MANAGE_INTEGRATIONS' },
+      { labelKey: 'dashboard.company', icon: Building, path: '/dashboard/company', requiredPermission: 'MANAGE_COMPANY' },
     ]},
     { key: 'tools', labelKey: 'dashboard.navTools', icon: Sparkles, roles: _STAFF, items: [
-      { labelKey: 'dashboard.assessments', icon: FileCheck, path: '/dashboard/assessments' },
-      { labelKey: 'dashboard.referrals', icon: Users, path: '/dashboard/referrals' },
-      { labelKey: 'dashboard.esignature', icon: FileCheck, path: '/dashboard/esignature' },
-      { labelKey: 'dashboard.backgroundChecks', icon: Shield, path: '/dashboard/background-checks' },
+      { labelKey: 'dashboard.assessments', icon: FileCheck, path: '/dashboard/assessments', requiredPermission: 'VIEW_ASSESSMENTS' },
+      { labelKey: 'dashboard.skills', icon: Tags, path: '/dashboard/skills', requiredPermission: 'VIEW_CANDIDATES' },
+      { labelKey: 'dashboard.referrals', icon: Users, path: '/dashboard/referrals', requiredPermission: 'VIEW_REFERRALS' },
+      { labelKey: 'dashboard.esignature', icon: FileCheck, path: '/dashboard/esignature', requiredPermission: 'USE_ESIGNATURE' },
+      { labelKey: 'dashboard.backgroundChecks', icon: Shield, path: '/dashboard/background-checks', requiredPermission: 'VIEW_BACKGROUND_CHECKS' },
     ]},
     { key: 'analytics', labelKey: 'dashboard.navAnalytics', icon: BarChart3, roles: _ALL, items: [
-      { labelKey: 'dashboard.analytics', icon: BarChart3, path: '/dashboard/analytics' },
-      { labelKey: 'dashboard.reports', icon: FileText, path: '/dashboard/reports' },
+      { labelKey: 'dashboard.analytics', icon: BarChart3, path: '/dashboard/analytics', requiredPermission: 'VIEW_ANALYTICS' },
+      { labelKey: 'dashboard.reports', icon: FileText, path: '/dashboard/reports', requiredPermission: 'VIEW_REPORTS' },
+      { labelKey: 'dashboard.dei', icon: Shield, path: '/dashboard/dei', requiredPermission: 'MANAGE_SETTINGS' },
     ]},
-    { key: 'communication', labelKey: 'dashboard.navCommunication', icon: Mail, roles: ['ADMIN','RECRUITER','HIRING_MANAGER','INTERVIEWER'], items: [
+    { key: 'communication', labelKey: 'dashboard.navCommunication', icon: Mail, roles: _ALL, items: [
       { labelKey: 'dashboard.inbox', icon: Mail, path: '/dashboard/inbox' },
       { labelKey: 'dashboard.messages', icon: MessageCircle, path: '/dashboard/messages' },
     ]},
   ];
-  const visibleNavGroups = navGroups.filter(g => !userRole || g.roles.includes(userRole));
+  const visibleNavGroups = userRole
+    ? navGroups.filter((g) => g.roles.includes(userRole))
+    : navGroups;
   const toggleNavGroup = (key: string) => setOpenNavGroups((prev) => {
     const next = new Set(prev);
     if (next.has(key)) next.delete(key);
@@ -290,10 +297,12 @@ export default function DashboardLayout({
   useEffect(() => {
     const groupForPath: Record<string, string> = {
       '/dashboard/candidates': 'recruitment', '/dashboard/kanban': 'recruitment', '/dashboard/jobs': 'recruitment',
-      '/dashboard/analytics': 'analytics', '/dashboard/reports': 'analytics',
+      '/dashboard/talent-pools': 'recruitment',
+      '/dashboard/analytics': 'analytics', '/dashboard/reports': 'analytics', '/dashboard/dei': 'analytics',
       '/dashboard/inbox': 'communication', '/dashboard/messages': 'communication',
       '/dashboard/company': 'premium', '/dashboard/integrations': 'premium',
-      '/dashboard/assessments': 'tools', '/dashboard/referrals': 'tools', '/dashboard/esignature': 'tools', '/dashboard/background-checks': 'tools',
+      '/dashboard/assessments': 'tools', '/dashboard/skills': 'tools', '/dashboard/referrals': 'tools',
+      '/dashboard/esignature': 'tools', '/dashboard/background-checks': 'tools',
     };
     const key = groupForPath[pathname];
     if (key) setOpenNavGroups((prev) => new Set(prev).add(key));
@@ -496,6 +505,24 @@ export default function DashboardLayout({
                               {group.items.map((item) => {
                                 const ItemIcon = item.icon;
                                 const active = pathname === item.path;
+                                const locked = !canAccessItem(item.requiredPermission);
+                                if (locked) {
+                                  return (
+                                    <div
+                                      key={item.path}
+                                      title={`Requires ${(item.requiredPermission ?? '').replace(/_/g, ' ')} permission`}
+                                      className="cursor-not-allowed select-none"
+                                    >
+                                      <div className="relative flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium opacity-35">
+                                        <span className="relative flex-shrink-0">
+                                          <ItemIcon className="w-3.5 h-3.5 text-stone-600" />
+                                        </span>
+                                        <span className="flex-1 text-stone-600 truncate">{t(item.labelKey)}</span>
+                                        <Lock className="w-3 h-3 flex-shrink-0 text-stone-700" />
+                                      </div>
+                                    </div>
+                                  );
+                                }
                                 return (
                                   <Link key={item.path} href={item.path} onClick={() => setSidebarOpen(false)}>
                                     <div className={`relative flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
@@ -549,15 +576,16 @@ export default function DashboardLayout({
             </Link>
           </motion.div>
 
-          {/* Settings group (Settings + ADMIN-only links) */}
+          {/* Settings group (Settings + role-gated links) */}
           {(() => {
             const settingsPaths = ['/dashboard/settings', '/dashboard/settings/users', '/dashboard/settings/audit-log'];
             const isSettingsActive = settingsPaths.some(p => pathname.startsWith(p));
             const isSettingsOpen = openNavGroups.has('settings');
-            const adminItems = userRole === 'ADMIN' ? [
-              { label: 'User Management', icon: Users, path: '/dashboard/settings/users' },
-              { label: 'Audit Logs', icon: Shield, path: '/dashboard/settings/audit-log' },
-            ] : [];
+            const settingsSubItems = [
+              { label: 'User Management', icon: Users, path: '/dashboard/settings/users', requiredPermission: 'MANAGE_USERS' },
+              { label: 'Audit Logs', icon: Shield, path: '/dashboard/settings/audit-log', requiredPermission: 'VIEW_AUDIT_LOGS' },
+            ];
+            const adminItems = settingsSubItems;
             return (
               <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.22 }}>
                 {sidebarCollapsed ? (
@@ -572,7 +600,7 @@ export default function DashboardLayout({
                       </div>
                     </div>
                   </Link>
-                ) : adminItems.length > 0 ? (
+                ) : (
                   <>
                     <button
                       type="button"
@@ -611,7 +639,7 @@ export default function DashboardLayout({
                                 <Settings className="w-3.5 h-3.5" /><span>General</span>
                               </div>
                             </Link>
-                            {adminItems.map(item => (
+                            {adminItems.filter(item => canAccessItem(item.requiredPermission)).map(item => (
                               <Link key={item.path} href={item.path} onClick={() => setSidebarOpen(false)}>
                                 <div className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
                                   pathname === item.path ? 'bg-white/5 text-stone-200' : 'text-stone-500 hover:bg-stone-800/40 hover:text-stone-200'
@@ -625,20 +653,6 @@ export default function DashboardLayout({
                       )}
                     </AnimatePresence>
                   </>
-                ) : (
-                  <Link href="/dashboard/settings" onClick={() => setSidebarOpen(false)}>
-                    <div className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all ${
-                      isSettingsActive ? 'bg-stone-800 text-white' : 'text-stone-400 hover:bg-stone-800/50 hover:text-stone-200'
-                    }`}>
-                      {isSettingsActive && <div className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full bg-brand-400" />}
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        isSettingsActive ? 'bg-brand-500/30' : 'bg-stone-800/60'
-                      }`}>
-                        <Settings className={`w-4 h-4 ${isSettingsActive ? 'text-brand-300' : 'text-stone-500'}`} />
-                      </div>
-                      <span className="text-sm">{t('dashboard.settings')}</span>
-                    </div>
-                  </Link>
                 )}
               </motion.div>
             );
@@ -718,6 +732,24 @@ export default function DashboardLayout({
                   {fg.items.map((item) => {
                     const ItemIcon = item.icon;
                     const active = pathname === item.path;
+                    const flyoutLocked = !canAccessItem(item.requiredPermission);
+                    if (flyoutLocked) {
+                      return (
+                        <div
+                          key={item.path}
+                          title={`Requires ${(item.requiredPermission ?? '').replace(/_/g, ' ')} permission`}
+                          className="cursor-not-allowed select-none"
+                        >
+                          <div className="flex items-center gap-3 mx-1.5 px-3 py-2.5 rounded-lg text-sm font-medium opacity-35">
+                            <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 bg-stone-800 text-stone-600">
+                              <ItemIcon className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="flex-1 min-w-0 truncate text-stone-600">{t(item.labelKey)}</span>
+                            <Lock className="w-3.5 h-3.5 text-stone-700 flex-shrink-0" />
+                          </div>
+                        </div>
+                      );
+                    }
                     return (
                       <Link
                         key={item.path}
@@ -915,6 +947,17 @@ export default function DashboardLayout({
                     {initials}
                   </div>
                   <span className="hidden sm:inline text-sm font-semibold text-stone-700">Hi, {displayName}</span>
+                  {userRole && (
+                    <span className={`hidden sm:inline text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${
+                      userRole === 'ADMIN' ? 'bg-violet-100 text-violet-700' :
+                      userRole === 'RECRUITER' ? 'bg-brand-100 text-brand-700' :
+                      userRole === 'HIRING_MANAGER' ? 'bg-amber-100 text-amber-700' :
+                      userRole === 'INTERVIEWER' ? 'bg-sky-100 text-sky-700' :
+                      'bg-stone-100 text-stone-600'
+                    }`}>
+                      {userRole.replace('_', ' ')}
+                    </span>
+                  )}
                   <ChevronDown className={`hidden sm:inline w-4 h-4 text-stone-500 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
                 </motion.button>
                 <AnimatePresence>

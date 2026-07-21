@@ -1,10 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { stageToDisplay } from '@/lib/api-helpers';
+import { withAuth } from '@/lib/with-permission';
+import type { SessionUser } from '@/lib/auth';
 
 const STAGES = ['APPLIED', 'SCREENING', 'INTERVIEW', 'OFFER', 'HIRED', 'JOINED', 'REJECTED', 'DROPPED'];
 
-export async function GET() {
+export const GET = withAuth(async (_req: NextRequest, _ctx, session: SessionUser) => {
   try {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -12,8 +14,26 @@ export async function GET() {
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
     const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
+    startOfWeek.setDate(now.getDate() - now.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
+
+    const orgId = session.organizationId;
+    const isInterviewer = session.role === 'INTERVIEWER';
+
+    // Resolve org-scoped job IDs first (more reliable than nested relation filters in production)
+    const orgJobIds = orgId
+      ? (await prisma.job.findMany({ where: { companyId: orgId }, select: { id: true } })).map(j => j.id)
+      : [];
+
+    // Org-scoped filters
+    const candidateWhere = orgId ? { organizationId: orgId } : {};
+    const jobWhere = orgId ? { companyId: orgId } : {};
+    const appWhere = orgJobIds.length > 0 ? { jobId: { in: orgJobIds } } : {};
+    const interviewWhere = {
+      start: { gte: now, lte: in7Days },
+      ...(orgJobIds.length > 0 ? { jobId: { in: orgJobIds } } : {}),
+      ...(isInterviewer ? { assignedToId: session.id } : {}),
+    };
 
     const [
       candidates,
@@ -31,10 +51,11 @@ export async function GET() {
       hiredCount,
       rejectedCount,
     ] = await Promise.all([
-      prisma.candidate.count(),
-      prisma.application.findMany({ select: { stage: true } }),
-      prisma.job.count({ where: { status: 'Active' } }),
+      prisma.candidate.count({ where: candidateWhere }),
+      prisma.application.findMany({ where: appWhere, select: { stage: true } }),
+      prisma.job.count({ where: { ...jobWhere, status: 'Active' } }),
       prisma.candidate.findMany({
+        where: candidateWhere,
         take: 10,
         orderBy: { createdAt: 'desc' },
         include: {
@@ -45,44 +66,38 @@ export async function GET() {
           },
         },
       }),
-      prisma.candidate.count({ where: { createdAt: { gte: startOfMonth } } }),
-      prisma.candidate.count({ where: { createdAt: { gte: startOfLastMonth, lte: endOfLastMonth } } }),
+      prisma.candidate.count({ where: { ...candidateWhere, createdAt: { gte: startOfMonth } } }),
+      prisma.candidate.count({ where: { ...candidateWhere, createdAt: { gte: startOfLastMonth, lte: endOfLastMonth } } }),
       prisma.interviewEvent.findMany({
-        where: { start: { gte: now, lte: in7Days } },
+        where: interviewWhere,
         include: { candidate: true, job: true, assignedTo: true },
         orderBy: { start: 'asc' },
         take: 10,
       }),
       prisma.activityLog.findMany({
+        where: orgId && orgJobIds.length > 0 ? { jobId: { in: orgJobIds } } : {},
         orderBy: { createdAt: 'desc' },
         take: 15,
       }),
-      // Get applications with job info for top positions
       prisma.application.findMany({
-        select: {
-          job: { select: { title: true } },
-          stage: true,
-        },
+        where: appWhere,
+        select: { job: { select: { title: true } }, stage: true },
       }),
-      // Get candidates with source info
       prisma.candidate.findMany({
+        where: candidateWhere,
         select: { source: true },
       }),
-      // Get candidates created this week for daily submissions
       prisma.candidate.findMany({
-        where: { createdAt: { gte: startOfWeek } },
+        where: { ...candidateWhere, createdAt: { gte: startOfWeek } },
         select: { createdAt: true },
         orderBy: { createdAt: 'asc' },
       }),
-      // Get time-to-hire data
       prisma.timeToHireMetric.findMany({
         where: { totalTimeToHire: { not: null } },
         select: { totalTimeToHire: true },
       }),
-      // Count hired candidates
-      prisma.application.count({ where: { stage: { in: ['HIRED', 'JOINED'] } } }),
-      // Count rejected candidates
-      prisma.application.count({ where: { stage: 'REJECTED' } }),
+      prisma.application.count({ where: { ...appWhere, stage: { in: ['HIRED', 'JOINED'] } } }),
+      prisma.application.count({ where: { ...appWhere, stage: 'REJECTED' } }),
     ]);
 
     const pipelineCounts = STAGES.map((stage) => ({
@@ -204,15 +219,18 @@ export async function GET() {
     });
 
     // Calculate previous month hires for comparison
-    const prevMonthHires = await prisma.application.count({
-      where: {
-        stage: { in: ['HIRED', 'JOINED'] },
-        OR: [
-          { hiredAt: { gte: startOfLastMonth, lte: endOfLastMonth } },
-          { hiredAt: null, updatedAt: { gte: startOfLastMonth, lte: endOfLastMonth } },
-        ]
-      }
-    });
+    const prevMonthHires = orgJobIds.length > 0
+      ? await prisma.application.count({
+          where: {
+            jobId: { in: orgJobIds },
+            stage: { in: ['HIRED', 'JOINED'] },
+            OR: [
+              { hiredAt: { gte: startOfLastMonth, lte: endOfLastMonth } },
+              { hiredAt: null, updatedAt: { gte: startOfLastMonth, lte: endOfLastMonth } },
+            ]
+          }
+        })
+      : 0;
 
     const summary = {
       totalCandidates: candidates,
@@ -240,4 +258,4 @@ export async function GET() {
     console.error('GET /api/dashboard/summary', e);
     return NextResponse.json({ error: 'Failed to load dashboard summary' }, { status: 500 });
   }
-}
+});

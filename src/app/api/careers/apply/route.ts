@@ -1,13 +1,17 @@
-import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { mkdir } from 'fs/promises';
 import { sendEmail, generateApplicationConfirmationEmail, generateNewApplicationNotificationEmail } from '@/lib/email';
+import { notifyNewApplication } from '@/lib/push';
+import { careersCorsHeaders, careersCorsOptions, jsonWithCors } from '@/lib/careers-cors';
 
-const prisma = new PrismaClient();
+export async function OPTIONS(req: NextRequest) {
+  return careersCorsOptions(req);
+}
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
 
@@ -22,19 +26,13 @@ export async function POST(request: Request) {
 
     // Validation
     if (!name || !email || !jobId) {
-      return NextResponse.json(
-        { error: 'Name, email, and job selection are required' },
-        { status: 400 }
-      );
+      return jsonWithCors(request, { error: 'Name, email, and job selection are required' }, { status: 400 });
     }
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Invalid email address' },
-        { status: 400 }
-      );
+      return jsonWithCors(request, { error: 'Invalid email address' }, { status: 400 });
     }
 
     // Check if job exists and is active
@@ -43,10 +41,7 @@ export async function POST(request: Request) {
     });
 
     if (!job) {
-      return NextResponse.json(
-        { error: 'Job not found or no longer accepting applications' },
-        { status: 404 }
-      );
+      return jsonWithCors(request, { error: 'Job not found or no longer accepting applications' }, { status: 404 });
     }
 
     // Handle resume upload
@@ -57,18 +52,12 @@ export async function POST(request: Request) {
       // Validate file type
       const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
       if (!allowedTypes.includes(resume.type)) {
-        return NextResponse.json(
-          { error: 'Invalid file type. Please upload PDF or Word document.' },
-          { status: 400 }
-        );
+        return jsonWithCors(request, { error: 'Invalid file type. Please upload PDF or Word document.' }, { status: 400 });
       }
 
       // Validate file size (max 5MB)
       if (resume.size > 5 * 1024 * 1024) {
-        return NextResponse.json(
-          { error: 'File size too large. Maximum 5MB allowed.' },
-          { status: 400 }
-        );
+        return jsonWithCors(request, { error: 'File size too large. Maximum 5MB allowed.' }, { status: 400 });
       }
 
       // Save file
@@ -88,9 +77,11 @@ export async function POST(request: Request) {
       resumeText = resume.name;
     }
 
-    // Check if candidate already exists
-    let candidate = await prisma.candidate.findUnique({
-      where: { email },
+    // Check if candidate already exists within this org (email uniqueness is now per-org)
+    const candidateWhere: any = { email };
+    if (job.companyId) candidateWhere.organizationId = job.companyId;
+    let candidate = await prisma.candidate.findFirst({
+      where: candidateWhere,
     });
 
     if (candidate) {
@@ -106,17 +97,17 @@ export async function POST(request: Request) {
         },
       });
     } else {
-      // Create new candidate
-      candidate = await prisma.candidate.create({
-        data: {
-          name,
-          email,
-          phone,
-          resumeUrl,
-          resumeText,
-          source: 'Career Portal',
-        },
-      });
+      // Create new candidate tied to the job's company
+      const candidateData: any = {
+        name,
+        email,
+        phone,
+        resumeUrl,
+        resumeText,
+        source: 'Career Portal',
+      };
+      if (job.companyId) candidateData.organizationId = job.companyId;
+      candidate = await prisma.candidate.create({ data: candidateData });
     }
 
     // Check if already applied to this job
@@ -128,10 +119,7 @@ export async function POST(request: Request) {
     });
 
     if (existingApplication) {
-      return NextResponse.json(
-        { error: 'You have already applied for this position' },
-        { status: 409 }
-      );
+      return jsonWithCors(request, { error: 'You have already applied for this position' }, { status: 409 });
     }
 
     // Create application
@@ -142,6 +130,33 @@ export async function POST(request: Request) {
         stage: 'Applied',
       },
     });
+
+    // Voluntary EEO self-ID (optional, stored separately from hiring data)
+    const organizationId = job.companyId;
+    if (organizationId) {
+      const declined = formData.get('declinedToSelfId') === 'true';
+      const gender = (formData.get('gender') as string) || '';
+      const ethnicity = (formData.get('ethnicity') as string) || '';
+      const veteranStatus = (formData.get('veteranStatus') as string) || '';
+      const disability = (formData.get('disability') as string) || '';
+      if (declined || gender || ethnicity || veteranStatus || disability) {
+        const deiSettings = await prisma.orgDeiSettings.findUnique({ where: { organizationId } });
+        if (!deiSettings || deiSettings.selfIdFormEnabled !== false) {
+          await prisma.candidateSelfId.create({
+            data: {
+              organizationId,
+              candidateId: candidate.id,
+              applicationId: application.id,
+              gender: gender || null,
+              ethnicity: ethnicity || null,
+              veteranStatus: veteranStatus || null,
+              disability: disability || null,
+              declinedToSelfId: declined,
+            },
+          }).catch(() => {});
+        }
+      }
+    }
 
     // Update job applicant count
     await prisma.job.update({
@@ -186,7 +201,15 @@ export async function POST(request: Request) {
       text: notificationEmail.text,
     });
 
-    return NextResponse.json({
+    // Web push to org recruiters (no-op if VAPID not configured)
+    await notifyNewApplication({
+      organizationId: organizationId ?? null,
+      candidateName: name,
+      jobTitle: job.title,
+      candidateId: candidate.id,
+    }).catch(() => {});
+
+    return jsonWithCors(request, {
       success: true,
       message: 'Application submitted successfully',
       applicationId: application.id,
@@ -196,7 +219,7 @@ export async function POST(request: Request) {
     console.error('Error submitting application:', error);
     return NextResponse.json(
       { error: 'Failed to submit application. Please try again.' },
-      { status: 500 }
+      { status: 500, headers: careersCorsHeaders(request) },
     );
   }
 }

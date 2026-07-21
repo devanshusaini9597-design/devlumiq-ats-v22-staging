@@ -40,32 +40,32 @@ interface Integration {
 }
 
 const integrations: Integration[] = [
-  { name: 'LinkedIn', desc: 'Post jobs & source candidates', icon: Linkedin, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: true, category: 'jobboards', setupTime: '2 min' },
-  { name: 'Indeed', desc: 'Reach 350M+ monthly visitors', icon: Globe, color: 'text-orange-400', bg: 'bg-orange-500/15', connected: true, category: 'jobboards', setupTime: '3 min' },
+  { name: 'LinkedIn', desc: 'Post jobs & source candidates', icon: Linkedin, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: false, category: 'jobboards', setupTime: '2 min' },
+  { name: 'Indeed', desc: 'Reach 350M+ monthly visitors', icon: Globe, color: 'text-orange-400', bg: 'bg-orange-500/15', connected: false, category: 'jobboards', setupTime: '3 min' },
   { name: 'Glassdoor', desc: 'Build your employer brand', icon: Shield, color: 'text-green-400', bg: 'bg-green-500/15', connected: false, category: 'jobboards', setupTime: '2 min' },
-  { name: 'ZipRecruiter', desc: 'AI-powered matching', icon: Zap, color: 'text-purple-400', bg: 'bg-purple-500/15', connected: false, category: 'jobboards', setupTime: '5 min' },
+  { name: 'ZipRecruiter', desc: 'Smart matching', icon: Zap, color: 'text-purple-400', bg: 'bg-purple-500/15', connected: false, category: 'jobboards', setupTime: '5 min' },
   { name: 'Stack Overflow', desc: 'Target developers directly', icon: Code, color: 'text-amber-400', bg: 'bg-amber-500/15', connected: false, category: 'jobboards', setupTime: '3 min' },
-  { name: 'Slack', desc: 'Team notifications & alerts', icon: Slack, color: 'text-violet-400', bg: 'bg-violet-500/15', connected: true, category: 'communication', setupTime: '1 min' },
-  { name: 'Microsoft Teams', desc: 'Collaborate on hiring', icon: MessageSquare, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: true, category: 'communication', setupTime: '2 min' },
+  { name: 'Slack', desc: 'Team notifications & alerts', icon: Slack, color: 'text-violet-400', bg: 'bg-violet-500/15', connected: false, category: 'communication', setupTime: '1 min' },
+  { name: 'Microsoft Teams', desc: 'Collaborate on hiring', icon: MessageSquare, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: false, category: 'communication', setupTime: '2 min' },
   { name: 'Gmail', desc: 'Email candidates seamlessly', icon: Mail, color: 'text-red-400', bg: 'bg-red-500/15', connected: true, category: 'communication', setupTime: '1 min' },
-  { name: 'Outlook', desc: 'Microsoft mail integration', icon: Mail, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: true, category: 'communication', setupTime: '2 min' },
+  { name: 'Outlook', desc: 'Microsoft mail integration', icon: Mail, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: false, category: 'communication', setupTime: '2 min' },
   { name: 'Zoom', desc: 'Auto-generate video links', icon: Video, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: false, category: 'communication', setupTime: '2 min' },
-  { name: 'Google Calendar', desc: 'Sync interview schedules', icon: Calendar, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: true, category: 'calendar', setupTime: '1 min' },
-  { name: 'Outlook Calendar', desc: 'Office 365 calendar sync', icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-600/15', connected: true, category: 'calendar', setupTime: '2 min' },
+  { name: 'Google Calendar', desc: 'Sync interview schedules', icon: Calendar, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: false, category: 'calendar', setupTime: '1 min' },
+  { name: 'Outlook Calendar', desc: 'Office 365 calendar sync', icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-600/15', connected: false, category: 'calendar', setupTime: '2 min' },
   { name: 'Calendly', desc: 'Self-schedule interviews', icon: Calendar, color: 'text-teal-400', bg: 'bg-teal-500/15', connected: false, category: 'calendar', setupTime: '3 min' },
-  { name: 'Workday', desc: 'Enterprise HR management', icon: Cloud, color: 'text-amber-400', bg: 'bg-amber-500/15', connected: true, category: 'hr', setupTime: '15 min' },
-  { name: 'BambooHR', desc: 'People-first HR platform', icon: Server, color: 'text-green-400', bg: 'bg-green-500/15', connected: true, category: 'hr', setupTime: '10 min' },
+  { name: 'Workday', desc: 'Enterprise HR management', icon: Cloud, color: 'text-amber-400', bg: 'bg-amber-500/15', connected: false, category: 'hr', setupTime: '15 min' },
+  { name: 'BambooHR', desc: 'People-first HR platform', icon: Server, color: 'text-green-400', bg: 'bg-green-500/15', connected: false, category: 'hr', setupTime: '10 min' },
   { name: 'SAP SuccessFactors', desc: 'Global HR suite', icon: Database, color: 'text-blue-400', bg: 'bg-blue-700/15', connected: false, category: 'hr', setupTime: '30 min' },
   { name: 'Greenhouse', desc: 'Recruiting software sync', icon: Server, color: 'text-green-400', bg: 'bg-green-600/15', connected: false, category: 'hr', setupTime: '20 min' },
   { name: 'Checkr', desc: 'Fast background checks', icon: Shield, color: 'text-blue-400', bg: 'bg-blue-600/15', connected: true, category: 'background', setupTime: '5 min' },
-  { name: 'GoodHire', desc: 'FCRA-compliant checks', icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-500/15', connected: true, category: 'background', setupTime: '5 min' },
+  { name: 'GoodHire', desc: 'FCRA-compliant checks', icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-500/15', connected: false, category: 'background', setupTime: '5 min' },
   { name: 'Sterling', desc: 'Enterprise verification', icon: Shield, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: false, category: 'background', setupTime: '15 min' },
   { name: 'Onfido', desc: 'Identity verification', icon: Lock, color: 'text-purple-400', bg: 'bg-purple-500/15', connected: false, category: 'background', setupTime: '10 min' },
   { name: 'Zapier', desc: 'Connect 5,000+ apps', icon: Zap, color: 'text-orange-400', bg: 'bg-orange-500/15', connected: true, category: 'productivity', setupTime: '2 min' },
   { name: 'Chrome Extension', desc: 'Source from anywhere', icon: Chrome, color: 'text-blue-400', bg: 'bg-blue-500/15', connected: true, category: 'productivity', setupTime: '1 min' },
   { name: 'GitHub', desc: 'Source developer talent', icon: Github, color: 'text-white', bg: 'bg-stone-700/30', connected: false, category: 'productivity', setupTime: '3 min' },
   { name: 'Zapier Webhooks', desc: 'Real-time event push', icon: Workflow, color: 'text-pink-400', bg: 'bg-pink-500/15', connected: false, category: 'productivity', setupTime: '5 min' },
-  { name: 'DocuSign', desc: 'e-Sign offer letters', icon: FileText, color: 'text-amber-400', bg: 'bg-amber-500/15', connected: true, category: 'productivity', setupTime: '3 min' },
+  { name: 'DocuSign', desc: 'e-Sign offer letters (stub — bring your own key)', icon: FileText, color: 'text-amber-400', bg: 'bg-amber-500/15', connected: false, category: 'productivity', setupTime: '3 min' },
   { name: 'REST API', desc: 'Full CRUD API access', icon: Code, color: 'text-teal-400', bg: 'bg-teal-500/15', connected: true, category: 'productivity', setupTime: 'Custom' },
   { name: 'Webhooks', desc: 'Real-time event stream', icon: RefreshCw, color: 'text-brand-400', bg: 'bg-brand-500/15', connected: true, category: 'productivity', setupTime: 'Custom' },
 ];
@@ -143,9 +143,9 @@ export default function IntegrationsPage() {
   };
 
   const stats = [
-    { value: '50+', label: t('integrations.stat1.label') },
+    { value: '15+', label: t('integrations.stat1.label') },
     { value: `${connectedCount}`, label: t('integrations.connected') },
-    { value: '99.9%', label: t('integrations.stat2.label') },
+    { value: 'High', label: t('integrations.stat2.label') },
     { value: '<100ms', label: t('integrations.stat3.label') },
   ];
 
@@ -378,10 +378,10 @@ export default function IntegrationsPage() {
         <div className="max-w-4xl mx-auto">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { icon: Code, label: 'REST + GraphQL', sub: 'Query anything', color: 'text-teal-600', bg: 'bg-teal-50', border: 'border-teal-200' },
-              { icon: Shield, label: 'OAuth 2.0', sub: 'Secure by default', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+              { icon: Code, label: 'REST API', sub: 'Full CRUD endpoints', color: 'text-teal-600', bg: 'bg-teal-50', border: 'border-teal-200' },
+              { icon: Shield, label: 'JWT Auth', sub: 'Secure by default', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
               { icon: RefreshCw, label: 'Webhooks', sub: 'Real-time events', color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-200' },
-              { icon: Globe, label: 'SDKs', sub: 'JS, Python, Ruby', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
+              { icon: Globe, label: 'RBAC', sub: '5 built-in roles', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
             ].map(({ icon: Icon, label, sub, color, bg, border }, i) => (
               <motion.div key={i} variants={scaleIn} whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 300 }}
                 className={`flex flex-col items-center text-center p-6 rounded-2xl border ${border} ${bg} shadow-sm hover:shadow-md transition-all`}>

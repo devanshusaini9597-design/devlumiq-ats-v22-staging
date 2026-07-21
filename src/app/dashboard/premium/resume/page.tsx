@@ -1,321 +1,223 @@
 /**
  * Resume AI Parser Page
  * ======================
- * Client-side PDF parsing powered by PDF.js.
- * Automatically extracts name, contact info, skills, education, and experience
- * from uploaded resumes and allows review before saving to the candidate database.
+ * Enterprise-grade server-side resume parsing.
+ * Supports PDF, DOCX, DOC, TXT. Extracts 15+ structured fields including
+ * work history, education, certifications, social links, and confidence score.
  */
 'use client';
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload, FileText, Sparkles, User, Mail, Phone, Briefcase,
-  GraduationCap, CheckCircle, X, Download, AlertTriangle, Plus, Edit3,
+  GraduationCap, CheckCircle, X, Download, AlertTriangle, Plus,
+  MapPin, Linkedin, Github, Globe, Award, Clock,
+  Building2, Calendar, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
-import { useLocale } from '@/components/providers/LocaleProvider';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Types matching the server API response
+// ─────────────────────────────────────────────────────────────────────────────
+interface WorkItem {
+  title: string;
+  company: string;
+  startDate: string;
+  endDate: string;
+  current: boolean;
+  description: string;
+}
+interface EduItem {
+  degree: string;
+  institution: string;
+  year: string;
+  gpa: string;
+}
 interface ParsedResume {
   name: string;
   email: string;
   phone: string;
+  location: string;
+  linkedin: string;
+  github: string;
+  portfolio: string;
+  currentTitle: string;
   skills: string[];
-  experience: string;
-  education: string;
+  experienceYears: number | null;
+  workExperience: WorkItem[];
+  education: EduItem[];
+  certifications: string[];
+  languages: string[];
   summary: string;
+  _confidence: number;
+  _meta?: { parseMethod: string; textLength: number; fileName: string; fileSize: number };
 }
 
-// ---------------------------------------------------------------------------
-// Client-side PDF.js — loaded from CDN for maximum compatibility
-// ---------------------------------------------------------------------------
-const PDFJS_VER = '3.11.174';
-const CDN = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VER}`;
-
-async function loadPDFJS(): Promise<any> {
-  if (typeof window !== 'undefined' && (window as any).pdfjsLib) {
-    return (window as any).pdfjsLib;
-  }
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = `${CDN}/pdf.min.js`;
-    s.onload = () => {
-      const lib = (window as any).pdfjsLib;
-      lib.GlobalWorkerOptions.workerSrc = `${CDN}/pdf.worker.min.js`;
-      resolve(lib);
-    };
-    s.onerror = () => reject(new Error('Failed to load PDF.js'));
-    document.head.appendChild(s);
-  });
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+function confidenceLabel(n: number): { label: string; cls: string; icon: typeof CheckCircle } {
+  if (n >= 70) return { label: `High confidence (${n}%)`, cls: 'text-emerald-700 bg-emerald-50 border-emerald-200', icon: CheckCircle };
+  if (n >= 40) return { label: `Review recommended (${n}%)`, cls: 'text-amber-700 bg-amber-50 border-amber-200', icon: AlertTriangle };
+  return { label: `Low quality — edit manually (${n}%)`, cls: 'text-red-700 bg-red-50 border-red-200', icon: AlertTriangle };
 }
 
-async function extractTextFromPDF(file: File): Promise<string> {
-  const pdfjsLib = await loadPDFJS();
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({
-    data: new Uint8Array(arrayBuffer),
-    cMapUrl: `${CDN}/cmaps/`,
-    cMapPacked: true,
-  }).promise;
-
-  let fullText = '';
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const pageText = content.items
-      .filter((item: any) => typeof item.str === 'string')
-      .map((item: any) => item.str)
-      .join(' ');
-    fullText += pageText + '\n';
-  }
-  return fullText.trim();
+function fmtBytes(n: number) {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
-// ---------------------------------------------------------------------------
-// Quality helpers
-// ---------------------------------------------------------------------------
-function isCleanString(str: string): boolean {
-  if (!str || str.length < 2) return false;
-  const printable = str.replace(/[^\x20-\x7E]/g, '');
-  return printable.length > str.length * 0.7;
-}
-
-function getConfidence(text: string): 'high' | 'medium' | 'low' {
-  if (!text || text.length < 30) return 'low';
-  const words = text.split(/\s+/).filter(w => w.length >= 2);
-  if (words.length < 5) return 'low';
-  const readable = words.filter(w => /^[a-zA-Z0-9'.@,\-+()/]+$/.test(w));
-  const ratio = readable.length / words.length;
-  if (ratio > 0.55) return 'high';
-  if (ratio > 0.3) return 'medium';
-  return 'low';
-}
-
-function isValidName(n: string): boolean {
-  if (!n || n.length < 3 || n.length > 55) return false;
-  if (!isCleanString(n)) return false;
-  if (!/[aeiouAEIOU]/.test(n)) return false;
-  const alpha = n.replace(/[^a-zA-Z]/g, '');
-  return alpha.length >= n.replace(/\s/g, '').length * 0.75;
-}
-
-// ---------------------------------------------------------------------------
-// Skills list
-// ---------------------------------------------------------------------------
-const SKILL_KEYWORDS = [
-  'JavaScript','TypeScript','Python','Java','C++','C#','Go','Rust','Ruby','PHP','Swift','Kotlin',
-  'React','Angular','Vue','Next.js','Node.js','Express','NestJS','Django','Flask','Spring Boot','Laravel','.NET',
-  'AWS','Azure','GCP','Docker','Kubernetes','Terraform','CI/CD','Jenkins','GitHub Actions',
-  'PostgreSQL','MySQL','MongoDB','Redis','Elasticsearch','GraphQL','REST','gRPC',
-  'Tailwind','SASS','CSS','HTML','Git','Linux','Agile','Scrum','Kanban',
-  'Machine Learning','Deep Learning','TensorFlow','PyTorch','NLP',
-  'Figma','Sketch','Adobe XD','Photoshop','Illustrator',
-  'SQL','NoSQL','Firebase','Supabase','Prisma','Webpack','Vite',
-  'Redux','Zustand','RxJS','Socket.io',
-  'Microservices','System Design','Data Structures','Algorithms',
-  'SEO','Google Analytics','Jira','Confluence',
-  'Excel','Tableau','Power BI',
-  'Leadership','Team Management','Project Management','Communication',
-];
-
-// ---------------------------------------------------------------------------
-// Parse structured data from extracted text
-// ---------------------------------------------------------------------------
-function parseResumeText(text: string, fileName: string): { data: ParsedResume; confidence: 'high' | 'medium' | 'low' } {
-  const confidence = getConfidence(text);
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  const lower = text.toLowerCase();
-
-  // ---- Name ----
-  let name = '';
-  if (confidence !== 'low') {
-    for (const line of lines.slice(0, 10)) {
-      const clean = line.replace(/[^a-zA-Z\s.'-]/g, '').trim();
-      const words = clean.split(/\s+/);
-      if (
-        words.length >= 2 && words.length <= 5 &&
-        clean.length > 3 && clean.length < 50 &&
-        !line.includes('@') && !/\d{3}/.test(line) &&
-        !/^(summary|experience|education|skills|objective|profile|contact|phone|email|address|resume|cv|curriculum)/i.test(clean) &&
-        isValidName(clean)
-      ) {
-        name = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-        break;
-      }
-    }
-  }
-  if (!name || !isValidName(name)) {
-    name = fileName
-      .replace(/\.pdf$/i, '')
-      .replace(/[_\-]+/g, ' ')
-      .replace(/resume|cv|curriculum\s*vitae/gi, '')
-      .trim()
-      .split(/\s+/)
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-      .join(' ') || 'Candidate';
-  }
-
-  // ---- Email ----
-  const emailMatch = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
-  const email = emailMatch ? emailMatch[0].toLowerCase() : '';
-
-  // ---- Phone (contextual extraction) ----
-  let phone = '';
-  const phoneCtx = text.match(/(?:phone|tel|mobile|cell|contact)[:\s|]*([+\d\s.()\-]{10,20})/i);
-  if (phoneCtx) {
-    phone = phoneCtx[1].trim();
-  } else {
-    const phoneFmt = text.match(/(\+\d{1,3}[\s.\-])?\(?\d{3}\)[\s.\-]\d{3}[\s.\-]\d{4}/);
-    if (phoneFmt) phone = phoneFmt[0];
-    else {
-      const phoneAlt = text.match(/(\+\d{1,3}[\s.\-])\d{4,5}[\s.\-]\d{4,6}/);
-      if (phoneAlt) phone = phoneAlt[0];
-    }
-  }
-  const phoneDigits = phone.replace(/\D/g, '');
-  if (phoneDigits.length < 10 || /^20[12]\d{7}$/.test(phoneDigits)) phone = '';
-
-  // ---- Skills ----
-  const skills: string[] = [];
-  for (const skill of SKILL_KEYWORDS) {
-    if (lower.includes(skill.toLowerCase())) skills.push(skill);
-  }
-
-  // ---- Section extractor ----
-  const extractSection = (headers: RegExp, stops: RegExp, maxLines = 10): string => {
-    const idx = lines.findIndex(l => headers.test(l));
-    if (idx < 0) return '';
-    const out: string[] = [];
-    for (let i = idx + 1; i < Math.min(idx + maxLines + 1, lines.length); i++) {
-      if (stops.test(lines[i])) break;
-      if (lines[i].length > 2 && isCleanString(lines[i])) out.push(lines[i]);
-    }
-    return out.join('\n').slice(0, 500).trim();
-  };
-
-  let experience = extractSection(
-    /^(experience|employment|work\s*history|professional\s*experience)/i,
-    /^(education|skills|certif|project|summary|objective|reference|awards)/i, 12,
+// ─────────────────────────────────────────────────────────────────────────────
+// Sub-components
+// ─────────────────────────────────────────────────────────────────────────────
+function Field({ label, icon: Icon, children }: { label: string; icon: React.ElementType; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1.5">
+        <Icon className="w-3.5 h-3.5 text-brand-500" />{label}
+      </label>
+      {children}
+    </div>
   );
-  if (!experience) {
-    const ym = text.match(/(\d+)\+?\s*years?\s*(of\s*)?(experience|in\s)/i);
-    if (ym) experience = `${ym[1]}+ years of professional experience`;
-  }
-
-  let education = extractSection(
-    /^(education|academic|qualifications)/i,
-    /^(experience|skills|certif|project|summary|objective|reference|awards)/i, 8,
-  );
-  if (!education) {
-    const dm = text.match(/(Bachelor|Master|PhD|B\.?S\.?|M\.?S\.?|B\.?A\.?|M\.?A\.?|B\.?Tech|M\.?Tech|MBA|Associate)[^.\n]{5,80}/i);
-    if (dm && isCleanString(dm[0])) education = dm[0].trim();
-  }
-
-  let summary = extractSection(
-    /^(summary|profile|objective|about\s*me|professional\s*summary)/i,
-    /^(experience|education|skills|certif|project)/i, 5,
-  );
-  if (!summary && skills.length > 0) {
-    summary = `Professional with expertise in ${skills.slice(0, 4).join(', ')}.`;
-  }
-
-  return {
-    confidence,
-    data: {
-      name,
-      email,
-      phone,
-      skills: skills.slice(0, 15),
-      experience: isCleanString(experience) ? experience : '',
-      education: isCleanString(education) ? education : '',
-      summary: isCleanString(summary) ? summary : '',
-    },
-  };
 }
 
-// ---------------------------------------------------------------------------
+function WorkSection({ items }: { items: WorkItem[] }) {
+  const [open, setOpen] = useState(true);
+  if (!items.length) return null;
+  return (
+    <div className="rounded-xl border border-stone-200 overflow-hidden">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-stone-50 hover:bg-stone-100 transition-colors"
+      >
+        <span className="flex items-center gap-2 font-semibold text-stone-800 text-sm">
+          <Building2 className="w-4 h-4 text-brand-500" /> Work Experience ({items.length})
+        </span>
+        {open ? <ChevronUp className="w-4 h-4 text-stone-400" /> : <ChevronDown className="w-4 h-4 text-stone-400" />}
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+            <div className="divide-y divide-stone-100">
+              {items.map((w, i) => (
+                <div key={i} className="px-4 py-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-stone-900 text-sm">{w.title || '—'}</p>
+                      <p className="text-xs text-stone-500">{w.company || '—'}</p>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-stone-400 whitespace-nowrap">
+                      <Calendar className="w-3 h-3" />
+                      {w.startDate} – {w.endDate}
+                      {w.current && <span className="ml-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">Current</span>}
+                    </div>
+                  </div>
+                  {w.description && <p className="mt-1 text-xs text-stone-500 line-clamp-2">{w.description}</p>}
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function EduSection({ items }: { items: EduItem[] }) {
+  if (!items.length) return null;
+  return (
+    <div className="rounded-xl border border-stone-200 overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 bg-stone-50 font-semibold text-stone-800 text-sm">
+        <GraduationCap className="w-4 h-4 text-brand-500" /> Education
+      </div>
+      <div className="divide-y divide-stone-100">
+        {items.map((e, i) => (
+          <div key={i} className="px-4 py-3">
+            <p className="font-semibold text-stone-900 text-sm">{e.degree || '—'}</p>
+            <p className="text-xs text-stone-500">{e.institution}</p>
+            {(e.year || e.gpa) && (
+              <p className="text-xs text-stone-400 mt-0.5">
+                {e.year}{e.year && e.gpa ? ' · ' : ''}{e.gpa ? `GPA ${e.gpa}` : ''}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Page Component
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 export default function ResumeParserPage() {
-  const { t } = useLocale();
   const [file, setFile] = useState<File | null>(null);
   const [parsing, setParsing] = useState(false);
-  const [editData, setEditData] = useState<ParsedResume | null>(null);
-  const [confidence, setConfidence] = useState<'high' | 'medium' | 'low'>('high');
+  const [result, setResult] = useState<ParsedResume | null>(null);
   const [newSkill, setNewSkill] = useState('');
   const [saving, setSaving] = useState(false);
   const toast = useToast();
 
-  // ---- File select ----
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0];
-    if (!selected) return;
-    if (selected.type !== 'application/pdf' && !selected.name.endsWith('.pdf')) {
-      toast.error('Please upload a PDF file');
-      return;
-    }
+  // ── Upload & parse via server API ──────────────────────────────────────────
+  const parseFile = useCallback(async (selected: File) => {
     setFile(selected);
-    await parseResume(selected);
-  };
-
-  // ---- Parse ----
-  const parseResume = async (pdfFile: File) => {
+    setResult(null);
     setParsing(true);
     try {
-      const text = await extractTextFromPDF(pdfFile);
-      const { data, confidence: conf } = parseResumeText(text, pdfFile.name);
-      setEditData(data);
-      setConfidence(conf);
-      if (conf === 'low') {
-        toast.warning('Limited text extraction', 'This PDF may use custom fonts. Please edit the fields manually.');
-      } else if (conf === 'medium') {
-        toast.info('Resume parsed', 'Some fields may need corrections — please review.');
+      const fd = new FormData();
+      fd.append('file', selected);
+      const res = await fetch('/api/resume-parse', { method: 'POST', body: fd, credentials: 'include' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Parse failed (${res.status})`);
+      }
+      const data: ParsedResume = await res.json();
+      setResult(data);
+      if (data._confidence >= 70) {
+        toast.success('Resume parsed', 'Review the extracted data below before saving.');
+      } else if (data._confidence >= 40) {
+        toast.info('Parsed with partial data', 'Some fields may need manual review.');
       } else {
-        toast.success('Resume parsed successfully', 'Review and edit the data below before saving.');
+        toast.warning('Low-quality extraction', 'This file may be image-based. Please edit fields manually.');
       }
-    } catch {
-      // Fallback to server-side
-      try {
-        const fd = new FormData();
-        fd.append('file', pdfFile);
-        const res = await fetch('/api/resume-parse', { method: 'POST', body: fd });
-        if (res.ok) {
-          const d = await res.json();
-          setEditData(d);
-          setConfidence('medium');
-          toast.info('Parsed with server fallback', 'Please review the fields.');
-        } else throw new Error();
-      } catch {
-        toast.error('Failed to parse resume', 'Please try a different PDF file.');
-      }
+    } catch (err: any) {
+      toast.error('Parse failed', err?.message || 'Try a different file.');
     } finally {
       setParsing(false);
     }
+  }, [toast]);
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) parseFile(f);
+    e.target.value = '';
   };
 
-  // ---- Helpers ----
-  const update = (field: keyof ParsedResume, value: string | string[]) => {
-    if (editData) setEditData({ ...editData, [field]: value });
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const f = e.dataTransfer.files?.[0];
+    if (f) parseFile(f);
+  }, [parseFile]);
+
+  // ── Edit helpers ───────────────────────────────────────────────────────────
+  const set = <K extends keyof ParsedResume>(key: K, value: ParsedResume[K]) => {
+    if (result) setResult({ ...result, [key]: value });
   };
 
   const addSkill = () => {
     const s = newSkill.trim();
-    if (!s || !editData || editData.skills.includes(s)) return;
-    update('skills', [...editData.skills, s]);
+    if (!s || !result || result.skills.includes(s)) return;
+    set('skills', [...result.skills, s]);
     setNewSkill('');
   };
 
-  const removeSkill = (skill: string) => {
-    if (editData) update('skills', editData.skills.filter(x => x !== skill));
-  };
-
-  const clearFile = () => { setFile(null); setEditData(null); };
-
-  const saveToDatabase = async () => {
-    if (!editData) return;
-    if (!editData.name.trim() || !editData.email.trim()) {
-      toast.error('Name and email are required');
-      return;
+  // ── Save to candidates database ────────────────────────────────────────────
+  const save = async () => {
+    if (!result) return;
+    if (!result.name.trim() || !result.email.trim()) {
+      toast.error('Name and email are required'); return;
     }
     setSaving(true);
     try {
@@ -324,66 +226,75 @@ export default function ResumeParserPage() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          name: editData.name,
-          email: editData.email,
-          phone: editData.phone,
-          source: 'Resume Parser',
-          experience: parseInt(editData.experience) || null,
+          name:          result.name.trim(),
+          email:         result.email.trim(),
+          phone:         result.phone || undefined,
+          location:      result.location || undefined,
+          currentTitle:  result.currentTitle || undefined,
+          linkedInUrl:   result.linkedin || undefined,
+          githubUrl:     result.github || undefined,
+          portfolioUrl:  result.portfolio || undefined,
+          skills:        result.skills,
+          experience:    result.experienceYears ?? undefined,
+          summary:       result.summary || undefined,
+          source:        'Resume Parser',
+          tags:          result.certifications.slice(0, 5),
         }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to save');
+        throw new Error(err.error || 'Save failed');
       }
-      toast.success('Candidate added to database');
+      toast.success('Candidate saved', `${result.name} added to your pipeline.`);
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to save candidate');
+      toast.error('Save failed', err?.message);
     } finally {
       setSaving(false);
     }
   };
 
+  // ── Export JSON ────────────────────────────────────────────────────────────
   const exportJSON = () => {
-    if (!editData) return;
-    const blob = new Blob([JSON.stringify(editData, null, 2)], { type: 'application/json' });
+    if (!result) return;
+    const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${editData.name.replace(/\s+/g, '_')}_resume.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    a.download = `${result.name.replace(/\s+/g, '_')}_parsed.json`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
     toast.success('JSON exported');
   };
 
-  const confBadge = {
-    high: { text: 'High confidence', cls: 'text-emerald-700 bg-emerald-50 border-emerald-200', icon: CheckCircle },
-    medium: { text: 'Please verify fields', cls: 'text-amber-700 bg-amber-50 border-amber-200', icon: Edit3 },
-    low: { text: 'Manual editing needed', cls: 'text-red-700 bg-red-50 border-red-200', icon: AlertTriangle },
-  };
-  const Badge = confBadge[confidence];
-
   const inputCls = 'w-full px-3.5 py-2.5 border border-stone-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 outline-none transition-all bg-white';
+  const badge = result ? confidenceLabel(result._confidence) : null;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      {/* Header */}
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-6xl">
+
+      {/* ── Header ── */}
       <div className="flex items-center gap-3">
-        <div className="p-3 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600">
+        <div className="p-3 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-lg shadow-blue-500/20">
           <Upload className="w-6 h-6 text-white" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-stone-900">Resume AI Parser</h1>
-          <p className="text-stone-500">Extract candidate data automatically from PDF resumes</p>
+          <p className="text-stone-500 text-sm">Upload PDF, DOCX, DOC, or TXT — extract 15+ fields automatically</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-        {/* Left — Upload / Edit */}
-        <div className="space-y-4">
-          {!editData ? (
-            <div className="p-8 rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50 text-center">
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+
+        {/* ── Left panel: upload + edit ── */}
+        <div className="xl:col-span-3 space-y-4">
+
+          {/* Upload zone */}
+          {!result && (
+            <div
+              onDrop={handleDrop}
+              onDragOver={e => e.preventDefault()}
+              className="p-8 rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50 text-center hover:border-brand-400 hover:bg-brand-50/30 transition-colors"
+            >
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-100 to-teal-100 flex items-center justify-center mx-auto mb-4">
                 {parsing ? (
                   <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
@@ -392,84 +303,104 @@ export default function ResumeParserPage() {
                 )}
               </div>
               <h3 className="text-lg font-semibold text-stone-900 mb-2">
-                {parsing ? 'AI is analyzing your resume...' : 'Upload Resume'}
+                {parsing ? 'AI is analysing your resume…' : 'Upload Resume'}
               </h3>
               <p className="text-stone-500 text-sm mb-6 max-w-sm mx-auto">
                 {parsing
-                  ? 'Extracting skills, experience, education, and contact info'
-                  : 'Drop a PDF resume here or click to browse. Our AI will automatically extract key information.'}
+                  ? 'Extracting name, contact details, skills, work history, education & more'
+                  : 'Drop a file here or click to browse. Supports PDF, DOCX, DOC, TXT (max 5 MB).'}
               </p>
               {!parsing && (
-                <label className="inline-flex items-center gap-2 px-6 py-3 bg-brand-600 text-white rounded-xl font-semibold cursor-pointer hover:bg-brand-700 transition-colors">
+                <label className="inline-flex items-center gap-2 px-6 py-3 bg-brand-600 text-white rounded-xl font-semibold cursor-pointer hover:bg-brand-700 transition-colors shadow-lg shadow-brand-500/25">
                   <Upload className="w-5 h-5" />
-                  Choose PDF File
-                  <input type="file" accept=".pdf" className="hidden" onChange={handleFileSelect} />
+                  Choose File
+                  <input type="file" accept=".pdf,.docx,.doc,.txt" className="hidden" onChange={handleFileInput} />
                 </label>
               )}
-              <p className="text-xs text-stone-400 mt-4">Supports PDF files up to 10 MB</p>
+              {file && !parsing && (
+                <p className="mt-3 text-xs text-stone-400">{file.name} · {fmtBytes(file.size)}</p>
+              )}
             </div>
-          ) : (
-            <div className="p-6 rounded-2xl bg-white border border-stone-200 shadow-sm">
-              {/* Header + confidence */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
-                    <Sparkles className="w-5 h-5 text-amber-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-stone-900 text-sm">AI Parsed Data</h3>
-                    <p className="text-xs text-stone-500">From {file?.name}</p>
-                  </div>
-                </div>
-                <button onClick={clearFile} className="p-2 hover:bg-stone-100 rounded-lg text-stone-400 hover:text-red-500 transition-colors">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+          )}
 
-              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium mb-5 ${Badge.cls}`}>
-                <Badge.icon className="w-3.5 h-3.5" />
-                {Badge.text}
-              </div>
-
-              {/* Editable fields */}
-              <div className="space-y-4">
-                {/* Name */}
-                <div>
-                  <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-500 uppercase mb-1.5">
-                    <User className="w-3.5 h-3.5 text-brand-500" /> Full Name
-                  </label>
-                  <input value={editData.name} onChange={e => update('name', e.target.value)} className={inputCls} placeholder="Candidate name" />
+          {/* Results form */}
+          <AnimatePresence>
+            {result && (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="p-6 rounded-2xl bg-white border border-stone-200 shadow-sm space-y-5"
+              >
+                {/* Header row */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
+                      <Sparkles className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-stone-900 text-sm">AI Extracted Data</p>
+                      <p className="text-xs text-stone-400">{file?.name} · {result._meta?.parseMethod}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => { setResult(null); setFile(null); }} className="p-2 hover:bg-stone-100 rounded-lg text-stone-400 hover:text-red-500 transition-colors">
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
 
-                {/* Email & Phone */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-500 uppercase mb-1.5">
-                      <Mail className="w-3.5 h-3.5 text-brand-500" /> Email
-                    </label>
-                    <input type="email" value={editData.email} onChange={e => update('email', e.target.value)} className={inputCls} placeholder="email@example.com" />
+                {/* Confidence badge */}
+                {badge && (
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold ${badge.cls}`}>
+                    <badge.icon className="w-3.5 h-3.5" />
+                    {badge.label}
                   </div>
-                  <div>
-                    <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-500 uppercase mb-1.5">
-                      <Phone className="w-3.5 h-3.5 text-brand-500" /> Phone
-                    </label>
-                    <input type="tel" value={editData.phone} onChange={e => update('phone', e.target.value)} className={inputCls} placeholder="+1 (555) 000-0000" />
-                  </div>
+                )}
+
+                {/* ── Contact ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field label="Full Name" icon={User}>
+                    <input value={result.name} onChange={e => set('name', e.target.value)} className={inputCls} placeholder="Candidate name" />
+                  </Field>
+                  <Field label="Current Title" icon={Briefcase}>
+                    <input value={result.currentTitle} onChange={e => set('currentTitle', e.target.value)} className={inputCls} placeholder="e.g. Senior Engineer" />
+                  </Field>
+                  <Field label="Email" icon={Mail}>
+                    <input type="email" value={result.email} onChange={e => set('email', e.target.value)} className={inputCls} placeholder="email@example.com" />
+                  </Field>
+                  <Field label="Phone" icon={Phone}>
+                    <input type="tel" value={result.phone} onChange={e => set('phone', e.target.value)} className={inputCls} placeholder="+1 (555) 000-0000" />
+                  </Field>
+                  <Field label="Location" icon={MapPin}>
+                    <input value={result.location} onChange={e => set('location', e.target.value)} className={inputCls} placeholder="City, State" />
+                  </Field>
+                  <Field label="Experience (years)" icon={Clock}>
+                    <input type="number" value={result.experienceYears ?? ''} onChange={e => set('experienceYears', e.target.value ? Number(e.target.value) : null)} className={inputCls} placeholder="e.g. 5" min={0} max={50} />
+                  </Field>
+                  <Field label="LinkedIn" icon={Linkedin}>
+                    <input value={result.linkedin} onChange={e => set('linkedin', e.target.value)} className={inputCls} placeholder="https://linkedin.com/in/..." />
+                  </Field>
+                  <Field label="GitHub" icon={Github}>
+                    <input value={result.github} onChange={e => set('github', e.target.value)} className={inputCls} placeholder="https://github.com/..." />
+                  </Field>
+                  {result.portfolio && (
+                    <Field label="Portfolio" icon={Globe}>
+                      <input value={result.portfolio} onChange={e => set('portfolio', e.target.value)} className={inputCls} placeholder="https://..." />
+                    </Field>
+                  )}
                 </div>
 
-                {/* Skills */}
-                <div>
-                  <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-500 uppercase mb-1.5">
-                    <Briefcase className="w-3.5 h-3.5 text-brand-500" /> Skills Detected
-                  </label>
+                {/* ── Skills ── */}
+                <Field label="Skills Detected" icon={Briefcase}>
                   <div className="flex flex-wrap gap-1.5 mb-2 min-h-[32px]">
-                    {editData.skills.map((skill, i) => (
+                    {result.skills.map((s, i) => (
                       <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 bg-brand-50 text-brand-700 rounded-lg text-xs font-medium border border-brand-200">
-                        {skill}
-                        <button type="button" onClick={() => removeSkill(skill)} className="hover:text-red-500 transition-colors"><X className="w-3 h-3" /></button>
+                        {s}
+                        <button type="button" onClick={() => set('skills', result.skills.filter((_, j) => j !== i))} className="hover:text-red-500 transition-colors">
+                          <X className="w-3 h-3" />
+                        </button>
                       </span>
                     ))}
-                    {editData.skills.length === 0 && <span className="text-xs text-stone-400 italic">No skills detected — add manually</span>}
+                    {!result.skills.length && <span className="text-xs text-stone-400 italic">No skills detected — add manually</span>}
                   </div>
                   <div className="flex gap-2">
                     <input
@@ -477,75 +408,102 @@ export default function ResumeParserPage() {
                       onChange={e => setNewSkill(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addSkill())}
                       className={inputCls + ' flex-1'}
-                      placeholder="Type a skill and press Enter..."
+                      placeholder="Add skill and press Enter…"
                     />
-                    <button type="button" onClick={addSkill} className="px-3 py-2 bg-brand-600 text-white rounded-xl text-sm font-semibold hover:bg-brand-700 transition-colors flex items-center gap-1">
+                    <button type="button" onClick={addSkill} className="px-3 py-2.5 bg-brand-600 text-white rounded-xl hover:bg-brand-700 transition-colors">
                       <Plus className="w-4 h-4" />
                     </button>
                   </div>
-                </div>
+                </Field>
 
-                {/* Experience */}
-                <div>
-                  <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-500 uppercase mb-1.5">
-                    <CheckCircle className="w-3.5 h-3.5 text-brand-500" /> Experience
+                {/* ── Work experience items ── */}
+                <WorkSection items={result.workExperience} />
+
+                {/* ── Education items ── */}
+                <EduSection items={result.education} />
+
+                {/* ── Certifications & Languages ── */}
+                {(result.certifications.length > 0 || result.languages.length > 0) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {result.certifications.length > 0 && (
+                      <div className="p-4 rounded-xl border border-stone-200 bg-stone-50">
+                        <p className="flex items-center gap-1.5 text-xs font-semibold text-stone-500 uppercase mb-2">
+                          <Award className="w-3.5 h-3.5 text-brand-500" /> Certifications
+                        </p>
+                        <ul className="space-y-1">
+                          {result.certifications.map((c, i) => (
+                            <li key={i} className="text-xs text-stone-700 flex items-start gap-1">
+                              <CheckCircle className="w-3 h-3 text-emerald-500 mt-0.5 shrink-0" />{c}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {result.languages.length > 0 && (
+                      <div className="p-4 rounded-xl border border-stone-200 bg-stone-50">
+                        <p className="flex items-center gap-1.5 text-xs font-semibold text-stone-500 uppercase mb-2">
+                          <Globe className="w-3.5 h-3.5 text-brand-500" /> Languages
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {result.languages.map((l, i) => (
+                            <span key={i} className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-200">{l}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Summary ── */}
+                <Field label="Professional Summary" icon={FileText}>
+                  <textarea value={result.summary} onChange={e => set('summary', e.target.value)} rows={4} className={inputCls + ' resize-none'} placeholder="Professional summary…" />
+                </Field>
+
+                {/* ── Actions ── */}
+                <div className="flex gap-2 pt-2">
+                  <motion.button
+                    whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                    onClick={save} disabled={saving}
+                    className="flex-1 py-3 bg-brand-600 text-white rounded-xl font-semibold hover:bg-brand-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-brand-500/20"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    {saving ? 'Saving…' : 'Save Candidate'}
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                    onClick={exportJSON}
+                    className="px-4 py-3 border border-stone-200 text-stone-700 rounded-xl font-semibold hover:bg-stone-50 transition-colors flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" /> JSON
+                  </motion.button>
+                  <label className="px-4 py-3 border border-stone-200 text-stone-700 rounded-xl font-semibold hover:bg-stone-50 transition-colors flex items-center gap-2 cursor-pointer">
+                    <Upload className="w-4 h-4" /> New
+                    <input type="file" accept=".pdf,.docx,.doc,.txt" className="hidden" onChange={handleFileInput} />
                   </label>
-                  <textarea value={editData.experience} onChange={e => update('experience', e.target.value)} rows={3} className={inputCls + ' resize-none'} placeholder="Work experience details..." />
                 </div>
-
-                {/* Education */}
-                <div>
-                  <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-500 uppercase mb-1.5">
-                    <GraduationCap className="w-3.5 h-3.5 text-brand-500" /> Education
-                  </label>
-                  <textarea value={editData.education} onChange={e => update('education', e.target.value)} rows={2} className={inputCls + ' resize-none'} placeholder="Education details..." />
-                </div>
-
-                {/* Summary */}
-                <div>
-                  <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-500 uppercase mb-1.5">
-                    <FileText className="w-3.5 h-3.5 text-brand-500" /> Summary
-                  </label>
-                  <textarea value={editData.summary} onChange={e => update('summary', e.target.value)} rows={3} className={inputCls + ' resize-none'} placeholder="Professional summary..." />
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-2 mt-6">
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={saveToDatabase} disabled={saving}
-                  className="flex-1 p-3 bg-brand-600 text-white rounded-xl font-semibold hover:bg-brand-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
-                  <CheckCircle className="w-4 h-4" />
-                  {saving ? 'Saving...' : 'Save to Database'}
-                </motion.button>
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={exportJSON}
-                  className="flex-1 p-3 border border-stone-200 text-stone-700 rounded-xl font-semibold hover:bg-stone-50 transition-colors flex items-center justify-center gap-2">
-                  <Download className="w-4 h-4" />
-                  Export JSON
-                </motion.button>
-              </div>
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Right — Info */}
-        <div className="space-y-4">
+        {/* ── Right panel: how it works + supported fields ── */}
+        <div className="xl:col-span-2 space-y-4">
           <div className="p-6 rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100 border border-stone-200">
             <h3 className="font-bold text-stone-900 mb-4 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-amber-500" />
-              How It Works
+              <Sparkles className="w-5 h-5 text-amber-500" /> How It Works
             </h3>
             <div className="space-y-4">
               {[
-                { n: '1', title: 'Upload PDF', desc: 'Select any candidate resume in PDF format' },
-                { n: '2', title: 'AI Analysis', desc: 'Our AI extracts contact info, skills, experience, education' },
+                { n: '1', title: 'Upload File', desc: 'PDF, DOCX, DOC, or TXT — up to 5 MB' },
+                { n: '2', title: 'Server Parsing', desc: 'AI extracts 15+ structured fields server-side with no data leaving your infrastructure' },
                 { n: '3', title: 'Review & Edit', desc: 'Verify extracted data and make corrections if needed' },
-                { n: '4', title: 'Save Profile', desc: 'Save the candidate to your database or export as JSON' },
-              ].map(step => (
-                <div key={step.n} className="flex gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-sm flex-shrink-0">{step.n}</div>
+                { n: '4', title: 'Save to Pipeline', desc: 'Save the candidate with full profile or export as JSON' },
+              ].map(s => (
+                <div key={s.n} className="flex gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-sm shrink-0">{s.n}</div>
                   <div>
-                    <p className="font-semibold text-stone-900 text-sm">{step.title}</p>
-                    <p className="text-xs text-stone-500">{step.desc}</p>
+                    <p className="font-semibold text-stone-900 text-sm">{s.title}</p>
+                    <p className="text-xs text-stone-500">{s.desc}</p>
                   </div>
                 </div>
               ))}
@@ -553,12 +511,17 @@ export default function ResumeParserPage() {
           </div>
 
           <div className="p-6 rounded-2xl bg-white border border-stone-200 shadow-sm">
-            <h3 className="font-bold text-stone-900 mb-4">Supported Data Fields</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {['Full Name','Email Address','Phone Number','Skills & Technologies','Work Experience','Education History','Certifications','Professional Summary'].map(f => (
+            <h3 className="font-bold text-stone-900 mb-4">Extracted Fields</h3>
+            <div className="grid grid-cols-1 gap-2">
+              {[
+                'Full Name', 'Email & Phone', 'Location', 'Current Job Title',
+                'LinkedIn & GitHub', 'Portfolio URL', 'Skills (150+ keywords)',
+                'Work History (company, dates)', 'Total Years Experience',
+                'Education (degree, GPA)', 'Certifications',
+                'Languages', 'Professional Summary',
+              ].map(f => (
                 <div key={f} className="flex items-center gap-2 text-sm text-stone-600">
-                  <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  {f}
+                  <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />{f}
                 </div>
               ))}
             </div>
@@ -566,14 +529,14 @@ export default function ResumeParserPage() {
 
           <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+              <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
               <div>
-                <p className="font-semibold text-amber-800 text-sm">Parsing Tips</p>
-                <ul className="text-xs text-amber-700 mt-1 space-y-1">
-                  <li>• Text-based PDFs give the best results</li>
-                  <li>• Scanned/image PDFs may require manual entry</li>
-                  <li>• All extracted fields are fully editable</li>
-                  <li>• Standard resume formats parse most accurately</li>
+                <p className="font-semibold text-amber-800 text-sm">Tips for best results</p>
+                <ul className="mt-1 space-y-1 text-xs text-amber-700">
+                  <li>• Use text-based PDFs — not scanned images</li>
+                  <li>• DOCX files from Word give the highest accuracy</li>
+                  <li>• Standard headings (Experience, Education, Skills) improve parsing</li>
+                  <li>• Always review extracted data before saving</li>
                 </ul>
               </div>
             </div>

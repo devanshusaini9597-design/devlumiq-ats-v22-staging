@@ -14,6 +14,7 @@ import { CandidateSelector } from '@/components/ui/CandidateSelector';
 import PageHeader from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
 import { useLocale } from '@/components/providers/LocaleProvider';
+import { EmailShortFormManager } from '@/components/dashboard/EmailShortFormManager';
 
 const EMAIL_TEMPLATES = [
   {
@@ -411,6 +412,8 @@ export default function EmailTemplatesPage() {
           )}
         </div>
       </div>
+
+      <EmailShortFormManager />
     </motion.div>
   );
 }

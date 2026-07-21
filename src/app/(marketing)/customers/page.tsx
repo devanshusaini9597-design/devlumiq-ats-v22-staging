@@ -12,60 +12,60 @@ import { useLocale } from '@/components/providers/LocaleProvider';
 
 const companyData = [
   {
-    company: 'TechFlow Inc.',
-    logo: 'TF',
+    company: 'Tech Startup',
+    logo: 'TS',
     industryKey: 'customers.cs1.industry',
-    size: '500+',
+    size: '50–200',
     quoteKey: 'customers.cs1.quote',
-    author: 'Sarah Chen',
+    author: 'Beta User',
     roleKey: 'customers.cs1.role',
     color: 'from-blue-500 to-cyan-600',
     glow: 'group-hover:shadow-blue-500/20',
     metrics: [
-      { value: '60%', labelKey: 'customers.cs1.m1', bar: 60 },
-      { value: '3x', labelKey: 'customers.cs1.m2', bar: 75 },
-      { value: '85%', labelKey: 'customers.cs1.m3', bar: 85 },
+      { value: 'Faster', labelKey: 'customers.cs1.m1', bar: 60 },
+      { value: 'More', labelKey: 'customers.cs1.m2', bar: 75 },
+      { value: 'High', labelKey: 'customers.cs1.m3', bar: 85 },
     ],
   },
   {
-    company: 'GrowthHQ',
-    logo: 'GH',
+    company: 'SaaS Company',
+    logo: 'SC',
     industryKey: 'customers.cs2.industry',
-    size: '200+',
+    size: '100–500',
     quoteKey: 'customers.cs2.quote',
-    author: 'Michael Torres',
+    author: 'Beta User',
     roleKey: 'customers.cs2.role',
     color: 'from-teal-500 to-emerald-600',
     glow: 'group-hover:shadow-teal-500/20',
     metrics: [
-      { value: '75%', labelKey: 'customers.cs2.m1', bar: 75 },
-      { value: '40%', labelKey: 'customers.cs2.m2', bar: 40 },
-      { value: '4.9/5', labelKey: 'customers.cs2.m3', bar: 98 },
+      { value: 'Less', labelKey: 'customers.cs2.m1', bar: 75 },
+      { value: 'Lower', labelKey: 'customers.cs2.m2', bar: 40 },
+      { value: 'Great', labelKey: 'customers.cs2.m3', bar: 98 },
     ],
   },
   {
-    company: 'Enterprise Solutions',
-    logo: 'ES',
+    company: 'Consulting Firm',
+    logo: 'CF',
     industryKey: 'customers.cs3.industry',
-    size: '1000+',
+    size: '200–1000',
     quoteKey: 'customers.cs3.quote',
-    author: 'Emily Watson',
+    author: 'Beta User',
     roleKey: 'customers.cs3.role',
     color: 'from-violet-500 to-purple-600',
     glow: 'group-hover:shadow-violet-500/20',
     metrics: [
-      { value: '12', labelKey: 'customers.cs3.m1', bar: 100 },
-      { value: '200%', labelKey: 'customers.cs3.m2', bar: 100 },
-      { value: '99.9%', labelKey: 'customers.cs3.m3', bar: 99 },
+      { value: 'Multi', labelKey: 'customers.cs3.m1', bar: 100 },
+      { value: 'Higher', labelKey: 'customers.cs3.m2', bar: 100 },
+      { value: 'Reliable', labelKey: 'customers.cs3.m3', bar: 99 },
     ],
   },
 ];
 
 const testimonialData = [
-  { quoteKey: 'customers.t1.quote', author: 'David Park', roleKey: 'customers.t1.role', company: 'StartupXYZ', rating: 5 },
-  { quoteKey: 'customers.t2.quote', author: 'Lisa Johnson', roleKey: 'customers.t2.role', company: 'Fortune Corp', rating: 5 },
-  { quoteKey: 'customers.t3.quote', author: 'James Miller', roleKey: 'customers.t3.role', company: 'ScaleUp Inc', rating: 5 },
-  { quoteKey: 'customers.t4.quote', author: 'Anna Schmidt', roleKey: 'customers.t4.role', company: 'InnovateLab', rating: 5 },
+  { quoteKey: 'customers.t1.quote', author: 'Beta User', roleKey: 'customers.t1.role', company: 'Early Adopter', rating: 5 },
+  { quoteKey: 'customers.t2.quote', author: 'Beta User', roleKey: 'customers.t2.role', company: 'Early Adopter', rating: 5 },
+  { quoteKey: 'customers.t3.quote', author: 'Beta User', roleKey: 'customers.t3.role', company: 'Early Adopter', rating: 5 },
+  { quoteKey: 'customers.t4.quote', author: 'Beta User', roleKey: 'customers.t4.role', company: 'Early Adopter', rating: 5 },
 ];
 
 const industryKeys = [
@@ -148,35 +148,35 @@ export default function CustomersPage() {
   const { t } = useLocale();
 
   const heroStats = [
-    { target: 2500, suffix: '+', label: t('customers.stat1.label'), Icon: Building2 },
-    { target: 500, suffix: 'K+', label: t('customers.stat2.label'), Icon: Users },
-    { display: '98%', label: t('customers.stat3.label'), Icon: TrendingUp },
-    { display: '4.9/5', label: t('customers.stat4.label'), Icon: Star },
+    { display: '12+', label: t('customers.stat1.label'), Icon: Building2 },
+    { display: '7', label: t('customers.stat2.label'), Icon: Users },
+    { display: 'High', label: t('customers.stat3.label'), Icon: TrendingUp },
+    { display: 'Beta', label: t('customers.stat4.label'), Icon: Star },
   ];
 
   const trustBadges = [
     {
       Icon: Trophy,
-      badge: t('customers.trust.g2'),
-      sub: t('customers.trust.g2sub'),
-      score: '4.9',
-      count: '1,200+ reviews',
-      gradient: 'from-orange-500 to-red-500',
+      badge: 'Open Source',
+      sub: 'Transparent & auditable',
+      score: 'MIT',
+      count: 'License',
+      gradient: 'from-emerald-500 to-teal-600',
     },
     {
       Icon: Star,
-      badge: t('customers.trust.capterra'),
-      sub: t('customers.trust.capterrasub'),
-      score: '4.8',
-      count: '800+ reviews',
+      badge: 'Modern Stack',
+      sub: 'Next.js · TypeScript · Prisma',
+      score: 'Full',
+      count: 'Stack',
       gradient: 'from-blue-500 to-indigo-600',
     },
     {
       Icon: Zap,
-      badge: t('customers.trust.producthunt'),
-      sub: t('customers.trust.phsub'),
-      score: '#1',
-      count: 'Product of the Day',
+      badge: 'Production Ready',
+      sub: 'RBAC · Audit Logs · TLS',
+      score: 'Secure',
+      count: 'By default',
       gradient: 'from-amber-500 to-orange-500',
     },
   ];
@@ -198,9 +198,9 @@ export default function CustomersPage() {
         />
         <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-stone-50 to-transparent" />
 
-        <ProofCard name="Sarah Chen" company="TechFlow Inc." score="5.0" xCls="right-12" yCls="top-32" delay={0.7} />
-        <ProofCard name="Michael Torres" company="GrowthHQ" score="4.9" xCls="right-8" yCls="bottom-40" delay={0.9} />
-        <ProofCard name="Emily Watson" company="Enterprise Solutions" score="5.0" xCls="right-32" yCls="top-56" delay={1.1} />
+        <ProofCard name="Beta User" company="Early Adopter" score="5.0" xCls="right-12" yCls="top-32" delay={0.7} />
+        <ProofCard name="Beta Tester" company="Startup" score="5.0" xCls="right-8" yCls="bottom-40" delay={0.9} />
+        <ProofCard name="Early User" company="Tech Co" score="5.0" xCls="right-32" yCls="top-56" delay={1.1} />
 
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 w-full">
           <motion.div
@@ -277,9 +277,7 @@ export default function CustomersPage() {
                 <div className="absolute inset-0 bg-gradient-to-br from-white/3 to-transparent" />
                 <stat.Icon className="w-5 h-5 text-brand-400 mx-auto mb-2" />
                 <p className="text-2xl sm:text-3xl font-extrabold text-white mb-1">
-                  {'target' in stat ? (
-                    <AnimatedCounter target={stat.target as number} suffix={stat.suffix} />
-                  ) : (stat.display)}
+                  {stat.display}
                 </p>
                 <p className="text-xs text-stone-400 leading-tight">{stat.label}</p>
               </motion.div>

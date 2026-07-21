@@ -1,10 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withPermission, withAuth } from '@/lib/with-permission';
 
 // POST /api/linkedin/import - Import LinkedIn profile
-export async function POST(request: Request) {
+export const POST = withPermission('CREATE_CANDIDATE', async (request: NextRequest, _ctx, session) => {
   try {
-    const { linkedInUrl, linkedInData, importedById } = await request.json();
+    const { linkedInUrl, linkedInData } = await request.json();
+    const importedById = session.id;
 
     // Create import record
     const importRecord = await prisma.linkedInImport.create({
@@ -19,20 +21,23 @@ export async function POST(request: Request) {
     // Parse LinkedIn data and create candidate
     const candidateData = parseLinkedInData(linkedInData);
     
+    const candidateDataAny: any = {
+      name: candidateData.name,
+      email: candidateData.email,
+      phone: candidateData.phone,
+      source: 'linkedin',
+      sourceDetail: linkedInUrl,
+      skills: candidateData.skills || [],
+      experience: candidateData.experience,
+      currentTitle: candidateData.currentTitle,
+      currentCompany: candidateData.currentCompany,
+      linkedInUrl,
+      location: candidateData.location,
+    };
+    if (session.organizationId) candidateDataAny.organizationId = session.organizationId;
+
     const candidate = await prisma.candidate.create({
-      data: {
-        name: candidateData.name,
-        email: candidateData.email,
-        phone: candidateData.phone,
-        source: 'linkedin',
-        sourceDetail: linkedInUrl,
-        skills: candidateData.skills || [],
-        experience: candidateData.experience,
-        currentTitle: candidateData.currentTitle,
-        currentCompany: candidateData.currentCompany,
-        linkedInUrl,
-        location: candidateData.location,
-      },
+      data: candidateDataAny,
     });
 
     // Update import record
@@ -55,11 +60,13 @@ export async function POST(request: Request) {
     console.error('Error importing LinkedIn profile:', error);
     return NextResponse.json({ error: 'Failed to import profile' }, { status: 500 });
   }
-}
+});
 
-// Helper to parse LinkedIn data
+// ── LinkedIn Data Parser ────────────────────────────────────────────────────
+// Accepts structured profile data sent by the Chrome extension.
+// The extension scrapes LinkedIn profile fields and sends them here.
+// This is a passthrough mapper — no AI/ML processing is applied.
 function parseLinkedInData(data: any) {
-  // In production, this would use AI/ML to parse structured LinkedIn data
   return {
     name: data.name || data.fullName || '',
     email: data.email || '',
@@ -73,13 +80,13 @@ function parseLinkedInData(data: any) {
 }
 
 // GET /api/linkedin/import - Get import history
-export async function GET(request: Request) {
+export const GET = withAuth(async (request: NextRequest, _ctx, session) => {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
     const imports = await prisma.linkedInImport.findMany({
-      where: userId ? { importedById: userId } : {},
+      where: userId ? { importedById: userId } : { importedById: session.id },
       include: {
         candidate: {
           select: {
@@ -98,4 +105,4 @@ export async function GET(request: Request) {
     console.error('Error fetching imports:', error);
     return NextResponse.json({ error: 'Failed to fetch imports' }, { status: 500 });
   }
-}
+});

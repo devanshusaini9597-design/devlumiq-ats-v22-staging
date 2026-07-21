@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withPermission } from '@/lib/with-permission';
 
 // GET /api/analytics/dashboard - Get analytics dashboard data
-export async function GET(request: Request) {
+export const GET = withPermission('VIEW_ANALYTICS', async (request: NextRequest, _ctx, session) => {
   try {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || '30d';
@@ -10,11 +11,17 @@ export async function GET(request: Request) {
 
     const dateFilter = getDateFilter(period);
 
+    // Resolve org-scoped job IDs for filtering
+    const orgJobIds = session.organizationId
+      ? (await prisma.job.findMany({ where: { companyId: session.organizationId }, select: { id: true } })).map((j) => j.id)
+      : undefined;
+    const jobIdFilter = orgJobIds ? { in: orgJobIds } : undefined;
+
     // Pipeline metrics
     const pipelineMetrics = await prisma.pipelineMetric.findMany({
       where: {
         date: { gte: dateFilter },
-        ...(jobId ? { jobId } : {}),
+        ...(jobId ? { jobId } : jobIdFilter ? { jobId: jobIdFilter } : {}),
       },
       orderBy: { date: 'asc' },
     });
@@ -23,6 +30,7 @@ export async function GET(request: Request) {
     const sourceMetrics = await prisma.sourceQualityMetric.findMany({
       where: {
         date: { gte: dateFilter },
+        ...(session.organizationId ? { organizationId: session.organizationId } : { organizationId: null }),
       },
       orderBy: { date: 'asc' },
     });
@@ -31,15 +39,17 @@ export async function GET(request: Request) {
     const timeToHire = await prisma.timeToHireMetric.findMany({
       where: {
         appliedAt: { gte: dateFilter },
-        ...(jobId ? { jobId } : {}),
+        ...(jobId ? { jobId } : jobIdFilter ? { jobId: jobIdFilter } : {}),
       },
     });
 
     // Calculate aggregate stats
+    const appCountWhere = {
+      appliedAt: { gte: dateFilter },
+      ...(jobIdFilter ? { jobId: jobIdFilter } : {}),
+    };
     const stats = {
-      totalApplicants: await prisma.application.count({
-        where: { appliedAt: { gte: dateFilter } },
-      }),
+      totalApplicants: await prisma.application.count({ where: appCountWhere }),
       avgTimeToHire: calculateAvgTimeToHire(timeToHire),
       conversionRates: calculateConversionRates(pipelineMetrics),
       topSources: getTopSources(sourceMetrics),
@@ -56,7 +66,7 @@ export async function GET(request: Request) {
     console.error('Error fetching analytics:', error);
     return NextResponse.json({ error: 'Failed to fetch analytics' }, { status: 500 });
   }
-}
+});
 
 function getDateFilter(period: string): Date {
   const now = new Date();

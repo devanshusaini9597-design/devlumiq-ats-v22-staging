@@ -17,16 +17,16 @@ import { useLocale } from '@/components/providers/LocaleProvider';
 const complianceCerts = [
   { name: 'GDPR',         descKey: 'gdpr',  icon: Globe,       color: 'from-blue-500 to-cyan-500',     statusKey: 'compliant' as const },
   { name: 'CCPA',         descKey: 'ccpa',  icon: Shield,      color: 'from-violet-500 to-purple-500', statusKey: 'compliant' as const },
-  { name: 'SOC 2 Type II',descKey: 'soc2',  icon: Award,       color: 'from-emerald-500 to-teal-500',  statusKey: 'certified' as const },
-  { name: 'ISO 27001',    descKey: 'iso',   icon: FileCheck,   color: 'from-amber-500 to-orange-500',  statusKey: 'certified' as const },
-  { name: 'HIPAA',        descKey: 'hipaa', icon: ShieldCheck, color: 'from-rose-500 to-pink-500',     statusKey: 'eligible'  as const },
-  { name: 'PCI DSS',      descKey: 'pci',   icon: Key,         color: 'from-brand-500 to-teal-500',    statusKey: 'compliant' as const },
+  { name: 'RBAC',         descKey: 'rbac',  icon: Key,         color: 'from-emerald-500 to-teal-500',  statusKey: 'compliant' as const },
+  { name: 'Audit Logs',   descKey: 'audit', icon: FileCheck,   color: 'from-amber-500 to-orange-500',  statusKey: 'compliant' as const },
+  { name: 'TLS 1.3',      descKey: 'tls',   icon: ShieldCheck, color: 'from-rose-500 to-pink-500',     statusKey: 'compliant' as const },
+  { name: 'Rate Limiting', descKey: 'rate', icon: Award,       color: 'from-brand-500 to-teal-500',    statusKey: 'compliant' as const },
 ];
 
 const certDescriptions: Record<string, string> = {
   gdpr: 'EU data protection', ccpa: 'California privacy',
-  soc2: 'Security & availability', iso: 'Info security management',
-  hipaa: 'Healthcare data protection', pci: 'Payment card security',
+  rbac: 'Role-based access control', audit: 'Full activity audit trail',
+  tls: 'Encrypted in transit', rate: 'API abuse prevention',
 };
 
 const featureData = [
@@ -53,9 +53,9 @@ const practiceData = [
 const layerKeys = ['layer1', 'layer2', 'layer3', 'layer4', 'layer5', 'layer6'] as const;
 
 const stats = [
-  { value: '99.99%', labelKey: 'security.hero.stat1Label' },
-  { value: 'AES-256', labelKey: 'security.hero.stat2Label' },
-  { value: '0',       labelKey: 'security.hero.stat3Label' },
+  { value: 'TLS 1.3', labelKey: 'security.hero.stat1Label' },
+  { value: 'bcrypt',  labelKey: 'security.hero.stat2Label' },
+  { value: 'RBAC',    labelKey: 'security.hero.stat3Label' },
   { value: '6+',      labelKey: 'security.hero.stat4Label' },
 ];
 
@@ -379,7 +379,7 @@ export default function SecurityPage() {
                   </div>
                   <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 rounded-full flex-shrink-0">
                     <motion.div className="w-2 h-2 rounded-full bg-emerald-500" animate={{ scale: [1, 1.4, 1], opacity: [1, 0.6, 1] }} transition={{ duration: 1.5, repeat: Infinity }} />
-                    <span className="text-xs font-semibold text-emerald-700">Live</span>
+                    <span className="text-xs font-semibold text-emerald-700">Preview</span>
                   </div>
                 </div>
 
@@ -403,11 +403,11 @@ export default function SecurityPage() {
                 {/* Stats */}
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <div className="p-4 rounded-xl bg-stone-50 border border-stone-100 text-center">
-                    <p className="text-2xl font-extrabold text-stone-900">99.99<span className="text-base">%</span></p>
-                    <p className="text-xs text-stone-500 mt-0.5">{t('security.dashboard.uptime')}</p>
+                    <p className="text-2xl font-extrabold text-stone-900">TLS<span className="text-base"> 1.3</span></p>
+                    <p className="text-xs text-stone-500 mt-0.5">Encryption</p>
                   </div>
                   <div className="p-4 rounded-xl bg-stone-50 border border-stone-100 text-center">
-                    <p className="text-2xl font-extrabold text-stone-900">0</p>
+                    <p className="text-2xl font-extrabold text-stone-900">5</p>
                     <p className="text-xs text-stone-500 mt-0.5">{t('security.dashboard.incidents')}</p>
                   </div>
                 </div>
@@ -488,11 +488,7 @@ export default function SecurityPage() {
                   </div>
                   <h4 className="font-bold text-stone-900 text-sm mb-0.5">{cert.name}</h4>
                   <p className="text-stone-500 text-xs leading-snug mb-3">{certDescriptions[cert.descKey]}</p>
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                    cert.statusKey === 'certified' ? 'bg-blue-100 text-blue-700' :
-                    cert.statusKey === 'eligible'  ? 'bg-amber-100 text-amber-700' :
-                                                     'bg-emerald-100 text-emerald-700'
-                  }`}>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
                     {statusLabel}
                   </span>
                 </motion.div>

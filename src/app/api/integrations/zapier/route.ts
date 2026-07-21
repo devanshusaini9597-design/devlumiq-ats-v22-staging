@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth, withPermission } from '@/lib/with-permission';
 
 // Zapier Integration API
 // POST /api/integrations/zapier/trigger - Trigger Zapier webhook
-export async function POST(request: Request) {
+export const POST = withPermission('MANAGE_INTEGRATIONS', async (request: NextRequest) => {
   try {
     const { 
       event,
@@ -60,10 +61,10 @@ export async function POST(request: Request) {
     console.error('Error triggering Zapier:', error);
     return NextResponse.json({ error: 'Failed to trigger' }, { status: 500 });
   }
-}
+});
 
 // GET /api/integrations/zapier/events - Get available Zapier events
-export async function GET() {
+export const GET = withAuth(async () => {
   const events = [
     {
       id: 'candidate.created',
@@ -149,10 +150,10 @@ export async function GET() {
   ];
 
   return NextResponse.json(events);
-}
+});
 
 // POST /api/integrations/zapier/subscribe - Subscribe to Zapier triggers
-export async function PATCH(request: Request) {
+export const PATCH = withPermission('MANAGE_INTEGRATIONS', async (request: NextRequest) => {
   try {
     const { targetUrl, event, authentication } = await request.json();
 
@@ -175,10 +176,10 @@ export async function PATCH(request: Request) {
     console.error('Error subscribing:', error);
     return NextResponse.json({ error: 'Subscription failed' }, { status: 500 });
   }
-}
+});
 
 // DELETE /api/integrations/zapier/unsubscribe - Unsubscribe from triggers
-export async function DELETE(request: Request) {
+export const DELETE = withPermission('MANAGE_INTEGRATIONS', async (request: NextRequest) => {
   try {
     const { subscriptionId } = await request.json();
 
@@ -192,4 +193,4 @@ export async function DELETE(request: Request) {
     console.error('Error unsubscribing:', error);
     return NextResponse.json({ error: 'Unsubscribe failed' }, { status: 500 });
   }
-}
+});

@@ -7,6 +7,7 @@ import { KanbanCard } from './KanbanCard';
 
 type Candidate = {
   id: string;
+  candidateId?: string;
   name: string;
   position: string;
   source: string;
@@ -14,6 +15,8 @@ type Candidate = {
   email?: string;
   createdAt?: string;
   phone?: string;
+  assessmentScore?: number | null;
+  latestAssessmentScore?: number | null;
 };
 
 interface PaginationProps {

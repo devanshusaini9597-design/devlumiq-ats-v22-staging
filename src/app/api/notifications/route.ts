@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
+import { withAuth } from '@/lib/with-permission';
+import type { SessionUser } from '@/lib/auth';
 
 /** GET /api/notifications — return latest 20 notifications for the current user */
-export async function GET() {
+export const GET = withAuth(async (_req: NextRequest, _ctx, session: SessionUser) => {
   try {
-    const session = await getSession();
-    const userId = session?.id ?? null;
+    const userId = session.id;
 
-    const where = userId ? { OR: [{ userId }, { userId: null }] } : { userId: null };
+    const where = { OR: [{ userId }, { userId: null as string | null }] };
 
     const notifications = await prisma.notification.findMany({
       where,
@@ -23,17 +23,16 @@ export async function GET() {
     console.error('GET /api/notifications', e);
     return NextResponse.json({ notifications: [], unreadCount: 0 });
   }
-}
+});
 
 /** PATCH /api/notifications — mark all as read, or mark one by id */
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAuth(async (request: NextRequest, _ctx, session: SessionUser) => {
   try {
-    const session = await getSession();
-    const userId = session?.id ?? null;
+    const userId = session.id;
     const body = await request.json().catch(() => ({}));
     const id = (body as { id?: string })?.id;
 
-    const where = userId ? { OR: [{ userId }, { userId: null }] } : { userId: null };
+    const where = { OR: [{ userId }, { userId: null }] };
 
     if (id) {
       await prisma.notification.update({ where: { id }, data: { isRead: true } });
@@ -46,4 +45,4 @@ export async function PATCH(request: NextRequest) {
     console.error('PATCH /api/notifications', e);
     return NextResponse.json({ error: 'Failed to update notifications' }, { status: 500 });
   }
-}
+});

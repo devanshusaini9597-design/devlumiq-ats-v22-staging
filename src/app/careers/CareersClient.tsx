@@ -9,6 +9,7 @@ import {
   Users, ChevronRight, ExternalLink, Mail,
   ChevronLeft,
 } from 'lucide-react';
+import { CareersChatbot } from '@/components/careers/CareersChatbot';
 
 const DEPT_COLORS: Record<string, string> = {
   Engineering:   'bg-blue-100 text-blue-700 border-blue-200',
@@ -68,9 +69,10 @@ interface CareersClientProps {
   initialJobs: Job[];
   initialFilters: Filters;
   company?: CompanyInfo | null;
+  companySlug?: string;
 }
 
-export default function CareersClient({ initialJobs, initialFilters, company }: CareersClientProps) {
+export default function CareersClient({ initialJobs, initialFilters, company, companySlug }: CareersClientProps) {
   const JOBS_PER_PAGE = 8;
   const [jobs, setJobs] = useState<Job[]>(initialJobs);
   const [filters] = useState<Filters>(initialFilters);
@@ -86,6 +88,7 @@ export default function CareersClient({ initialJobs, initialFilters, company }: 
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
+      if (companySlug) params.set('company', companySlug);
       if (searchQuery) params.set('search', searchQuery);
       if (selectedDepartment !== 'all') params.set('department', selectedDepartment);
       if (selectedLocation !== 'all') params.set('location', selectedLocation);
@@ -102,7 +105,7 @@ export default function CareersClient({ initialJobs, initialFilters, company }: 
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, selectedDepartment, selectedLocation, selectedType]);
+  }, [searchQuery, selectedDepartment, selectedLocation, selectedType, companySlug]);
 
   useEffect(() => {
     const timer = setTimeout(fetchJobs, 300);
@@ -678,6 +681,8 @@ export default function CareersClient({ initialJobs, initialFilters, company }: 
           </motion.div>
         </div>
       </section>
+
+      <CareersChatbot companySlug={companySlug} />
     </div>
   );
 }

@@ -15,10 +15,10 @@ const valueKeys = [
 ];
 
 const statKeys = [
-  { value: '500+', labelKey: 'about.stat1' },
-  { value: '50K+', labelKey: 'about.stat2' },
+  { value: '12+', labelKey: 'about.stat1' },
+  { value: '7', labelKey: 'about.stat2' },
   { value: '2023', labelKey: 'about.stat3' },
-  { value: '15', labelKey: 'about.stat4' },
+  { value: '4', labelKey: 'about.stat4' },
 ];
 
 const timelineKeys = [
@@ -30,10 +30,10 @@ const timelineKeys = [
 ];
 
 const teamKeys = [
-  { name: 'Alex Rivera', roleKey: 'about.team1Role', avatar: 'AR', bioKey: 'about.team1Bio' },
-  { name: 'Sarah Chen', roleKey: 'about.team2Role', avatar: 'SC', bioKey: 'about.team2Bio' },
-  { name: 'Marcus Johnson', roleKey: 'about.team3Role', avatar: 'MJ', bioKey: 'about.team3Bio' },
-  { name: 'Priya Patel', roleKey: 'about.team4Role', avatar: 'PP', bioKey: 'about.team4Bio' },
+  { name: 'Dev Team', roleKey: 'about.team1Role', avatar: 'DT', bioKey: 'about.team1Bio' },
+  { name: 'Design Team', roleKey: 'about.team2Role', avatar: 'UX', bioKey: 'about.team2Bio' },
+  { name: 'Backend Team', roleKey: 'about.team3Role', avatar: 'BE', bioKey: 'about.team3Bio' },
+  { name: 'Support Team', roleKey: 'about.team4Role', avatar: 'CS', bioKey: 'about.team4Bio' },
 ];
 
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.08 } } };

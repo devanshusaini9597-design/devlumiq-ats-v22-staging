@@ -1,16 +1,29 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import jwt from 'jsonwebtoken';
 
 // GET /api/portal/applications - Get candidate's applications
 export async function GET(request: Request) {
   try {
-    // Get user from auth header (simplified - in production use proper auth middleware)
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = authHeader.replace('Bearer ', '');
+    const token = authHeader.slice(7);
+    let userId: string;
+    try {
+      const payload = jwt.verify(
+        token,
+        process.env.JWT_SECRET || 'devlumiq-ats-dev-only-secret-do-not-use-in-production'
+      ) as { userId?: string; type?: string };
+      if (!payload.userId || payload.type !== 'candidate') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      userId = payload.userId;
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const applications = await prisma.application.findMany({
       where: { portalUserId: userId },

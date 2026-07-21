@@ -3,10 +3,10 @@ import { getSession, SessionUser } from '@/lib/auth';
 import { hasPermission, hasAnyPermission, Permission, Role } from '@/lib/roles';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type RouteContext = { params?: Promise<Record<string, any>> };
-type AuthedHandler = (
+type RouteContext = { params: Promise<any> };
+type AuthedHandler<T extends RouteContext = RouteContext> = (
   req: NextRequest,
-  ctx: RouteContext,
+  ctx: T,
   session: SessionUser,
 ) => Promise<NextResponse> | NextResponse;
 
@@ -17,8 +17,11 @@ type AuthedHandler = (
  * Usage:
  *   export const POST = withPermission('CREATE_JOB', async (req, ctx, session) => { ... });
  */
-export function withPermission(permission: Permission, handler: AuthedHandler) {
-  return async (req: NextRequest, ctx: RouteContext = {}) => {
+export function withPermission<T extends RouteContext>(
+  permission: Permission,
+  handler: AuthedHandler<T>,
+) {
+  return async (req: NextRequest, ctx: T) => {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -37,12 +40,12 @@ export function withPermission(permission: Permission, handler: AuthedHandler) {
  * Like withPermission but accepts multiple permissions (OR logic by default).
  * Pass requireAll: true for AND logic.
  */
-export function withAnyPermission(
+export function withAnyPermission<T extends RouteContext>(
   permissions: Permission[],
-  handler: AuthedHandler,
+  handler: AuthedHandler<T>,
   requireAll = false,
 ) {
-  return async (req: NextRequest, ctx: RouteContext = {}) => {
+  return async (req: NextRequest, ctx: T) => {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -66,8 +69,8 @@ export function withAnyPermission(
  * Only requires authentication — no specific permission needed.
  * Use for routes that just need to know who the user is.
  */
-export function withAuth(handler: AuthedHandler) {
-  return async (req: NextRequest, ctx: RouteContext = {}) => {
+export function withAuth<T extends RouteContext>(handler: AuthedHandler<T>) {
+  return async (req: NextRequest, ctx: T) => {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

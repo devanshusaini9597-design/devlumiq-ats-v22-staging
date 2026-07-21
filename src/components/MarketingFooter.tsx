@@ -113,10 +113,10 @@ export default function MarketingFooter() {
         {/* Trust stats strip */}
         <div className="mb-10 sm:mb-12 grid grid-cols-2 sm:grid-cols-4 gap-4 pb-10 sm:pb-12 border-b border-stone-800/60">
           {[
-            { icon: Users, value: '500+', labelKey: 'footer.stat1.label', color: 'text-brand-400', bg: 'bg-brand-500/10' },
-            { icon: Star, value: '4.9/5', labelKey: 'footer.stat2.label', color: 'text-amber-400', bg: 'bg-amber-500/10' },
-            { icon: TrendingUp, value: '40%', labelKey: 'footer.stat3.label', color: 'text-teal-400', bg: 'bg-teal-500/10' },
-            { icon: Shield, value: '99.9%', labelKey: 'footer.stat4.label', color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+            { icon: Users, value: '15+', labelKey: 'footer.stat1.label', color: 'text-brand-400', bg: 'bg-brand-500/10' },
+            { icon: Star, value: 'Next.js', labelKey: 'footer.stat2.label', color: 'text-amber-400', bg: 'bg-amber-500/10' },
+            { icon: TrendingUp, value: 'TS', labelKey: 'footer.stat3.label', color: 'text-teal-400', bg: 'bg-teal-500/10' },
+            { icon: Shield, value: 'Prisma', labelKey: 'footer.stat4.label', color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
           ].map(({ icon: Icon, value, labelKey, color, bg }) => (
             <div key={labelKey} className="flex items-center gap-3">
               <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center flex-shrink-0`}>
@@ -182,11 +182,11 @@ export default function MarketingFooter() {
             <p className="text-sm text-stone-400 leading-relaxed max-w-[220px]">
               {t('footer.tagline')}
             </p>
-            <a href="mailto:devanshusaini72@gmail.com" className="mt-5 inline-flex items-center gap-2 text-stone-400 hover:text-brand-400 text-sm font-medium transition-colors group">
+            <a href="mailto:support@devlumiq.com" className="mt-5 inline-flex items-center gap-2 text-stone-400 hover:text-brand-400 text-sm font-medium transition-colors group">
               <div className="w-7 h-7 rounded-lg bg-white/[0.05] flex items-center justify-center group-hover:bg-brand-500/10 transition-colors">
                 <Mail className="w-3.5 h-3.5" />
               </div>
-              devanshusaini72@gmail.com
+              support@devlumiq.com
             </a>
             {/* Award badge */}
             <div className="mt-5 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
@@ -228,8 +228,8 @@ export default function MarketingFooter() {
             <div className="flex items-center gap-2">
               {[
                 { href: 'https://twitter.com/devlumiq', label: 'Twitter', Icon: Twitter },
-                { href: 'https://www.linkedin.com/in/devanshu-saini-baba10360/', label: 'LinkedIn', Icon: Linkedin },
-                { href: 'https://github.com/devanshusaini9597-design', label: 'GitHub', Icon: Github },
+                { href: 'https://www.linkedin.com/company/devlumiq', label: 'LinkedIn', Icon: Linkedin },
+                { href: 'https://github.com/devlumiq', label: 'GitHub', Icon: Github },
               ].map(({ href, label, Icon }) => (
                 <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label}
                   className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/[0.06] flex items-center justify-center text-stone-500 hover:text-white hover:bg-brand-600/30 hover:border-brand-500/30 transition-all"

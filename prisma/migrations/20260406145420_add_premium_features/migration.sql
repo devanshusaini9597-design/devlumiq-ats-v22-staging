@@ -1,5 +1,5 @@
 -- CreateTable
-CREATE TABLE "JobBoardIntegration" (
+CREATE TABLE IF NOT EXISTS "JobBoardIntegration" (
     "id" TEXT NOT NULL,
     "jobId" TEXT NOT NULL,
     "board" TEXT NOT NULL,
@@ -15,4 +15,4 @@ CREATE TABLE "JobBoardIntegration" (
 );
 
 -- AddForeignKey
-ALTER TABLE "JobBoardIntegration" ADD CONSTRAINT "JobBoardIntegration_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "Job"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'JobBoardIntegration_jobId_fkey') THEN ALTER TABLE "JobBoardIntegration" ADD CONSTRAINT "JobBoardIntegration_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "Job"("id") ON DELETE CASCADE ON UPDATE CASCADE; END IF; END $$;

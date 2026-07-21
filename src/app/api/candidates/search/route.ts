@@ -1,18 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { stageToDisplay } from '@/lib/api-helpers';
+import { withPermission } from '@/lib/with-permission';
+import {
+  isOrgBlindScreeningEnabled,
+  maskCandidateForList,
+  shouldBlindScreen,
+} from '@/lib/blind-screening';
 
-export async function GET(req: NextRequest) {
+export const GET = withPermission('VIEW_CANDIDATES', async (req: NextRequest, _ctx, session) => {
   try {
     const { searchParams } = new URL(req.url);
+    const blindEnabled = shouldBlindScreen(
+      session.role,
+      await isOrgBlindScreeningEnabled(session.organizationId),
+    );
     const query = searchParams.get('q') || '';
     const skills = searchParams.get('skills')?.split(',').filter(Boolean) || [];
+    const skillIds = searchParams.get('skillIds')?.split(',').filter(Boolean) || [];
     const experience = searchParams.get('experience');
     const tags = searchParams.get('tags')?.split(',').filter(Boolean) || [];
     const source = searchParams.get('source');
     const stage = searchParams.get('stage');
 
-    const where: any = {};
+    const where: any = {
+      ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+    };
+
+    // Taxonomy filter (AND — candidate must have all listed skill IDs)
+    if (skillIds.length > 0) {
+      where.AND = [
+        ...(where.AND ?? []),
+        ...skillIds.map((skillId: string) => ({
+          candidateSkills: { some: { skillId } },
+        })),
+      ];
+    }
 
     if (query) {
       where.OR = [
@@ -20,14 +43,6 @@ export async function GET(req: NextRequest) {
         { email: { contains: query, mode: 'insensitive' } },
         { currentTitle: { contains: query, mode: 'insensitive' } }
       ];
-    }
-
-    if (skills.length > 0) {
-      where.skills = { hasSome: skills };
-    }
-
-    if (tags.length > 0) {
-      where.tags = { hasSome: tags };
     }
 
     if (experience) {
@@ -52,7 +67,7 @@ export async function GET(req: NextRequest) {
       where.applications = { some: { stage } };
     }
 
-    const candidates = await prisma.candidate.findMany({
+    let candidates = await prisma.candidate.findMany({
       where,
       include: {
         applications: { orderBy: { updatedAt: 'desc' }, take: 1, include: { job: true } },
@@ -63,12 +78,26 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' }
     });
 
+    // Application-level filtering for skills/tags (Json fields don't support hasSome in all DBs)
+    if (skills.length > 0) {
+      candidates = candidates.filter((c) => {
+        const cSkills = (c.skills as unknown as string[]) ?? [];
+        return skills.some((s: string) => cSkills.includes(s));
+      });
+    }
+    if (tags.length > 0) {
+      candidates = candidates.filter((c) => {
+        const cTags = (c.tags as unknown as string[]) ?? [];
+        return tags.some((t: string) => cTags.includes(t));
+      });
+    }
+
     // Transform to match the format expected by frontend
-    const list = candidates.map((c) => {
+    const list = candidates.map((c, i) => {
       const app = c.applications[0];
       const position = app?.job?.title ?? c.currentTitle ?? '';
       const status = app ? stageToDisplay(app.stage) : 'Applied';
-      return {
+      const row = {
         id: c.id,
         name: c.name,
         email: c.email,
@@ -80,19 +109,21 @@ export async function GET(req: NextRequest) {
         skills: c.skills ?? [],
         tags: c.tags ?? [],
         createdAt: c.createdAt.toISOString(),
-        applications: c.applications,
-        interviews: c.interviews,
-        notes: c.notes,
-        comments: c.comments
+        applications: blindEnabled ? [] : c.applications,
+        interviews: blindEnabled ? [] : c.interviews,
+        notes: blindEnabled ? [] : c.notes,
+        comments: blindEnabled ? [] : c.comments,
       };
+      return maskCandidateForList(row, i, blindEnabled);
     });
 
     return NextResponse.json({ 
       candidates: list,
       total: list.length,
-      filters: { skills, experience, tags, source, stage }
+      filters: { skills, experience, tags, source, stage },
+      blindScreening: blindEnabled,
     });
   } catch {
     return NextResponse.json({ candidates: [], total: 0 }, { status: 500 });
   }
-}
+});

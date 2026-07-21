@@ -7,30 +7,15 @@ export async function GET(request: NextRequest) {
     const cookieValue = request.cookies.get(SESSION_COOKIE)?.value;
     if (!cookieValue) return NextResponse.json({ user: null });
 
-    // Try JWT verification
+    // Verify JWT session
     const payload = verifySession(cookieValue);
-    let userId: string | null = payload?.userId ?? null;
-
-    // Fallback: legacy plain JSON
-    if (!userId) {
-      try {
-        const legacy = JSON.parse(cookieValue) as { userId?: string };
-        userId = legacy?.userId ?? null;
-      } catch { /* not JSON */ }
-    }
+    const userId = payload?.userId ?? null;
 
     if (!userId) return NextResponse.json({ user: null });
 
-    // Demo user — no DB record
-    if (userId === 'demo-user') {
-      return NextResponse.json({
-        user: { id: 'demo-user', name: 'Demo User', email: 'demo@devlumiq.com', role: 'RECRUITER', initials: 'DU' },
-      });
-    }
-
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, email: true, role: true, isActive: true },
+      select: { id: true, name: true, email: true, role: true, isActive: true, organizationId: true },
     });
 
     if (!user || !user.isActive) return NextResponse.json({ user: null });
@@ -41,6 +26,7 @@ export async function GET(request: NextRequest) {
         name: user.name,
         email: user.email,
         role: user.role,
+        organizationId: user.organizationId ?? null,
         initials: user.name.slice(0, 2).toUpperCase(),
       },
     });

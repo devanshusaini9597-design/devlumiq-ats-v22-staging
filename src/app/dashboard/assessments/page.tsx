@@ -14,6 +14,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
 import { format } from 'date-fns';
+import { IntegrityReportModal } from '@/components/dashboard/IntegrityReportModal';
+import { AssignmentDetailModal } from '@/components/dashboard/AssignmentDetailModal';
 
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -36,6 +38,10 @@ type AssessmentFormData = {
   duration: number;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   passingScore: number;
+  proctoringEnabled: boolean;
+  proctoringStrictness: 'off' | 'standard' | 'strict';
+  requireFullscreen: boolean;
+  snapshotIntervalSec: number;
   questions: QuestionFormData[];
 };
 
@@ -49,6 +55,10 @@ type AssessmentTemplate = {
   difficulty: string;
   passingScore: number;
   isActive: boolean;
+  proctoringEnabled?: boolean;
+  proctoringStrictness?: string;
+  requireFullscreen?: boolean;
+  snapshotIntervalSec?: number;
   _count?: { questions: number; assignments: number };
 };
 
@@ -58,6 +68,7 @@ type AssessmentAssignment = {
   candidate: { name: string; email: string };
   template: { name: string; category: string };
   status: string;
+  reviewStatus?: string | null;
   startedAt: string | null;
   submittedAt: string | null;
   score: number | null;
@@ -170,6 +181,10 @@ const BLANK_FORM = (): AssessmentFormData => ({
   duration: 30,
   difficulty: 'intermediate',
   passingScore: 70,
+  proctoringEnabled: false,
+  proctoringStrictness: 'standard',
+  requireFullscreen: false,
+  snapshotIntervalSec: 30,
   questions: [BLANK_QUESTION()],
 });
 
@@ -341,6 +356,31 @@ function CreateAssessmentModal({
                     <label className="block text-sm font-medium text-stone-700 mb-1.5">Passing Score (%)</label>
                     <input type="number" value={formData.passingScore} onChange={e => setFormData(p => ({ ...p, passingScore: parseInt(e.target.value) || 0 }))} min={0} max={100} className="w-full px-4 py-2.5 bg-white border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
                   </div>
+                  <div className="sm:col-span-2 rounded-xl border border-amber-100 bg-amber-50/50 p-4 space-y-3">
+                    <p className="text-sm font-semibold text-stone-800">Proctoring / anti-cheat</p>
+                    <label className="flex items-center gap-2 text-sm text-stone-700">
+                      <input type="checkbox" checked={formData.proctoringEnabled} onChange={e => setFormData(p => ({ ...p, proctoringEnabled: e.target.checked }))} />
+                      Enable proctoring for this template
+                    </label>
+                    <div className="grid sm:grid-cols-3 gap-3">
+                      <label className="block text-xs font-medium text-stone-600">
+                        Strictness
+                        <select value={formData.proctoringStrictness} onChange={e => setFormData(p => ({ ...p, proctoringStrictness: e.target.value as AssessmentFormData['proctoringStrictness'] }))} className="mt-1 w-full px-3 py-2 bg-white border border-stone-200 rounded-lg text-sm" disabled={!formData.proctoringEnabled}>
+                          <option value="off">Off (monitor only)</option>
+                          <option value="standard">Standard</option>
+                          <option value="strict">Strict</option>
+                        </select>
+                      </label>
+                      <label className="block text-xs font-medium text-stone-600">
+                        Snapshot interval (sec)
+                        <input type="number" min={15} max={120} value={formData.snapshotIntervalSec} onChange={e => setFormData(p => ({ ...p, snapshotIntervalSec: parseInt(e.target.value) || 30 }))} className="mt-1 w-full px-3 py-2 bg-white border border-stone-200 rounded-lg text-sm" disabled={!formData.proctoringEnabled} />
+                      </label>
+                      <label className="flex items-center gap-2 text-sm text-stone-700 mt-5">
+                        <input type="checkbox" checked={formData.requireFullscreen} onChange={e => setFormData(p => ({ ...p, requireFullscreen: e.target.checked }))} disabled={!formData.proctoringEnabled} />
+                        Require fullscreen lock
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -471,7 +511,16 @@ function AssignModal({
         body: JSON.stringify({ templateId: template.id, candidateId: selectedId, expiresInDays: 7 }),
       });
       if (res.ok) {
-        toast.success('Assessment assigned successfully');
+        const data = await res.json().catch(() => ({}));
+        if (data.takeUrl && typeof navigator !== 'undefined' && navigator.clipboard) {
+          await navigator.clipboard.writeText(data.takeUrl).catch(() => {});
+          toast.success(
+            data.emailSent ? 'Assigned — email sent & link copied' : 'Assigned — take link copied',
+            data.takeUrl,
+          );
+        } else {
+          toast.success('Assessment assigned successfully');
+        }
         onAssigned();
         onClose();
       } else {
@@ -712,7 +761,7 @@ const CATEGORIES = [
 export default function AssessmentsPage() {
   const { t } = useLocale();
 
-  const [activeTab, setActiveTab] = useState<'templates' | 'assignments'>('templates');
+  const [activeTab, setActiveTab] = useState<'templates' | 'assignments' | 'pending_review'>('templates');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [templates, setTemplates] = useState<AssessmentTemplate[]>([]);
   const [assignments, setAssignments] = useState<AssessmentAssignment[]>([]);
@@ -722,6 +771,8 @@ export default function AssessmentsPage() {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [assignTemplate, setAssignTemplate] = useState<AssessmentTemplate | null>(null);
+  const [integrityId, setIntegrityId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; id: string; name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -822,6 +873,12 @@ export default function AssessmentsPage() {
   const passRate = completedA.length > 0
     ? Math.round((assignments.filter(a => a.passed).length / completedA.length) * 100) : 0;
 
+  const pendingReviewAssignments = assignments.filter(
+    (a) => a.reviewStatus === 'pending_review' || (a.status === 'completed' && a.reviewStatus === 'pending_review'),
+  );
+  const displayedAssignments =
+    activeTab === 'pending_review' ? pendingReviewAssignments : assignments;
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
@@ -874,7 +931,7 @@ export default function AssessmentsPage() {
         })}
       </div>
 
-      {/* Search + Category â€” templates tab only */}
+      {/* Search + Category — templates tab only */}
       {activeTab === 'templates' && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -911,26 +968,42 @@ export default function AssessmentsPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex border-b border-stone-200 overflow-x-auto scrollbar-hide">
-        {(['templates', 'assignments'] as const).map(tab => (
+      <div className="flex border-b border-stone-200 overflow-x-auto scrollbar-hide items-center gap-1">
+        {([
+          { id: 'templates' as const, label: 'Templates', icon: ClipboardList, count: templates.length },
+          { id: 'assignments' as const, label: 'Assignments', icon: Users, count: assignments.length },
+          { id: 'pending_review' as const, label: 'Pending review', icon: AlertCircle, count: pendingReviewAssignments.length },
+        ]).map(tab => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 sm:px-5 py-3 text-sm font-semibold border-b-2 transition-all whitespace-nowrap flex-shrink-0 ${
-              activeTab === tab
+              activeTab === tab.id
                 ? 'border-brand-500 text-brand-600 bg-brand-50/50'
                 : 'border-transparent text-stone-500 hover:text-stone-700 hover:bg-stone-50'
             }`}
           >
-            {tab === 'templates' ? <ClipboardList className="w-4 h-4" /> : <Users className="w-4 h-4" />}
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            <tab.icon className="w-4 h-4" />
+            {tab.label}
             <span className={`px-2 py-0.5 text-xs rounded-full font-semibold ${
-              activeTab === tab ? 'bg-brand-100 text-brand-700' : 'bg-stone-100 text-stone-600'
+              tab.id === 'pending_review' && tab.count > 0
+                ? 'bg-amber-100 text-amber-800'
+                : activeTab === tab.id ? 'bg-brand-100 text-brand-700' : 'bg-stone-100 text-stone-600'
             }`}>
-              {tab === 'templates' ? templates.length : assignments.length}
+              {tab.count}
             </span>
           </button>
         ))}
+        {pendingReviewAssignments.length > 0 && activeTab !== 'pending_review' && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('pending_review')}
+            className="ml-auto mr-2 mb-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold hover:bg-amber-100"
+          >
+            <AlertCircle className="w-3.5 h-3.5" />
+            {pendingReviewAssignments.length} pending review
+          </button>
+        )}
       </div>
 
       {/* Content */}
@@ -1032,14 +1105,18 @@ export default function AssessmentsPage() {
           </div>
         ) : (
           <div className="divide-y divide-stone-100">
-            {assignments.length === 0 ? (
+            {displayedAssignments.length === 0 ? (
               <EmptyState
-                message="No assessments assigned yet"
+                message={activeTab === 'pending_review' ? 'No assessments pending review' : 'No assessments assigned yet'}
                 icon={Users}
-                subMessage="Assign assessments to candidates using the Template Actions menu"
+                subMessage={
+                  activeTab === 'pending_review'
+                    ? 'Open-ended and coding answers awaiting recruiter review will appear here'
+                    : 'Assign assessments to candidates using the Template Actions menu'
+                }
               />
             ) : (
-              assignments.map((assignment, index) => (
+              displayedAssignments.map((assignment, index) => (
                 <motion.div
                   key={assignment.id}
                   initial={{ opacity: 0, y: 10 }}
@@ -1073,9 +1150,29 @@ export default function AssessmentsPage() {
                             {statusIcon(assignment.status)}
                             <span className="hidden xs:inline">{assignment.status.replace('_', ' ')}</span>
                           </span>
+                          {assignment.reviewStatus === 'pending_review' && (
+                            <span className="px-2 py-1 text-xs font-bold rounded-lg bg-amber-100 text-amber-800 border border-amber-200">
+                              Needs review
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setDetailId(assignment.id)}
+                            className="text-xs font-semibold text-brand-600 hover:text-brand-700 px-2 py-1 rounded-lg hover:bg-brand-50"
+                          >
+                            View results
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIntegrityId(assignment.id)}
+                            className="px-2 py-1 rounded-lg text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-100 hover:bg-amber-100 transition-colors"
+                            title="Integrity report"
+                          >
+                            Integrity
+                          </button>
                           <Link
                             href={`/dashboard/candidates/${assignment.candidateId}`}
-                            className="p-2 hover:bg-brand-50 rounded-lg text-stone-400 hover:text-brand-600 opacity-0 group-hover:opacity-100 transition-all"
+                            className="p-2 hover:bg-brand-50 rounded-lg text-stone-400 hover:text-brand-600 transition-all"
                             title="View candidate profile"
                           >
                             <ArrowRight className="w-4 h-4" />
@@ -1119,23 +1216,38 @@ export default function AssessmentsPage() {
         )}
       </motion.div>
 
-      {/* Quick Actions footer */}
+      {/* Quick Actions — filter templates by category */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
         className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { icon: Brain, colorClass: 'from-blue-50 to-indigo-50 border-blue-100', iconColor: 'text-blue-600', title: 'Technical Assessments', desc: 'Coding challenges, system design, and technical skills' },
-          { icon: Puzzle, colorClass: 'from-purple-50 to-pink-50 border-purple-100', iconColor: 'text-purple-600', title: 'Cognitive Tests', desc: 'Problem solving, logical reasoning, and aptitude' },
-          { icon: Users, colorClass: 'from-emerald-50 to-teal-50 border-emerald-100', iconColor: 'text-emerald-600', title: 'Personality Fit', desc: 'Culture fit, behavioral, and soft skills assessments' },
+          { category: 'technical', icon: Brain, colorClass: 'from-blue-50 to-indigo-50 border-blue-100 hover:border-blue-300', iconColor: 'text-blue-600', title: 'Technical Assessments', desc: 'Coding challenges, system design, and technical skills' },
+          { category: 'cognitive', icon: Puzzle, colorClass: 'from-purple-50 to-pink-50 border-purple-100 hover:border-purple-300', iconColor: 'text-purple-600', title: 'Cognitive Tests', desc: 'Problem solving, logical reasoning, and aptitude' },
+          { category: 'personality', icon: Users, colorClass: 'from-emerald-50 to-teal-50 border-emerald-100 hover:border-emerald-300', iconColor: 'text-emerald-600', title: 'Personality Fit', desc: 'Culture fit, behavioral, and soft skills assessments' },
         ].map(item => {
           const Icon = item.icon;
+          const active = selectedCategory === item.category && activeTab === 'templates';
           return (
-            <div key={item.title} className={`p-5 rounded-xl bg-gradient-to-br border ${item.colorClass}`}>
+            <button
+              key={item.title}
+              type="button"
+              onClick={() => {
+                setActiveTab('templates');
+                setSelectedCategory(item.category);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`p-5 rounded-xl bg-gradient-to-br border text-left transition-all ${item.colorClass} ${
+                active ? 'ring-2 ring-brand-500 shadow-md' : 'hover:shadow-sm'
+              }`}
+            >
               <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center mb-3">
                 <Icon className={`w-5 h-5 ${item.iconColor}`} />
               </div>
               <h4 className="font-semibold text-stone-900 mb-1">{item.title}</h4>
               <p className="text-sm text-stone-500">{item.desc}</p>
-            </div>
+              <p className="text-xs font-semibold text-brand-600 mt-3">
+                {active ? 'Showing this category' : 'View templates →'}
+              </p>
+            </button>
           );
         })}
       </motion.div>
@@ -1143,6 +1255,13 @@ export default function AssessmentsPage() {
       {/* Modals â€” top-level, never destroyed on tab switch */}
       <CreateAssessmentModal open={showCreateModal} onClose={() => setShowCreateModal(false)} onCreated={fetchTemplates} />
       <AssignModal open={!!assignTemplate} template={assignTemplate} onClose={() => setAssignTemplate(null)} onAssigned={fetchAssignments} />
+      <IntegrityReportModal assignmentId={integrityId} open={!!integrityId} onClose={() => setIntegrityId(null)} />
+      <AssignmentDetailModal
+        assignmentId={detailId}
+        open={!!detailId}
+        onClose={() => setDetailId(null)}
+        onGraded={fetchAssignments}
+      />
       <DeleteModal deleteModal={deleteModal} isDeleting={isDeleting} onCancel={() => setDeleteModal(null)} onConfirm={handleConfirmDelete} />
     </div>
   );

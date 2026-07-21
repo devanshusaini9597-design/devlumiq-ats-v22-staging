@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withPermission, withAuth } from '@/lib/with-permission';
 
 // POST /api/search/advanced - Advanced candidate search with boolean logic
 // POST /api/search (with `name` field) - Save a search for the current user
-export async function POST(request: Request) {
+export const POST = withPermission('USE_SMART_SEARCH', async (request: NextRequest, _ctx, session) => {
   try {
     const body = await request.json();
     const {
@@ -58,11 +59,6 @@ export async function POST(request: Request) {
       ];
     }
 
-    // Skills filter (array overlap)
-    if (skills && skills.length > 0) {
-      where.skills = { hasSome: skills };
-    }
-
     // Experience range
     if (experienceMin !== undefined || experienceMax !== undefined) {
       where.experience = {};
@@ -90,12 +86,7 @@ export async function POST(request: Request) {
       where.source = { in: source };
     }
 
-    // Tags filter
-    if (tags && tags.length > 0) {
-      where.tags = { hasSome: tags };
-    }
-
-    const candidates = await prisma.candidate.findMany({
+    let candidates = await prisma.candidate.findMany({
       where,
       include: {
         applications: {
@@ -114,6 +105,20 @@ export async function POST(request: Request) {
       take: 100,
     });
 
+    // Application-level filtering for skills/tags (Json fields don't support hasSome in all DBs)
+    if (skills && skills.length > 0) {
+      candidates = candidates.filter((c) => {
+        const cSkills = (c.skills as unknown as string[]) ?? [];
+        return skills.some((s: string) => cSkills.includes(s));
+      });
+    }
+    if (tags && tags.length > 0) {
+      candidates = candidates.filter((c) => {
+        const cTags = (c.tags as unknown as string[]) ?? [];
+        return tags.some((t: string) => cTags.includes(t));
+      });
+    }
+
     return NextResponse.json({
       candidates,
       total: candidates.length,
@@ -123,10 +128,10 @@ export async function POST(request: Request) {
     console.error('Error in advanced search:', error);
     return NextResponse.json({ error: 'Search failed' }, { status: 500 });
   }
-}
+});
 
 // GET /api/search/saved - Get user's saved searches
-export async function GET(request: Request) {
+export const GET = withAuth(async (request: NextRequest, _ctx, session) => {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -145,4 +150,4 @@ export async function GET(request: Request) {
     console.error('Error fetching saved searches:', error);
     return NextResponse.json({ error: 'Failed to fetch saved searches' }, { status: 500 });
   }
-}
+});

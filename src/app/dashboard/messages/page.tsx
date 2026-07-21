@@ -10,9 +10,11 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
 import { format, formatDistanceToNow } from 'date-fns';
+import { ChannelMessageComposer } from '@/components/dashboard/ChannelMessageComposer';
 
 interface ThreadSummary {
   id: string;
+  candidateId?: string | null;
   subject: string;
   createdAt: string;
   lastMessageAt: string;
@@ -24,6 +26,7 @@ interface ThreadSummary {
     direction: string;
     isRead: boolean;
     sentAt: string;
+    channel?: 'EMAIL' | 'SMS' | 'WHATSAPP';
   } | null;
 }
 
@@ -38,6 +41,8 @@ interface MessageItem {
   isRead: boolean;
   sentAt: string;
   createdAt: string;
+  channel?: 'EMAIL' | 'SMS' | 'WHATSAPP';
+  toPhone?: string | null;
 }
 
 function getInitials(s: string) {
@@ -59,6 +64,7 @@ export default function MessagesPage() {
   const [loadingThreads, setLoadingThreads] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [input, setInput] = useState('');
+  const [replyChannel, setReplyChannel] = useState<'EMAIL' | 'SMS' | 'WHATSAPP'>('EMAIL');
   const [sending, setSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewChat, setShowNewChat] = useState(false);
@@ -79,13 +85,16 @@ export default function MessagesPage() {
         setThreads(list);
         setFilteredThreads(list);
         if (list.length > 0 && !activeThreadId) setActiveThreadId(list[0].id);
+      } else {
+        toast.error('Failed to load conversations');
       }
     } catch (error) {
       console.error('Failed to load threads:', error);
+      toast.error('Failed to load conversations');
     } finally {
       setLoadingThreads(false);
     }
-  }, [activeThreadId]);
+  }, [activeThreadId, toast]);
 
   useEffect(() => {
     loadThreads();
@@ -140,44 +149,76 @@ export default function MessagesPage() {
     e.preventDefault();
     if (!input.trim() || !activeThreadId) return;
 
+    const text = input.trim();
+    const candidateId = activeThread?.candidateId;
+
+    if ((replyChannel === 'SMS' || replyChannel === 'WHATSAPP') && !candidateId) {
+      toast.error('This thread is not linked to a candidate. Use the channel composer or link a candidate first.');
+      return;
+    }
+
     setSending(true);
     try {
-      const res = await fetch('/api/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          threadId: activeThreadId,
-          subject: activeThread?.subject,
-          body: input.trim(),
-        }),
-      });
+      let res: Response;
+      if (replyChannel === 'SMS') {
+        res = await fetch('/api/messages/sms/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ candidateId, message: text }),
+        });
+      } else if (replyChannel === 'WHATSAPP') {
+        res = await fetch('/api/messages/whatsapp/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ candidateId, message: text }),
+        });
+      } else {
+        res = await fetch('/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            threadId: activeThreadId,
+            subject: activeThread?.subject,
+            body: text,
+          }),
+        });
+      }
 
       if (res.ok) {
         const data = await res.json();
         setInput('');
-        toast.success('Message sent');
+        toast.success(
+          replyChannel === 'SMS' ? 'SMS sent' : replyChannel === 'WHATSAPP' ? 'WhatsApp sent' : 'Message sent',
+        );
 
-        // Add new message to list
         const newMessage: MessageItem = {
           id: data.message?.id || Date.now().toString(),
           fromName: data.message?.fromName || 'You',
           fromEmail: data.message?.fromEmail || '',
-          body: input.trim(),
+          body: text,
           direction: 'OUTBOUND',
-          status: 'sent',
+          status: data.message?.status || 'sent',
           isRead: true,
           sentAt: new Date().toISOString(),
           createdAt: new Date().toISOString(),
+          channel: replyChannel,
+          toPhone: data.message?.toPhone ?? null,
         };
         setMessages((prev) => [...prev, newMessage]);
 
-        // Refresh threads to update last message
+        // SMS/WhatsApp may land on a different candidate thread — switch if needed
+        if (data.thread?.id && data.thread.id !== activeThreadId) {
+          setActiveThreadId(data.thread.id);
+        }
         loadThreads();
       } else {
-        toast.error('Failed to send message');
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || 'Failed to send message');
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to send message');
     } finally {
       setSending(false);
@@ -254,7 +295,7 @@ export default function MessagesPage() {
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-stone-900">{t('messages.title') || 'Messages'}</h1>
-            <p className="text-sm text-stone-500">{t('messages.subtitle') || 'Real-time chat with candidates and team'}</p>
+            <p className="text-sm text-stone-500">{t('messages.subtitle') || 'Email, SMS & WhatsApp in one inbox'}</p>
           </div>
         </div>
         <motion.button
@@ -267,6 +308,8 @@ export default function MessagesPage() {
           New Chat
         </motion.button>
       </div>
+
+      <ChannelMessageComposer onSent={() => { void loadThreads(); }} />
 
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -436,10 +479,17 @@ export default function MessagesPage() {
                                     : 'bg-white text-stone-900 rounded-bl-md border border-stone-200'
                                 }`}
                               >
-                                <div className="flex items-center gap-2 mb-1">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
                                   <span className="text-xs font-semibold opacity-90">
                                     {isYou ? 'You' : m.fromName}
                                   </span>
+                                  {m.channel && m.channel !== 'EMAIL' && (
+                                    <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${
+                                      isYou ? 'bg-white/20' : 'bg-stone-100 text-stone-600'
+                                    }`}>
+                                      {m.channel}
+                                    </span>
+                                  )}
                                   <span className="text-xs opacity-60">·</span>
                                   <span className="text-xs opacity-60">
                                     {format(new Date(m.sentAt), 'h:mm a')}
@@ -460,13 +510,42 @@ export default function MessagesPage() {
                 </div>
 
                 {/* Input Area */}
-                <form onSubmit={handleSend} className="p-4 border-t border-stone-200 bg-white">
+                <form onSubmit={handleSend} className="p-4 border-t border-stone-200 bg-white space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    {([
+                      { value: 'EMAIL', label: 'Email' },
+                      { value: 'SMS', label: 'SMS' },
+                      { value: 'WHATSAPP', label: 'WhatsApp' },
+                    ] as const).map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setReplyChannel(opt.value)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                          replyChannel === opt.value
+                            ? 'bg-brand-600 text-white'
+                            : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                    {(replyChannel === 'SMS' || replyChannel === 'WHATSAPP') && !activeThread.candidateId && (
+                      <span className="text-[11px] text-amber-600 ml-1">No candidate linked</span>
+                    )}
+                  </div>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
-                      placeholder={t('messages.typeMessage') || 'Type your message...'}
+                      placeholder={
+                        replyChannel === 'SMS'
+                          ? 'Type SMS…'
+                          : replyChannel === 'WHATSAPP'
+                            ? 'Type WhatsApp message…'
+                            : (t('messages.typeMessage') || 'Type your message...')
+                      }
                       disabled={sending}
                       className="flex-1 px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-stone-900 placeholder:text-stone-400 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 disabled:opacity-50"
                     />

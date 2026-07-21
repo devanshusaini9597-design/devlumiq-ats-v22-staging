@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
-    const { threadId, toEmail, subject, body: messageBody, attachments } = body;
+    const { threadId, toEmail, subject, body: messageBody, attachments, candidateId } = body;
 
     // If no threadId, create new thread
     let thread;
@@ -17,19 +17,24 @@ export async function POST(request: NextRequest) {
       thread = await prisma.messageThread.create({
         data: {
           subject: subject || 'No Subject',
+          organizationId: user.organizationId ?? undefined,
+          candidateId: typeof candidateId === 'string' ? candidateId : undefined,
           lastMessageAt: new Date(),
         },
       });
     } else {
-      thread = await prisma.messageThread.findUnique({
-        where: { id: threadId },
+      thread = await prisma.messageThread.findFirst({
+        where: {
+          id: threadId,
+          ...(user.organizationId ? { organizationId: user.organizationId } : {}),
+        },
       });
       if (!thread) {
         return NextResponse.json({ error: 'Thread not found' }, { status: 404 });
       }
     }
 
-    // Create message
+    // Create message (email channel — SMS/WhatsApp use dedicated routes)
     const message = await prisma.message.create({
       data: {
         threadId: thread.id,
@@ -37,6 +42,7 @@ export async function POST(request: NextRequest) {
         fromName: user.name || 'Recruiter',
         fromEmail: user.email,
         toEmail,
+        channel: 'EMAIL',
         body: messageBody,
         direction: 'OUTBOUND',
         status: 'sent',
@@ -71,8 +77,13 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    const where: any = {
+    const orgFilter = user.organizationId
+      ? { thread: { organizationId: user.organizationId } }
+      : {};
+
+    const where: Record<string, unknown> = {
       isDeleted: false,
+      ...orgFilter,
     };
 
     if (threadId) where.threadId = threadId;

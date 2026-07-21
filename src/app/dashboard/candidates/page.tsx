@@ -19,7 +19,7 @@ import {
   Plus, Search, Filter, MoreVertical, Mail, ChevronLeft, ChevronRight,
   Columns3, FileSpreadsheet, FileText, Sparkles, Users, Star, FileText as FileTextIcon,
   MessageCircle, Phone, Calendar, FileCheck, Trash2, Eye, Edit3, Send, Copy,
-  Linkedin, Github, ExternalLink, Archive, MoreHorizontal, X, RefreshCw, CheckCircle2
+  Linkedin, Github, ExternalLink, Archive, MoreHorizontal, X, RefreshCw, CheckCircle2, Upload
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { useLocale } from '@/components/providers/LocaleProvider';
@@ -27,6 +27,7 @@ import { useToast } from '@/components/ui/Toast';
 import { Modal } from '@/components/ui/Modal';
 import { required, email as validateEmail } from '@/lib/validation';
 import { PermissionGate } from '@/components/PermissionGate';
+import { CandidateCsvImport } from '@/components/dashboard/CandidateCsvImport';
 
 // Portal Dropdown Component - Clean Professional Style (No Animation)
 function ActionDropdownPortal({
@@ -190,13 +191,14 @@ function ActionDropdownPortal({
   );
 }
 
-type CandidatesColumnId = 'candidate' | 'position' | 'experience' | 'source' | 'status' | 'smartMatch' | 'actions';
+type CandidatesColumnId = 'candidate' | 'position' | 'experience' | 'source' | 'status' | 'assessmentScore' | 'smartMatch' | 'actions';
 const ALL_COLUMNS_VISIBLE: Record<CandidatesColumnId, boolean> = {
   candidate: true,
   position: true,
   experience: true,
   source: true,
   status: true,
+  assessmentScore: true,
   smartMatch: true,
   actions: true,
 };
@@ -219,7 +221,20 @@ function getSmartMatchScore(id: string): number {
   return 65 + (n % 34);
 }
 
-type Candidate = { id: string; name: string; email?: string; position?: string; experience?: number | null; source?: string; status?: string; createdAt?: string; phone?: string; smartMatch?: number };
+type Candidate = {
+  id: string;
+  name: string;
+  email?: string;
+  position?: string;
+  experience?: number | null;
+  source?: string;
+  status?: string;
+  createdAt?: string;
+  phone?: string;
+  smartMatch?: number;
+  assessmentScore?: number | null;
+  assessmentPassed?: boolean | null;
+};
 
 export default function CandidatesPage() {
   const { t } = useLocale();
@@ -232,6 +247,7 @@ export default function CandidatesPage() {
   const columnsButtonRef = useRef<HTMLButtonElement>(null);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: PER_PAGE });
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [formName, setFormName] = useState('');
   const [formEmail, setFormEmail] = useState('');
   const [formPosition, setFormPosition] = useState('');
@@ -244,10 +260,14 @@ export default function CandidatesPage() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState({
     skills: '',
+    skillIds: [] as string[],
     experience: '',
     source: '',
     status: '',
+    minAssessmentScore: '',
+    sortBy: '' as '' | 'assessmentScore',
   });
+  const [taxonomySkills, setTaxonomySkills] = useState<Array<{ id: string; name: string }>>([]);
 
   const [data, setData] = useState<Candidate[]>([]);
   const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
@@ -264,10 +284,19 @@ export default function CandidatesPage() {
   const [deleteCandidate, setDeleteCandidate] = useState<Candidate | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
-  const fetchCandidates = async () => {
+  const fetchCandidates = async (opts?: { minAssessmentScore?: string; sortBy?: string }) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/candidates', { credentials: 'include', cache: 'no-store' });
+      const params = new URLSearchParams();
+      const minScore = opts?.minAssessmentScore ?? advancedFilters.minAssessmentScore;
+      const sortBy = opts?.sortBy ?? advancedFilters.sortBy;
+      if (minScore) params.set('minAssessmentScore', minScore);
+      if (sortBy) {
+        params.set('sortBy', sortBy);
+        params.set('sortDir', 'desc');
+      }
+      const qs = params.toString();
+      const res = await fetch(`/api/candidates${qs ? `?${qs}` : ''}`, { credentials: 'include', cache: 'no-store' });
       if (!res.ok) throw new Error('Failed');
       const json = await res.json();
       const list = json.candidates ?? json.candidatesList ?? [];
@@ -282,6 +311,8 @@ export default function CandidatesPage() {
         createdAt: c.createdAt,
         phone: c.phone,
         smartMatch: getSmartMatchScore(String(c.id)),
+        assessmentScore: c.assessmentScore ?? null,
+        assessmentPassed: c.assessmentPassed ?? null,
       }));
       setData(mapped);
     } catch {
@@ -296,6 +327,14 @@ export default function CandidatesPage() {
     fetchCandidates();
     // Force reset column visibility to ensure Experience column is visible
     setColumnVisibility(ALL_COLUMNS_VISIBLE);
+    fetch('/api/skills?limit=200', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.skills) {
+          setTaxonomySkills(d.skills.map((s: { id: string; name: string }) => ({ id: s.id, name: s.name })));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Edit candidate handlers
@@ -382,6 +421,9 @@ export default function CandidatesPage() {
       const params = new URLSearchParams();
       if (globalFilter) params.append('q', globalFilter);
       if (advancedFilters.skills) params.append('skills', advancedFilters.skills);
+      if (advancedFilters.skillIds.length > 0) {
+        params.append('skillIds', advancedFilters.skillIds.join(','));
+      }
       if (advancedFilters.experience) params.append('experience', advancedFilters.experience);
       if (advancedFilters.source) params.append('source', advancedFilters.source);
       if (advancedFilters.status) params.append('stage', advancedFilters.status);
@@ -493,6 +535,24 @@ export default function CandidatesPage() {
           );
         },
       }),
+      columnHelper.accessor((row) => row.assessmentScore ?? null, {
+        id: 'assessmentScore',
+        header: () => 'Assessment',
+        cell: ({ row }) => {
+          const v = row.original.assessmentScore;
+          if (v == null) return <span className="text-stone-400 text-xs">—</span>;
+          const passed = row.original.assessmentPassed;
+          return (
+            <span
+              className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-bold ${
+                passed ? 'bg-emerald-50 text-emerald-700' : passed === false ? 'bg-red-50 text-red-700' : 'bg-stone-100 text-stone-700'
+              }`}
+            >
+              {Math.round(v)}%
+            </span>
+          );
+        },
+      }),
       columnHelper.accessor((row) => row.smartMatch ?? 0, {
         id: 'smartMatch',
         header: () => (
@@ -585,6 +645,7 @@ export default function CandidatesPage() {
     { id: 'experience', label: t('candidates.experience') || 'Experience' },
     { id: 'source', label: t('candidates.source') },
     { id: 'status', label: t('candidates.status') },
+    { id: 'assessmentScore', label: 'Assessment' },
     { id: 'smartMatch', label: t('candidates.smartMatch') },
     { id: 'actions', label: t('candidates.actions') },
   ];
@@ -598,18 +659,36 @@ export default function CandidatesPage() {
         subtitle={loading ? '...' : `${data.length} ${t('candidates.totalCount')}`}
       >
         <PermissionGate permission="CREATE_CANDIDATE">
-          <motion.button
-            type="button"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setAddModalOpen(true)}
-            className="flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl font-semibold bg-gradient-to-r from-brand-600 via-teal-600 to-brand-700 text-white shadow-lg shadow-brand-500/25 hover:shadow-brand-500/35 transition-all"
-          >
-            <Plus className="w-5 h-5" />
-            {t('candidates.addCandidate')}
-          </motion.button>
+          <div className="flex flex-wrap items-center gap-2">
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setImportModalOpen(true)}
+              className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl font-semibold border-2 border-stone-200 bg-white text-stone-700 hover:border-brand-300 hover:bg-brand-50/40 transition-all"
+            >
+              <Upload className="w-5 h-5 text-brand-600" />
+              Import CSV
+            </motion.button>
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setAddModalOpen(true)}
+              className="flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl font-semibold bg-gradient-to-r from-brand-600 via-teal-600 to-brand-700 text-white shadow-lg shadow-brand-500/25 hover:shadow-brand-500/35 transition-all"
+            >
+              <Plus className="w-5 h-5" />
+              {t('candidates.addCandidate')}
+            </motion.button>
+          </div>
         </PermissionGate>
       </PageHeader>
+
+      <CandidateCsvImport
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImported={() => { void fetchCandidates(); }}
+      />
 
       <div
         className="rounded-2xl border border-stone-200 bg-white overflow-hidden shadow-[var(--shadow-card)] min-h-[320px]"
@@ -780,11 +859,37 @@ export default function CandidatesPage() {
             className="px-4 sm:px-6 py-4 border-b border-stone-100 bg-gradient-to-r from-brand-50/50 to-stone-50"
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-stone-600 mb-1.5 uppercase tracking-wide">Skills</label>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-stone-600 mb-1.5 uppercase tracking-wide">Skills (taxonomy)</label>
+                <div className="flex flex-wrap gap-1.5 mb-2 max-h-24 overflow-y-auto">
+                  {taxonomySkills.slice(0, 80).map((s) => {
+                    const on = advancedFilters.skillIds.includes(s.id);
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() =>
+                          setAdvancedFilters((prev) => ({
+                            ...prev,
+                            skillIds: on
+                              ? prev.skillIds.filter((id) => id !== s.id)
+                              : [...prev.skillIds, s.id],
+                          }))
+                        }
+                        className={`px-2 py-1 rounded-lg text-[11px] font-medium border transition-colors ${
+                          on
+                            ? 'bg-brand-600 text-white border-brand-600'
+                            : 'bg-white text-stone-600 border-stone-200 hover:border-brand-300'
+                        }`}
+                      >
+                        {s.name}
+                      </button>
+                    );
+                  })}
+                </div>
                 <input
                   type="text"
-                  placeholder="React, Node.js, Python..."
+                  placeholder="Or free-text skills: React, Node.js…"
                   value={advancedFilters.skills}
                   onChange={(e) => setAdvancedFilters({ ...advancedFilters, skills: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg border border-stone-200 bg-white text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
@@ -836,12 +941,46 @@ export default function CandidatesPage() {
                   <option value="REJECTED">Rejected</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-xs font-semibold text-stone-600 mb-1.5 uppercase tracking-wide">Min assessment %</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  placeholder="e.g. 70"
+                  value={advancedFilters.minAssessmentScore}
+                  onChange={(e) => setAdvancedFilters({ ...advancedFilters, minAssessmentScore: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-stone-200 bg-white text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-stone-600 mb-1.5 uppercase tracking-wide">Sort by</label>
+                <select
+                  value={advancedFilters.sortBy}
+                  onChange={(e) =>
+                    setAdvancedFilters({
+                      ...advancedFilters,
+                      sortBy: e.target.value === 'assessmentScore' ? 'assessmentScore' : '',
+                    })
+                  }
+                  className="w-full px-3 py-2 rounded-lg border border-stone-200 bg-white text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
+                >
+                  <option value="">Newest first</option>
+                  <option value="assessmentScore">Assessment score</option>
+                </select>
+              </div>
             </div>
             <div className="flex gap-3 mt-4">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={applyAdvancedFilters}
+                onClick={() => {
+                  void applyAdvancedFilters();
+                  void fetchCandidates({
+                    minAssessmentScore: advancedFilters.minAssessmentScore,
+                    sortBy: advancedFilters.sortBy,
+                  });
+                }}
                 className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-semibold hover:bg-brand-700 transition-colors"
               >
                 Apply Filters
@@ -850,8 +989,16 @@ export default function CandidatesPage() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
-                  setAdvancedFilters({ skills: '', experience: '', source: '', status: '' });
-                  fetchCandidates();
+                  setAdvancedFilters({
+                    skills: '',
+                    skillIds: [],
+                    experience: '',
+                    source: '',
+                    status: '',
+                    minAssessmentScore: '',
+                    sortBy: '',
+                  });
+                  fetchCandidates({ minAssessmentScore: '', sortBy: '' });
                 }}
                 className="px-4 py-2 border border-stone-300 text-stone-600 rounded-lg text-sm font-medium hover:bg-stone-50 transition-colors"
               >

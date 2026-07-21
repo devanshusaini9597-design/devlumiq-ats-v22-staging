@@ -17,16 +17,15 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function CareersPage() {
-  const [initialData, company] = await Promise.all([
-    getJobs(),
-    prisma.company.findFirst({
-      include: {
-        benefits: { orderBy: { sortOrder: 'asc' } },
-        teamMembers: { orderBy: { sortOrder: 'asc' } },
-        socialLinks: { orderBy: { sortOrder: 'asc' } },
-      },
-    }).catch(() => null),
-  ]);
+  const company = await prisma.company.findFirst({
+    include: {
+      benefits: { orderBy: { sortOrder: 'asc' } },
+      teamMembers: { orderBy: { sortOrder: 'asc' } },
+      socialLinks: { orderBy: { sortOrder: 'asc' } },
+    },
+  }).catch(() => null);
+
+  const initialData = await getJobs({ companySlug: company?.slug ?? undefined });
 
   const transformedJobs = initialData.jobs.map(job => ({
     ...job,
@@ -37,6 +36,7 @@ export default async function CareersPage() {
     <CareersClient
       initialJobs={transformedJobs}
       initialFilters={initialData.filters}
+      companySlug={company?.slug ?? undefined}
       company={company ? {
         name: company.name,
         logoUrl: company.logoUrl ?? undefined,

@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth, withPermission } from '@/lib/with-permission';
 
 // POST /api/scorecards/submit - Submit interview scores
-export async function POST(request: Request) {
+export const POST = withPermission('SCORE_INTERVIEW', async (request: NextRequest) => {
   try {
     const { interviewId, scores, recommendation, overallScore, scoredById } = await request.json();
 
@@ -36,10 +37,10 @@ export async function POST(request: Request) {
     console.error('Error submitting scores:', error);
     return NextResponse.json({ error: 'Failed to submit scores' }, { status: 500 });
   }
-}
+});
 
 // GET /api/scorecards/submit - Get scores for an interview
-export async function GET(request: Request) {
+export const GET = withAuth(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url);
     const interviewId = searchParams.get('interviewId');
@@ -62,4 +63,4 @@ export async function GET(request: Request) {
     console.error('Error fetching scores:', error);
     return NextResponse.json({ error: 'Failed to fetch scores' }, { status: 500 });
   }
-}
+});

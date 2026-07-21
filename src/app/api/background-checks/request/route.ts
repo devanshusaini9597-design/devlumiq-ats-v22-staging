@@ -1,12 +1,43 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth, withPermission } from '@/lib/with-permission';
 
 // Checkr API Integration
 const CHECKR_API_URL = process.env.CHECKR_API_URL || 'https://api.checkr.com/v1';
 const CHECKR_API_KEY = process.env.CHECKR_API_KEY;
 
+/** Call real Checkr API. Throws on failure. */
+async function callCheckrApi(candidate: { name: string }, email: string | null, checkTypes: string[]): Promise<string> {
+  if (!CHECKR_API_KEY) throw new Error('CHECKR_API_KEY not set');
+  const [firstName, ...rest] = candidate.name.trim().split(' ');
+  const lastName = rest.join(' ') || firstName;
+
+  // 1. Create candidate
+  const basicAuth = Buffer.from(`${CHECKR_API_KEY}:`).toString('base64');
+  const headers = { 'Authorization': `Basic ${basicAuth}`, 'Content-Type': 'application/json' };
+
+  const candRes = await fetch(`${CHECKR_API_URL}/candidates`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ first_name: firstName, last_name: lastName, ...(email ? { email } : {}) }),
+  });
+  if (!candRes.ok) throw new Error(`Checkr candidate creation failed: ${candRes.status}`);
+  const { id: checkrCandidateId } = await candRes.json() as { id: string };
+
+  // 2. Create report
+  const pkg = checkTypes.includes('employment') ? 'driver_standard' : 'tasker_standard';
+  const reportRes = await fetch(`${CHECKR_API_URL}/reports`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ package: pkg, candidate_id: checkrCandidateId }),
+  });
+  if (!reportRes.ok) throw new Error(`Checkr report creation failed: ${reportRes.status}`);
+  const { id: reportId } = await reportRes.json() as { id: string };
+  return reportId;
+}
+
 // POST /api/background-checks/request - Initiate background check
-export async function POST(request: Request) {
+export const POST = withPermission('RUN_BACKGROUND_CHECKS', async (request: NextRequest) => {
   try {
     const { 
       candidateId, 
@@ -37,23 +68,20 @@ export async function POST(request: Request) {
       },
     });
 
-    // In production, call Checkr API
-    // const checkrResponse = await initiateCheckrBackgroundCheck({
-    //   candidate: {
-    //     first_name: candidate.name.split(' ')[0],
-    //     last_name: candidate.name.split(' ').slice(1).join(' '),
-    //     email: candidateEmail || candidate.email,
-    //     phone: candidatePhone,
-    //   },
-    //   package: packageType,
-    // });
+    // Attempt real Checkr API call; fall back to stub if key not configured
+    let externalId = `stub-${Date.now()}`;
+    if (CHECKR_API_KEY) {
+      try {
+        const email = (candidate as { email?: string }).email ?? null;
+        externalId = await callCheckrApi(candidate, email, checkTypes);
+      } catch (checkrErr) {
+        console.error('[Checkr] API call failed, using stub:', checkrErr);
+      }
+    }
 
-    // Update with Checkr candidate ID
     await prisma.backgroundCheck.update({
       where: { id: bgCheck.id },
-      data: {
-        externalId: `checkr-${Date.now()}`,
-      },
+      data: { externalId },
     });
 
     return NextResponse.json({
@@ -66,16 +94,17 @@ export async function POST(request: Request) {
     console.error('Error initiating background check:', error);
     return NextResponse.json({ error: 'Failed to initiate check' }, { status: 500 });
   }
-}
+});
 
 // GET /api/background-checks/request - Get background check status
-export async function GET(request: Request) {
+export const GET = withAuth(async (request: NextRequest, _ctx, session) => {
   try {
     const { searchParams } = new URL(request.url);
     const candidateId = searchParams.get('candidateId');
+    const orgFilter = session.organizationId ? { candidate: { organizationId: session.organizationId } } : {};
 
     const checks = await prisma.backgroundCheck.findMany({
-      where: candidateId ? { candidateId } : {},
+      where: { ...orgFilter, ...(candidateId ? { candidateId } : {}) },
       include: {
         candidate: {
           select: { id: true, name: true, email: true },
@@ -107,10 +136,10 @@ export async function GET(request: Request) {
     console.error('Error fetching background checks:', error);
     return NextResponse.json({ error: 'Failed to fetch checks' }, { status: 500 });
   }
-}
+});
 
 // POST /api/background-checks/webhook - Checkr webhook handler
-export async function PATCH(request: Request) {
+export const PATCH = withPermission('RUN_BACKGROUND_CHECKS', async (request: NextRequest) => {
   try {
     const payload = await request.json();
     
@@ -157,4 +186,4 @@ export async function PATCH(request: Request) {
     console.error('Error handling webhook:', error);
     return NextResponse.json({ error: 'Webhook failed' }, { status: 500 });
   }
-}
+});

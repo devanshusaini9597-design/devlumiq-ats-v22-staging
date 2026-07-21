@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { signSession, sessionCookieOptions, SESSION_COOKIE } from '@/lib/auth';
+import { randomBytes } from 'crypto';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { sendEmail, generateEmailVerificationEmail } from '@/lib/email';
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 /** POST /api/auth/register — create a new user account */
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request);
+    const rl = rateLimit(`register:${ip}`, 5, 60 * 60 * 1000);
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: 'Too many registration attempts. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } },
+      );
+    }
+
     const body = await request.json();
     const name = (body?.name ?? '').toString().trim();
     const email = (body?.email ?? '').toString().trim().toLowerCase();
@@ -21,8 +34,8 @@ export async function POST(request: NextRequest) {
     if (!emailRegex.test(email)) {
       return NextResponse.json({ error: 'Please enter a valid email address' }, { status: 400 });
     }
-    if (!password || password.length < 6) {
-      return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
+    if (!password || password.length < 8) {
+      return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
     }
 
     // Check if user already exists
@@ -32,32 +45,48 @@ export async function POST(request: NextRequest) {
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
+
+    // Derive a company name + slug from the email domain
+    const domain = email.split('@')[1] ?? 'workspace';
+    const orgName = domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1);
+    const baseSlug = domain.split('.')[0].toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const uniqueSlug = `${baseSlug}-${Date.now()}`;
+
+    // Create org + user atomically
+    const company = await prisma.company.create({
+      data: {
+        name: orgName,
+        slug: uniqueSlug,
+        isPublished: false,
+      },
+    });
+
+    const verificationToken = randomBytes(32).toString('hex');
+    const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: passwordHash,
-        role: 'RECRUITER',
+        role: 'ADMIN',
+        organizationId: company.id,
+        isEmailVerified: false,
+        verificationToken,
+        verificationTokenExpiry,
       },
     });
 
-    // Create a welcome notification for the new user
-    await prisma.notification.create({
-      data: {
-        title: 'Welcome to the team!',
-        message: `Hi ${name}, your account is ready. Start by adding your first candidate or explore the dashboard.`,
-        type: 'success',
-        href: '/dashboard',
-      },
-    }).catch(() => {});
+    // Send verification email
+    const verifyUrl = `${APP_URL}/verify-email?token=${verificationToken}`;
+    const { subject, html, text } = generateEmailVerificationEmail(name, verifyUrl);
+    await sendEmail({ to: email, subject, html, text });
 
-    const token = signSession({ userId: user.id, email: user.email, name: user.name, role: user.role });
-
-    const response = NextResponse.json({
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, initials: user.name.slice(0, 2).toUpperCase() },
-    });
-    response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());
-    return response;
+    return NextResponse.json({
+      requiresVerification: true,
+      email: user.email,
+      message: 'Account created! Please check your email to verify your address before signing in.',
+    }, { status: 201 });
   } catch (e) {
     console.error('POST /api/auth/register', e);
     return NextResponse.json({ error: 'Registration failed. Please try again.' }, { status: 500 });

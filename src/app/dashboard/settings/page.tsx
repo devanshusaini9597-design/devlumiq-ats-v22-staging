@@ -7,12 +7,15 @@ import {
   Eye, EyeOff, Lock, KeyRound, Palette, Building2, Globe,
   Smartphone, Monitor, Sun, Moon, Sparkles, ChevronRight,
   ClipboardCopy, LogOut, AlertTriangle, Camera, AtSign,
-  Clock, BarChart3, UserCheck, Zap,
+  Clock, BarChart3, UserCheck, Zap, CreditCard, Key,
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
 import { required, email as validateEmail } from '@/lib/validation';
+import BillingSettings from '@/components/dashboard/BillingSettings';
+import ApiKeyManager from '@/components/dashboard/ApiKeyManager';
+import { PushNotificationSettings } from '@/components/dashboard/PushNotificationSettings';
 
 //  nav tabs 
 const TABS = [
@@ -21,6 +24,8 @@ const TABS = [
   { id: 'security',      label: 'Security',        icon: Shield },
   { id: 'appearance',    label: 'Appearance',      icon: Palette },
   { id: 'workspace',     label: 'Workspace',       icon: Building2 },
+  { id: 'billing',       label: 'Billing',         icon: CreditCard },
+  { id: 'api-keys',      label: 'API Keys',        icon: Key },
   { id: 'danger',        label: 'Danger Zone',     icon: AlertTriangle },
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
@@ -121,8 +126,14 @@ export default function SettingsPage() {
   // appearance
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('light');
   const [density, setDensity] = useState<'comfortable' | 'compact'>('comfortable');
+  const [companySlug, setCompanySlug] = useState('');
+  const [embedCopied, setEmbedCopied] = useState(false);
+  const [appOrigin, setAppOrigin] = useState('');
+  const [careersFaq, setCareersFaq] = useState<Array<{ q: string; a: string; keywords: string }>>([]);
+  const [faqSaving, setFaqSaving] = useState(false);
 
   useEffect(() => {
+    setAppOrigin(window.location.origin);
     fetch('/api/auth/session', { credentials: 'include', cache: 'no-store' })
       .then((r) => r.json())
       .then((json) => {
@@ -137,6 +148,21 @@ export default function SettingsPage() {
           setUserName(localStorage.getItem('userName') ?? '');
         }
       });
+    fetch('/api/company', { credentials: 'include', cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((c) => {
+        if (c?.slug) setCompanySlug(c.slug);
+        if (Array.isArray(c?.careersFaq)) {
+          setCareersFaq(
+            c.careersFaq.map((item: { q?: string; a?: string; keywords?: string[] }) => ({
+              q: item.q || '',
+              a: item.a || '',
+              keywords: Array.isArray(item.keywords) ? item.keywords.join(', ') : '',
+            })),
+          );
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleProfileSave = async () => {
@@ -346,6 +372,7 @@ export default function SettingsPage() {
                   <div className="mt-6">
                     <SaveBtn saving={false} saved={false} label="Save preferences" onClick={() => toast.success('Preferences saved', 'Notification settings updated.')} />
                   </div>
+                  <PushNotificationSettings />
                 </div>
               )}
 
@@ -533,14 +560,154 @@ export default function SettingsPage() {
                       <Sparkles className="w-5 h-5 text-brand-600" />
                       <h3 className="font-bold text-stone-900">Public Careers Page</h3>
                     </div>
-                    <p className="text-sm text-stone-600 mb-4">Your branded careers page is live. Share it with candidates or embed it on your site.</p>
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-stone-200">
+                    <p className="text-sm text-stone-600 mb-4">Your branded careers page is live. Share it with candidates or embed the chatbot on your site.</p>
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-stone-200 mb-3">
                       <Globe className="w-4 h-4 text-stone-400 flex-shrink-0" />
                       <code className="text-xs text-stone-700 flex-1 truncate">/careers</code>
                       <a href="/careers" target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-brand-600 hover:text-brand-700 flex-shrink-0 flex items-center gap-1">
                         Open <ChevronRight className="w-3 h-3" />
                       </a>
                     </div>
+                    <p className="text-xs font-semibold text-stone-600 mb-2">Embed careers chatbot</p>
+                    <div className="rounded-xl bg-stone-900 text-stone-100 p-3 relative">
+                      <pre className="text-[11px] leading-relaxed whitespace-pre-wrap break-all pr-16">{`<script src="${appOrigin || 'https://your-app'}/careers-chatbot.js" data-company="${companySlug || 'your-slug'}" async></script>`}</pre>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const snippet = `<script src="${appOrigin || window.location.origin}/careers-chatbot.js" data-company="${companySlug || 'your-slug'}" async></script>`;
+                          void navigator.clipboard.writeText(snippet).then(() => {
+                            setEmbedCopied(true);
+                            toast.success('Copied', 'Embed snippet copied to clipboard');
+                            setTimeout(() => setEmbedCopied(false), 2000);
+                          });
+                        }}
+                        className="absolute top-2 right-2 inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-semibold"
+                      >
+                        <ClipboardCopy className="w-3 h-3" />
+                        {embedCopied ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+
+                    <div className="mt-5 pt-5 border-t border-brand-200/60">
+                      <p className="text-sm font-bold text-stone-800 mb-1">Chatbot FAQ</p>
+                      <p className="text-xs text-stone-500 mb-3">
+                        Custom Q&amp;A merged ahead of defaults. Keywords are comma-separated match terms.
+                      </p>
+                      <div className="space-y-3">
+                        {careersFaq.map((item, idx) => (
+                          <div key={idx} className="rounded-xl border border-stone-200 bg-white p-3 space-y-2">
+                            <input
+                              type="text"
+                              placeholder="Question"
+                              value={item.q}
+                              onChange={(e) =>
+                                setCareersFaq((prev) =>
+                                  prev.map((row, i) => (i === idx ? { ...row, q: e.target.value } : row)),
+                                )
+                              }
+                              className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm"
+                            />
+                            <textarea
+                              placeholder="Answer"
+                              value={item.a}
+                              rows={2}
+                              onChange={(e) =>
+                                setCareersFaq((prev) =>
+                                  prev.map((row, i) => (i === idx ? { ...row, a: e.target.value } : row)),
+                                )
+                              }
+                              className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm resize-none"
+                            />
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                placeholder="Keywords (comma-separated)"
+                                value={item.keywords}
+                                onChange={(e) =>
+                                  setCareersFaq((prev) =>
+                                    prev.map((row, i) => (i === idx ? { ...row, keywords: e.target.value } : row)),
+                                  )
+                                }
+                                className="flex-1 px-3 py-2 rounded-lg border border-stone-200 text-sm"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setCareersFaq((prev) => prev.filter((_, i) => i !== idx))}
+                                className="px-3 py-2 rounded-lg border border-red-200 text-red-600 text-xs font-semibold"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <button
+                          type="button"
+                          onClick={() => setCareersFaq((prev) => [...prev, { q: '', a: '', keywords: '' }])}
+                          className="px-3 py-2 rounded-lg border border-stone-200 text-xs font-semibold text-stone-700 hover:bg-white"
+                        >
+                          Add FAQ
+                        </button>
+                        <button
+                          type="button"
+                          disabled={faqSaving}
+                          onClick={async () => {
+                            setFaqSaving(true);
+                            try {
+                              const payload = careersFaq
+                                .filter((f) => f.q.trim() && f.a.trim())
+                                .map((f) => ({
+                                  q: f.q.trim(),
+                                  a: f.a.trim(),
+                                  keywords: f.keywords
+                                    .split(',')
+                                    .map((k) => k.trim())
+                                    .filter(Boolean),
+                                }));
+                              const res = await fetch('/api/company', {
+                                method: 'PATCH',
+                                credentials: 'include',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ careersFaq: payload }),
+                              });
+                              if (!res.ok) {
+                                const d = await res.json().catch(() => ({}));
+                                throw new Error(d.error || 'Save failed');
+                              }
+                              toast.success('FAQ saved', 'Careers chatbot will use these answers first');
+                            } catch (e: unknown) {
+                              toast.error('FAQ', e instanceof Error ? e.message : 'Failed');
+                            } finally {
+                              setFaqSaving(false);
+                            }
+                          }}
+                          className="px-3 py-2 rounded-lg bg-brand-600 text-white text-xs font-semibold disabled:opacity-50"
+                        >
+                          {faqSaving ? 'Saving…' : 'Save FAQ'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* BILLING */}
+              {tab === 'billing' && (
+                <div className="space-y-6">
+                  <div className="rounded-2xl border border-stone-200 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
+                    {sectionHd(<CreditCard className="w-5 h-5 text-brand-600" />, 'Subscription & Billing', 'Manage your plan, upgrade, or update payment methods')}
+                    <BillingSettings />
+                  </div>
+                </div>
+              )}
+
+              {/* API KEYS */}
+              {tab === 'api-keys' && (
+                <div className="space-y-6">
+                  <div className="rounded-2xl border border-stone-200 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
+                    {sectionHd(<Key className="w-5 h-5 text-brand-600" />, 'API Key Vault (BYOK)', 'Store your own provider keys — encrypted with AES-256-GCM')}
+                    <ApiKeyManager />
                   </div>
                 </div>
               )}

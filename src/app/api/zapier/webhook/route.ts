@@ -4,9 +4,23 @@ import { prisma } from '@/lib/prisma';
 // Zapier Webhook Integration API
 // These endpoints allow Zapier to receive webhooks from the ATS
 
+function verifyZapierSecret(request: Request): boolean {
+  const zapierSecret = process.env.ZAPIER_WEBHOOK_SECRET;
+  if (!zapierSecret) return true; // Secret not configured — skip check (dev mode)
+  const incomingSecret =
+    request.headers.get('x-zapier-secret') ??
+    request.headers.get('authorization')?.replace('Bearer ', '') ??
+    '';
+  return incomingSecret === zapierSecret;
+}
+
 // POST /api/zapier/webhook - Receive webhook from Zapier
 export async function POST(request: Request) {
   try {
+    if (!verifyZapierSecret(request)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { 
       zapId,
       event,
@@ -99,6 +113,10 @@ export async function POST(request: Request) {
 // GET /api/zapier/webhook - Get webhook configuration
 export async function GET(request: Request) {
   try {
+    if (!verifyZapierSecret(request)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const zapId = searchParams.get('zapId');
 

@@ -1,11 +1,24 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withPermission } from '@/lib/with-permission';
+import {
+  normalizePhone,
+  isValidE164,
+  findOrCreateCandidateThread,
+  appendOutboundMessage,
+  sendTwilioSms,
+  twilioConfigured,
+} from '@/lib/messaging';
+import { resolveChannelBody } from '@/lib/short-templates';
+import { sendEmail } from '@/lib/email';
 
-// GET /api/email/sequences - Get all email sequences
-export async function GET() {
+export const GET = withPermission('USE_EMAIL_TEMPLATES', async (_req, _ctx, session) => {
   try {
     const sequences = await prisma.emailSequence.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+      },
       include: {
         steps: {
           include: { template: true },
@@ -23,10 +36,9 @@ export async function GET() {
     console.error('Error fetching sequences:', error);
     return NextResponse.json({ error: 'Failed to fetch sequences' }, { status: 500 });
   }
-}
+});
 
-// POST /api/email/sequences - Create email sequence
-export async function POST(request: Request) {
+export const POST = withPermission('MANAGE_EMAIL_SEQUENCES', async (request: NextRequest, _ctx, session) => {
   try {
     const { name, description, triggerType, steps } = await request.json();
 
@@ -35,14 +47,23 @@ export async function POST(request: Request) {
         name,
         description,
         triggerType,
+        ...(session.organizationId ? { organizationId: session.organizationId } : {}),
         steps: {
-          create: steps.map((s: any, index: number) => ({
+          create: (steps || []).map((s: {
+            delayHours?: number;
+            templateId?: string;
+            subject?: string;
+            body?: string;
+            condition?: string;
+            channel?: string;
+          }, index: number) => ({
             stepNumber: index + 1,
             delayHours: s.delayHours || 0,
             templateId: s.templateId,
             subject: s.subject,
             body: s.body,
             condition: s.condition,
+            channel: s.channel === 'SMS' || s.channel === 'WHATSAPP' ? s.channel : 'EMAIL',
           })),
         },
       },
@@ -56,12 +77,26 @@ export async function POST(request: Request) {
     console.error('Error creating sequence:', error);
     return NextResponse.json({ error: 'Failed to create sequence' }, { status: 500 });
   }
-}
+});
 
-// POST /api/email/sequences/enroll - Enroll candidate in sequence
-export async function PATCH(request: Request) {
+export const PATCH = withPermission('MANAGE_EMAIL_SEQUENCES', async (request: NextRequest, _ctx, session) => {
   try {
     const { sequenceId, candidateId, applicationId } = await request.json();
+
+    const candidate = await prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        smsOptIn: true,
+        organizationId: true,
+      },
+    });
+    if (!candidate) {
+      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
+    }
 
     const enrollment = await prisma.emailSequenceEnrollment.create({
       data: {
@@ -73,10 +108,14 @@ export async function PATCH(request: Request) {
       },
     });
 
-    // Schedule first email
     const sequence = await prisma.emailSequence.findUnique({
       where: { id: sequenceId },
-      include: { steps: { orderBy: { stepNumber: 'asc' } } },
+      include: {
+        steps: {
+          include: { template: true },
+          orderBy: { stepNumber: 'asc' },
+        },
+      },
     });
 
     if (sequence && sequence.steps.length > 0) {
@@ -84,17 +123,107 @@ export async function PATCH(request: Request) {
       const scheduledAt = new Date();
       scheduledAt.setHours(scheduledAt.getHours() + firstStep.delayHours);
 
-      await prisma.scheduledEmail.create({
-        data: {
-          enrollmentId: enrollment.id,
-          stepId: firstStep.id,
-          candidateId,
-          to: '', // Would get from candidate record
-          subject: firstStep.subject || '',
-          body: firstStep.body || '',
-          scheduledAt,
-        },
-      });
+      const channel = firstStep.channel || 'EMAIL';
+      const templateBody = firstStep.template
+        ? resolveChannelBody(
+            {
+              body: firstStep.template.body || firstStep.body || '',
+              smsBody: firstStep.template.smsBody,
+              whatsappBody: firstStep.template.whatsappBody,
+            },
+            channel === 'SMS' || channel === 'WHATSAPP' ? channel : 'EMAIL',
+          )
+        : firstStep.body || '';
+
+      if (channel === 'SMS') {
+        if (!twilioConfigured()) {
+          return NextResponse.json(
+            { success: true, enrollment, warning: 'SMS_NOT_CONFIGURED', message: 'Enrolled but SMS step skipped' },
+          );
+        }
+        if (!candidate.smsOptIn || !candidate.phone) {
+          return NextResponse.json({
+            success: true,
+            enrollment,
+            warning: 'NO_SMS_OPT_IN',
+            message: 'Enrolled but SMS step skipped (opt-in/phone required)',
+          });
+        }
+        const to = normalizePhone(candidate.phone);
+        if (!isValidE164(to)) {
+          return NextResponse.json({
+            success: true,
+            enrollment,
+            warning: 'INVALID_PHONE',
+          });
+        }
+
+        const sendNow = firstStep.delayHours <= 0;
+        if (sendNow) {
+          const text = templateBody
+            .replace(/\{\{candidateName\}\}/gi, candidate.name)
+            .replace(/\{\{name\}\}/gi, candidate.name)
+            .slice(0, 1600);
+          const { sid } = await sendTwilioSms(to, text);
+          const orgId = session.organizationId || candidate.organizationId;
+          if (orgId) {
+            const thread = await findOrCreateCandidateThread({
+              candidateId: candidate.id,
+              organizationId: orgId,
+              subject: `Sequence · ${sequence.name}`,
+            });
+            await appendOutboundMessage({
+              threadId: thread.id,
+              fromUserId: session.id,
+              fromName: session.name,
+              fromEmail: session.email,
+              channel: 'SMS',
+              body: text,
+              toPhone: to,
+              externalId: sid,
+              metadata: { sequenceId, stepId: firstStep.id },
+            });
+          }
+          await prisma.emailSequenceEnrollment.update({
+            where: { id: enrollment.id },
+            data: { currentStep: 1 },
+          });
+        } else {
+          // Queue as scheduled email row with SMS body for cron/processor
+          await prisma.scheduledEmail.create({
+            data: {
+              enrollmentId: enrollment.id,
+              stepId: firstStep.id,
+              candidateId,
+              to: to,
+              subject: `[SMS] ${firstStep.subject || sequence.name}`,
+              body: templateBody,
+              scheduledAt,
+            },
+          });
+        }
+      } else {
+        const toEmail = candidate.email || '';
+        await prisma.scheduledEmail.create({
+          data: {
+            enrollmentId: enrollment.id,
+            stepId: firstStep.id,
+            candidateId,
+            to: toEmail,
+            subject: firstStep.subject || firstStep.template?.subject || '',
+            body: templateBody || firstStep.body || '',
+            scheduledAt,
+          },
+        });
+        if (firstStep.delayHours <= 0 && toEmail && templateBody) {
+          await sendEmail({
+            to: toEmail,
+            subject: firstStep.subject || firstStep.template?.subject || sequence.name,
+            html: `<p>${templateBody.replace(/\n/g, '<br/>')}</p>`,
+            text: templateBody,
+          }).catch(() => {});
+        }
+      }
     }
 
     return NextResponse.json({ success: true, enrollment });
@@ -102,4 +231,4 @@ export async function PATCH(request: Request) {
     console.error('Error enrolling candidate:', error);
     return NextResponse.json({ error: 'Failed to enroll' }, { status: 500 });
   }
-}
+});

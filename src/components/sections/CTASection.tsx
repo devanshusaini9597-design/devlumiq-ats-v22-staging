@@ -121,10 +121,10 @@ export default function CTASection({
                   className="flex flex-wrap items-center justify-center gap-2 mt-8"
                 >
                   {[
-                    { icon: Clock, label: '14-day free trial' },
-                    { icon: CheckCircle2, label: 'No credit card' },
-                    { icon: Shield, label: 'SOC 2 certified' },
-                    { icon: Zap, label: 'Setup in 30 min' },
+                    { icon: Clock, label: '14-day trial' },
+                    { icon: CheckCircle2, label: 'Start whenever you’re ready' },
+                    { icon: Shield, label: 'Secure access controls' },
+                    { icon: Zap, label: 'Quick onboarding' },
                   ].map(({ icon: Icon, label }) => (
                     <span key={label} className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/15 text-white/85 text-xs font-semibold backdrop-blur-sm">
                       <Icon className="w-3 h-3 text-teal-300 flex-shrink-0" />
@@ -186,11 +186,11 @@ export default function CTASection({
                     <p className="text-white/70 text-sm"><span className="text-white font-bold">500+</span> companies onboarded</p>
                   </div>
                   <div className="hidden sm:block w-px h-6 bg-white/15" />
-                  {/* Stats */}
+                  {/* Neutral stats (no unverifiable claims) */}
                   {[
-                    { value: '40%', label: 'faster hiring' },
-                    { value: '4.9/5', label: 'avg rating' },
-                    { value: '98%', label: 'satisfaction' },
+                    { value: 'Team-ready', label: 'ATS workflow' },
+                    { value: 'Practical', label: 'day-to-day use' },
+                    { value: 'Secure', label: 'role-based access' },
                   ].map(({ value, label }) => (
                     <div key={label} className="flex items-center gap-2">
                       <span className="text-white font-extrabold text-base">{value}</span>

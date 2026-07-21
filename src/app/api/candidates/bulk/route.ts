@@ -1,10 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { withPermission } from '@/lib/with-permission';
 
 const prisma = new PrismaClient();
 
 // Bulk delete candidates
-export async function DELETE(request: Request) {
+export const DELETE = withPermission('DELETE_CANDIDATE', async (request: NextRequest) => {
   try {
     const { ids } = await request.json();
 
@@ -49,10 +50,10 @@ export async function DELETE(request: Request) {
       { status: 500 }
     );
   }
-}
+});
 
 // Bulk update candidate status
-export async function PATCH(request: Request) {
+export const PATCH = withPermission('MOVE_APPLICATION', async (request: NextRequest) => {
   try {
     const { ids, stage } = await request.json();
 
@@ -108,4 +109,4 @@ export async function PATCH(request: Request) {
       { status: 500 }
     );
   }
-}
+});

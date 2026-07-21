@@ -1,11 +1,18 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth, withPermission } from '@/lib/with-permission';
 
 // GET /api/scorecards/templates - Get all scorecard templates
-export async function GET() {
+export const GET = withAuth(async (_req, _ctx, session) => {
   try {
     const templates = await prisma.scorecardTemplate.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        OR: [
+          { organizationId: null },
+          { organizationId: session.organizationId ?? undefined },
+        ],
+      },
       include: {
         criteria: {
           orderBy: { sortOrder: 'asc' },
@@ -19,10 +26,10 @@ export async function GET() {
     console.error('Error fetching scorecard templates:', error);
     return NextResponse.json({ error: 'Failed to fetch templates' }, { status: 500 });
   }
-}
+});
 
 // POST /api/scorecards/templates - Create scorecard template
-export async function POST(request: Request) {
+export const POST = withPermission('SCORE_INTERVIEW', async (request: NextRequest, _ctx, session) => {
   try {
     const { name, description, category, criteria, isDefault } = await request.json();
 
@@ -32,6 +39,7 @@ export async function POST(request: Request) {
         description,
         category,
         isDefault,
+        organizationId: session.organizationId ?? undefined,
         criteria: {
           create: criteria.map((c: any, index: number) => ({
             name: c.name,
@@ -55,4 +63,4 @@ export async function POST(request: Request) {
     console.error('Error creating scorecard template:', error);
     return NextResponse.json({ error: 'Failed to create template' }, { status: 500 });
   }
-}
+});
