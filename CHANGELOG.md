@@ -220,16 +220,16 @@ This script does everything automatically:
 4. Create a Company in the database.
 5. Assign `organizationId` to existing users, candidates, and jobs.
 6. Create a FREE subscription for the company.
-7. Do NOT run `npm run seed` â€” it will refuse because real data exists.
+7. Do NOT run `npm run seed` — it will refuse because real data exists.
 
 ---
 
-## [2.0.1] â€” 2026-05-20
+## [2.0.1] — 2026-05-20
 
 ### Migration & Upgrade Safety
 
 **Comprehensive Migration**
-- Added `prisma/migrations/20260520000000_v2_schema_complete` â€” creates ALL v2 tables with `IF NOT EXISTS`
+- Added `prisma/migrations/20260520000000_v2_schema_complete` — creates ALL v2 tables with `IF NOT EXISTS`
 - Covers 49 tables: Company, Subscription, CandidatePortalUser, ScorecardTemplate, AssessmentTemplate, Webhook, CalendarIntegration, EmailSequence, PipelineMetric, and 40+ more
 - Every `CREATE TABLE`, `CREATE INDEX`, and `ALTER TABLE ADD FOREIGN KEY` uses `IF NOT EXISTS` guards
 - Combined with `db push`, migrations now cover both fresh DBs and v1 upgrades safely
@@ -240,23 +240,23 @@ This script does everything automatically:
 - Prevents accidental data loss for existing buyers
 
 **Upgrade Helper Script**
-- Added `scripts/upgrade-v1-to-v2.js` â€” one-command safe upgrade
-- Runs `generate` â†’ `migrate deploy` â†’ `db push` â†’ backfills all `organizationId` fields
+- Added `scripts/upgrade-v1-to-v2.js` — one-command safe upgrade
+- Runs `generate` → `migrate deploy` → `db push` → backfills all `organizationId` fields
 - Auto-creates default Company + FREE subscription
 - Marks all existing users as email-verified
 - **Never deletes data**
 
 ---
 
-## [2.0.0] â€” 2026-05-19
+## [2.0.0] — 2026-05-19
 
-### Major Release â€” v1 to v2 Upgrade
+### Major Release — v1 to v2 Upgrade
 
 See "v1 vs v2" and "Upgrade from v1 to v2" sections above for full details.
 
 ---
 
-## [1.1.0] â€” 2026-05-14
+## [1.1.0] — 2026-05-14
 
 ### Audit & Hardening Release
 
@@ -278,7 +278,7 @@ See "v1 vs v2" and "Upgrade from v1 to v2" sections above for full details.
 - API reference documentation (`docs/API.md`)
 
 **Marketing**
-- Fixed testimonial "AI screening" â†’ "smart screening"
+- Fixed testimonial "AI screening" → "smart screening"
 - Fixed false `connected: true` on Slack, Outlook, and other unimplemented integrations
 
 **Documentation**
@@ -294,7 +294,7 @@ See "v1 vs v2" and "Upgrade from v1 to v2" sections above for full details.
 
 ---
 
-## [1.0.0] â€” 2026-04-13
+## [1.0.0] — 2026-04-13
 
 ### Initial Release
 
@@ -313,25 +313,25 @@ See "v1 vs v2" and "Upgrade from v1 to v2" sections above for full details.
 
 **Dashboard**
 - Overview with live stats (candidates, jobs, pipeline), recent activity, upcoming interviews
-- Candidates â€” full CRUD, table with filters, pagination, export to PDF/Excel
-- Kanban pipeline â€” drag-and-drop board, stage changes persist to database
-- Jobs â€” create, edit, manage postings
-- Calendar â€” FullCalendar integration, interview events from database
-- Analytics â€” charts (pipeline funnel, source breakdown, hire rate)
-- Reports â€” PDF export
-- Inbox & Messages â€” threads and messages with API backend
-- Settings â€” profile, notifications, branding preferences
+- Candidates — full CRUD, table with filters, pagination, export to PDF/Excel
+- Kanban pipeline — drag-and-drop board, stage changes persist to database
+- Jobs — create, edit, manage postings
+- Calendar — FullCalendar integration, interview events from database
+- Analytics — charts (pipeline funnel, source breakdown, hire rate)
+- Reports — PDF export
+- Inbox & Messages — threads and messages with API backend
+- Settings — profile, notifications, branding preferences
 - Background Checks, Referrals, Assessments, E-Signature pages
 
 **Premium Tools**
-- Smart Search â€” Advanced candidate search with 5+ filters
-- Email Studio â€” templates with variable substitution and instant send
-- Interview Scoring â€” 5-criteria star rating system
-- Offer Letter Generator â€” one-click professional offer creation
-- Team Collaboration â€” candidate comments with @mentions
-- Resume Parser â€” Rule-based PDF/DOCX text extraction for skills, experience, education, and contact info
-- Job Board Integrations â€” post to LinkedIn, Indeed, Glassdoor
-- WhatsApp Messaging â€” candidate communication via WhatsApp
+- Smart Search — Advanced candidate search with 5+ filters
+- Email Studio — templates with variable substitution and instant send
+- Interview Scoring — 5-criteria star rating system
+- Offer Letter Generator — one-click professional offer creation
+- Team Collaboration — candidate comments with @mentions
+- Resume Parser — Rule-based PDF/DOCX text extraction for skills, experience, education, and contact info
+- Job Board Integrations — post to LinkedIn, Indeed, Glassdoor
+- WhatsApp Messaging — candidate communication via WhatsApp
 
 **Technical**
 - Next.js 15 App Router, React 19, TypeScript
@@ -339,7 +339,7 @@ See "v1 vs v2" and "Upgrade from v1 to v2" sections above for full details.
 - JWT-based authentication with bcrypt, token versioning, and session invalidation
 - REST API with 100+ route handlers across 37 endpoint directories
 - Framer Motion animations throughout
-- Fully responsive â€” mobile, tablet, desktop
+- Fully responsive — mobile, tablet, desktop
 - SEO: metadata, Open Graph, Twitter cards, sitemap.xml, robots.txt
 - Accessibility: skip-to-main, semantic landmarks, 44px touch targets, reduced-motion support
 
