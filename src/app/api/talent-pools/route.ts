@@ -9,10 +9,12 @@ export const GET = withPermission('VIEW_CANDIDATES', async (req: NextRequest, _c
     const orgId = requireOrgId(session);
     if (isOrgError(orgId)) return orgId;
 
-    // First visit with no pools — seed realistic demo CRM data
-    await ensureDemoTalentPools(orgId, session.id).catch((e) => {
-      console.warn('ensureDemoTalentPools', e);
-    });
+    // First visit with no pools — seed realistic demo CRM data (creates candidates if needed)
+    try {
+      await ensureDemoTalentPools(orgId, session.id);
+    } catch (e) {
+      console.error('ensureDemoTalentPools failed', e);
+    }
 
     const { searchParams } = new URL(req.url);
     const poolType = searchParams.get('type') || undefined;

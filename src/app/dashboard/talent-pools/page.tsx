@@ -222,6 +222,33 @@ export default function TalentPoolsPage() {
     }
   };
 
+  const seedDemoPools = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch('/api/talent-pools/seed-demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ force: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to load sample data');
+
+      const listRes = await fetch('/api/talent-pools', { credentials: 'include' });
+      const listData = await listRes.json().catch(() => ({}));
+      if (!listRes.ok) throw new Error(listData.error || 'Failed to reload pools');
+      const nextPools = listData.pools ?? [];
+      setPools(nextPools);
+      setSelectedId(nextPools[0]?.id ?? null);
+      toast.success('Sample data ready', `${data.pools ?? nextPools.length} pools · ${data.members ?? 0} members`);
+    } catch (e) {
+      toast.error('Error', e instanceof Error ? e.message : 'Could not seed pools');
+    } finally {
+      setBusy(false);
+      setLoading(false);
+    }
+  };
+
   const selected = pools.find((p) => p.id === selectedId);
 
   return (
@@ -232,15 +259,30 @@ export default function TalentPoolsPage() {
         subtitle="Silver medalists & keep-warm CRM — consent required to retain"
       >
         <PermissionGate permission="CREATE_CANDIDATE">
-          <motion.button
-            type="button"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setCreateOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold"
-          >
-            <Plus className="w-4 h-4" /> New pool
-          </motion.button>
+          <div className="flex flex-wrap items-center gap-2">
+            {pools.length === 0 && (
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                disabled={busy}
+                onClick={() => void seedDemoPools()}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-brand-200 bg-brand-50 text-brand-700 text-sm font-semibold disabled:opacity-50"
+              >
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                Load sample data
+              </motion.button>
+            )}
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setCreateOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold"
+            >
+              <Plus className="w-4 h-4" /> New pool
+            </motion.button>
+          </div>
         </PermissionGate>
       </PageHeader>
 
@@ -249,7 +291,21 @@ export default function TalentPoolsPage() {
           {loading ? (
             <div className="py-10 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-stone-400" /></div>
           ) : pools.length === 0 ? (
-            <p className="text-sm text-stone-500 p-4 text-center">No pools yet. Create a silver-medalist or keep-warm pool.</p>
+            <div className="p-4 text-center space-y-3">
+              <Archive className="w-8 h-8 text-stone-300 mx-auto" />
+              <p className="text-sm text-stone-500">No pools yet.</p>
+              <PermissionGate permission="CREATE_CANDIDATE">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void seedDemoPools()}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-600 text-white text-xs font-semibold disabled:opacity-50"
+                >
+                  {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  Load sample data
+                </button>
+              </PermissionGate>
+            </div>
           ) : (
             pools.map((p) => (
               <button
