@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Plug, Zap, Linkedin, Slack, Calendar, Mail, FileText,
   Shield, CheckCircle2, ArrowRight, ArrowUpRight,
-  Globe, Code, RefreshCw, Lock, MessageSquare, Chrome, Filter,
+  Globe, Code, RefreshCw, Lock, MessageSquare, Chrome, Filter, ExternalLink,
   Sparkles, Terminal, Copy, Check
 } from 'lucide-react';
 import { useState } from 'react';
