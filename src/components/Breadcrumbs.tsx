@@ -18,6 +18,17 @@ const routeKeys: Record<string, string> = {
   inbox: 'dashboard.inbox',
   messages: 'dashboard.messages',
   settings: 'dashboard.settings',
+  users: 'dashboard.users',
+  'audit-log': 'dashboard.auditLog',
+  'talent-pools': 'dashboard.talentPools',
+  skills: 'dashboard.skills',
+  assessments: 'dashboard.assessments',
+  referrals: 'dashboard.referrals',
+  esignature: 'dashboard.esignature',
+  'background-checks': 'dashboard.backgroundChecks',
+  integrations: 'dashboard.integrations',
+  company: 'dashboard.company',
+  dei: 'dashboard.dei',
   // Premium routes
   premium: 'premium.title',
   search: 'premium.smartSearch.title',
@@ -66,7 +77,8 @@ export default function Breadcrumbs() {
     }
     const key = routeKeys[seg];
     if (key) return t(key);
-    if (/^[a-f0-9-]{36}$|^\d+$|^[a-z0-9-]{10,}$/i.test(seg)) return t('profile.title');
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(seg)) return t('profile.title');
+    if (/^c[a-z0-9]{20,}$/i.test(seg) || /^\d{6,}$/.test(seg)) return t('profile.title');
     return seg;
   };
 

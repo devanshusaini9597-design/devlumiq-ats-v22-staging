@@ -2,11 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withPermission } from '@/lib/with-permission';
 import { requireOrgId, isOrgError } from '@/lib/require-org';
+import { ensureDemoTalentPools } from '@/lib/ensure-demo-talent-pools';
 
 export const GET = withPermission('VIEW_CANDIDATES', async (req: NextRequest, _ctx, session) => {
   try {
     const orgId = requireOrgId(session);
     if (isOrgError(orgId)) return orgId;
+
+    // First visit with no pools — seed realistic demo CRM data
+    await ensureDemoTalentPools(orgId, session.id).catch((e) => {
+      console.warn('ensureDemoTalentPools', e);
+    });
 
     const { searchParams } = new URL(req.url);
     const poolType = searchParams.get('type') || undefined;

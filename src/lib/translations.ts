@@ -452,6 +452,8 @@ const en: Record<string, string> = {
   'dashboard.referrals': 'Referrals',
   'dashboard.esignature': 'E-Signature',
   'dashboard.backgroundChecks': 'Background Checks',
+  'dashboard.users': 'User Management',
+  'dashboard.auditLog': 'Audit Logs',
   
   // Assessments Page
   'assessments.title': 'Skills Assessments',

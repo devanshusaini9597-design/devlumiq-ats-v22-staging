@@ -245,6 +245,8 @@ async function main() {
   await prisma.assessmentQuestion.deleteMany({ where: { templateId: { in: demoTemplateIds } } });
   await prisma.assessmentTemplate.deleteMany({ where: { id: { in: demoTemplateIds } } });
   await prisma.backgroundCheck.deleteMany({ where: { candidateId: { in: demoCandidateIds } } });
+  await prisma.talentPoolMember.deleteMany({ where: { candidateId: { in: demoCandidateIds } } }).catch(() => {});
+  await prisma.talentPool.deleteMany({ where: { organizationId: company.id } }).catch(() => {});
   await prisma.emailTemplate.deleteMany({ where: { organizationId: company.id } });
   await prisma.application.deleteMany({ where: { OR: [{ jobId: { in: demoJobIds } }, { candidateId: { in: demoCandidateIds } }] } });
   await prisma.message.deleteMany({ where: { threadId: { in: demoThreadIds } } });
@@ -782,6 +784,65 @@ async function main() {
     }
   }
   console.log(`✅ Skills taxonomy: ${SYSTEM_SKILLS.length} system skills + candidate/job links`);
+
+  // ── Talent pools (CRM / silver medalists) ─────────────────────────────────
+  await prisma.candidate.updateMany({
+    where: { organizationId: company.id },
+    data: { talentPoolConsent: true, talentPoolConsentAt: new Date() },
+  });
+  const poolDefs = [
+    {
+      name: 'Silver medalists — Engineering',
+      poolType: 'silver_medalist',
+      description: 'Strong final-round Eng candidates we almost hired.',
+      tags: ['engineering', 'silver'],
+      reason: 'Reached final round; excellent culture fit',
+    },
+    {
+      name: 'Keep warm — Product & Design',
+      poolType: 'keep_warm',
+      description: 'Designers and PMs for quarterly nurture campaigns.',
+      tags: ['product', 'design'],
+      reason: 'Strong portfolio; timing was not right',
+    },
+    {
+      name: 'Future fit — Leadership',
+      poolType: 'future_fit',
+      description: 'Senior ICs and managers for upcoming leadership roles.',
+      tags: ['leadership', 'future'],
+      reason: 'High potential for future leadership hire',
+    },
+  ];
+  let poolMemberCount = 0;
+  for (let i = 0; i < poolDefs.length; i++) {
+    const def = poolDefs[i];
+    const pool = await prisma.talentPool.create({
+      data: {
+        organizationId: company.id,
+        name: def.name,
+        description: def.description,
+        poolType: def.poolType,
+        tags: def.tags,
+        createdById: primaryUser.id,
+      },
+    });
+    const slice = candidates.slice(i * 4, i * 4 + 5);
+    for (let j = 0; j < slice.length; j++) {
+      await prisma.talentPoolMember.create({
+        data: {
+          poolId: pool.id,
+          candidateId: slice[j].id,
+          addedReason: def.reason,
+          addedById: primaryUser.id,
+          tags: def.tags,
+          lastContactedAt: j % 2 === 0 ? new Date(baseTime - (j + 1) * 7 * 86400000) : null,
+          notes: j === 0 ? 'Priority nurture — schedule coffee chat next month.' : null,
+        },
+      });
+      poolMemberCount += 1;
+    }
+  }
+  console.log(`✅ Talent pools: ${poolDefs.length} pools, ${poolMemberCount} members`);
 
   // ── Summary ────────────────────────────────────────────────────────────────
   console.log('\n🎉 Seed complete!\n');
