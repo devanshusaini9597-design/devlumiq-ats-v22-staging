@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
 import PageHeader from '@/components/ui/PageHeader';
 import PageShell from '@/components/ui/PageShell';
+import StatCard from '@/components/ui/StatCard';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { format } from 'date-fns';
 
@@ -280,36 +281,6 @@ const RequestCheckModal = memo(function RequestCheckModal({ isOpen, onClose, can
         </motion.div>
       </motion.div>
     </AnimatePresence>
-  );
-});
-
-// ============================================
-// STATS CARD COMPONENT
-// ============================================
-interface StatCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  delay?: number;
-  iconBgClass: string;
-}
-
-const StatCard = memo(function StatCard({ icon, label, value, delay = 0, iconBgClass }: StatCardProps) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.3 }}
-      className="rounded-xl border border-stone-200/80 bg-white p-4"
-    >
-      <div className="flex items-center gap-2 mb-2">
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconBgClass}`}>
-          {icon}
-        </div>
-        <span className="text-xs text-stone-500">{label}</span>
-      </div>
-      <p className="text-2xl font-bold text-stone-900">{value}</p>
-    </motion.div>
   );
 });
 
@@ -617,32 +588,28 @@ export default function BackgroundChecksPage() {
       {/* Stats Overview */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
-          icon={<Shield className="w-4 h-4 text-brand-600" />}
+          icon={Shield}
           label="Total"
           value={stats.total}
-          delay={0}
-          iconBgClass="bg-brand-50"
+          iconClassName="text-brand-600 bg-brand-50"
         />
         <StatCard
-          icon={<Clock className="w-4 h-4 text-amber-600" />}
+          icon={Clock}
           label="Pending"
           value={stats.pending}
-          delay={0.05}
-          iconBgClass="bg-amber-50"
+          iconClassName="text-amber-600 bg-amber-50"
         />
         <StatCard
-          icon={<CheckCircle className="w-4 h-4 text-emerald-600" />}
+          icon={CheckCircle}
           label="Clear"
           value={stats.clear}
-          delay={0.1}
-          iconBgClass="bg-emerald-50"
+          iconClassName="text-emerald-600 bg-emerald-50"
         />
         <StatCard
-          icon={<AlertTriangle className="w-4 h-4 text-orange-600" />}
+          icon={AlertTriangle}
           label="Consider"
           value={stats.consider}
-          delay={0.15}
-          iconBgClass="bg-orange-50"
+          iconClassName="text-violet-600 bg-violet-50"
         />
       </div>
 

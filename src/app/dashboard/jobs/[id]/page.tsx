@@ -10,6 +10,7 @@ import {
   Sparkles, Target, Eye
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
+import PageShell from '@/components/ui/PageShell';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { stageToDisplay } from '@/lib/api-helpers';
 import { JobBoardIntegration } from '@/components/premium/JobBoardIntegration';
@@ -77,33 +78,37 @@ export default function JobDetailPage() {
 
   if (loading && !job) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-        <Link href="/dashboard/jobs" className="inline-flex items-center gap-2 text-brand-600 font-semibold hover:underline">
-          <ArrowLeft className="w-4 h-4" /> {t('jobs.backToJobs') ?? 'Back to Open Positions'}
-        </Link>
-        <div className="rounded-2xl border border-stone-200/80 bg-white overflow-hidden shadow-[var(--shadow-card)] animate-pulse">
-          <div className="p-6 sm:p-8 border-b border-stone-100">
-            <div className="h-8 w-64 bg-stone-200 rounded-lg" />
-            <div className="h-4 w-48 bg-stone-100 rounded mt-3" />
+      <PageShell>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+          <Link href="/dashboard/jobs" className="inline-flex items-center gap-2 text-brand-600 font-semibold hover:underline">
+            <ArrowLeft className="w-4 h-4" /> {t('jobs.backToJobs') ?? 'Back to Open Positions'}
+          </Link>
+          <div className="rounded-2xl border border-stone-200/80 bg-white overflow-hidden shadow-[var(--shadow-card)] animate-pulse">
+            <div className="p-6 sm:p-8 border-b border-stone-100">
+              <div className="h-8 w-64 bg-stone-200 rounded-lg" />
+              <div className="h-4 w-48 bg-stone-100 rounded mt-3" />
+            </div>
+            <div className="p-6 space-y-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="h-14 bg-stone-50 rounded-xl w-full" />
+              ))}
+            </div>
           </div>
-          <div className="p-6 space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-14 bg-stone-50 rounded-xl w-full" />
-            ))}
-          </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      </PageShell>
     );
   }
 
   if (!job) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-        <Link href="/dashboard/jobs" className="inline-flex items-center gap-2 text-brand-600 font-semibold hover:underline">
-          <ArrowLeft className="w-4 h-4" /> {t('jobs.backToJobs') ?? 'Back to Open Positions'}
-        </Link>
-        <EmptyState message={t('common.noRecordFound') ?? 'No record found.'} />
-      </motion.div>
+      <PageShell>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+          <Link href="/dashboard/jobs" className="inline-flex items-center gap-2 text-brand-600 font-semibold hover:underline">
+            <ArrowLeft className="w-4 h-4" /> {t('jobs.backToJobs') ?? 'Back to Open Positions'}
+          </Link>
+          <EmptyState message={t('common.noRecordFound') ?? 'No record found.'} />
+        </motion.div>
+      </PageShell>
     );
   }
 
@@ -113,6 +118,7 @@ export default function JobDetailPage() {
   const pageApplications = applications.slice(safePage * PER_PAGE, (safePage + 1) * PER_PAGE);
 
   return (
+    <PageShell>
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
@@ -139,7 +145,7 @@ export default function JobDetailPage() {
                 <Briefcase className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-sm" />
               </motion.div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight truncate" style={{ letterSpacing: '-0.025em' }}>{job.title}</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight truncate min-w-0" style={{ letterSpacing: '-0.025em' }}>{job.title}</h1>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-sm text-stone-600">
                   <span className="flex items-center gap-1.5">
                     <div className="w-6 h-6 rounded-md bg-stone-100 flex items-center justify-center">
@@ -377,6 +383,7 @@ export default function JobDetailPage() {
         </div>
       </div>
     </motion.div>
+    </PageShell>
   );
 }
 

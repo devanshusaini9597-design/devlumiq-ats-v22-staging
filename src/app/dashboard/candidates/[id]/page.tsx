@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
+import PageShell from '@/components/ui/PageShell';
 
 // Premium Components
 import { QuickActionsPanel, EmailTemplatesModal } from '@/components/premium/CandidateActions';
@@ -251,44 +252,48 @@ export default function CandidateProfilePage() {
   // Loading skeleton
   if (loading && !candidate) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-        <Link href="/dashboard/candidates" className="inline-flex items-center gap-2 text-brand-600 font-semibold hover:underline">
-          <ArrowLeft className="w-4 h-4" /> {t('profile.backToCandidates')}
-        </Link>
-        <div className="rounded-2xl border border-stone-200/80 bg-white overflow-hidden shadow-sm animate-pulse">
-          <div className="p-6 sm:p-8 border-b border-stone-100">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="w-20 h-20 rounded-2xl bg-stone-200 flex-shrink-0" />
-              <div className="space-y-3 flex-1">
-                <div className="h-7 w-48 bg-stone-200 rounded-lg" />
-                <div className="h-4 w-32 bg-stone-100 rounded" />
-                <div className="h-4 w-56 bg-stone-100 rounded" />
+      <PageShell>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+          <Link href="/dashboard/candidates" className="inline-flex items-center gap-2 text-brand-600 font-semibold hover:underline">
+            <ArrowLeft className="w-4 h-4" /> {t('profile.backToCandidates')}
+          </Link>
+          <div className="rounded-2xl border border-stone-200/80 bg-white overflow-hidden shadow-sm animate-pulse">
+            <div className="p-6 sm:p-8 border-b border-stone-100">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="w-20 h-20 rounded-2xl bg-stone-200 flex-shrink-0" />
+                <div className="space-y-3 flex-1">
+                  <div className="h-7 w-48 bg-stone-200 rounded-lg" />
+                  <div className="h-4 w-32 bg-stone-100 rounded" />
+                  <div className="h-4 w-56 bg-stone-100 rounded" />
+                </div>
               </div>
             </div>
+            <div className="flex gap-1 p-2 border-b border-stone-100">
+              {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-10 w-24 bg-stone-100 rounded-xl" />)}
+            </div>
+            <div className="p-6 sm:p-8 space-y-4">
+              {[1, 2, 3].map(i => <div key={i} className="h-4 bg-stone-100 rounded" style={{ width: `${100 - i * 15}%` }} />)}
+            </div>
           </div>
-          <div className="flex gap-1 p-2 border-b border-stone-100">
-            {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-10 w-24 bg-stone-100 rounded-xl" />)}
-          </div>
-          <div className="p-6 sm:p-8 space-y-4">
-            {[1, 2, 3].map(i => <div key={i} className="h-4 bg-stone-100 rounded" style={{ width: `${100 - i * 15}%` }} />)}
-          </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      </PageShell>
     );
   }
 
   if (!candidate) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-        <Link href="/dashboard/candidates" className="inline-flex items-center gap-2 text-brand-600 font-semibold hover:underline">
-          <ArrowLeft className="w-4 h-4" /> {t('profile.backToCandidates')}
-        </Link>
-        <div className="text-center py-16">
-          <User className="w-12 h-12 text-stone-300 mx-auto mb-4" />
-          <p className="text-stone-600 font-semibold">{t('profile.notFound')}</p>
-          <p className="text-sm text-stone-500 mt-1">This candidate may have been removed.</p>
-        </div>
-      </motion.div>
+      <PageShell>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+          <Link href="/dashboard/candidates" className="inline-flex items-center gap-2 text-brand-600 font-semibold hover:underline">
+            <ArrowLeft className="w-4 h-4" /> {t('profile.backToCandidates')}
+          </Link>
+          <div className="text-center py-16">
+            <User className="w-12 h-12 text-stone-300 mx-auto mb-4" />
+            <p className="text-stone-600 font-semibold">{t('profile.notFound')}</p>
+            <p className="text-sm text-stone-500 mt-1">This candidate may have been removed.</p>
+          </div>
+        </motion.div>
+      </PageShell>
     );
   }
 
@@ -308,6 +313,7 @@ export default function CandidateProfilePage() {
   const inputCls = 'w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 outline-none transition-all bg-white';
 
   return (
+    <PageShell>
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-6">
       {/* Navigation */}
       <Link href="/dashboard/candidates" className="inline-flex items-center gap-2 text-stone-600 hover:text-brand-600 font-semibold transition-colors">
@@ -783,6 +789,7 @@ export default function CandidateProfilePage() {
         onGraded={refreshAssessments}
       />
     </motion.div>
+    </PageShell>
   );
 }
 

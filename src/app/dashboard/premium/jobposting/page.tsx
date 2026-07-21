@@ -18,6 +18,7 @@ import { useToast } from '@/components/ui/Toast';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import PageHeader from '@/components/ui/PageHeader';
 import PageShell from '@/components/ui/PageShell';
+import StatCard from '@/components/ui/StatCard';
 import Link from 'next/link';
 import { useLocale } from '@/components/providers/LocaleProvider';
 
@@ -295,26 +296,30 @@ export default function JobPostingPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="p-4 rounded-xl bg-gradient-to-br from-brand-50 to-purple-50 border border-brand-100">
-          <Briefcase className="w-5 h-5 text-brand-600 mb-2" />
-          <p className="text-2xl font-bold text-stone-900">{jobs.length}</p>
-          <p className="text-xs text-stone-500 uppercase font-semibold">Active Jobs</p>
-        </div>
-        <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
-          <Eye className="w-5 h-5 text-blue-600 mb-2" />
-          <p className="text-2xl font-bold text-stone-900">{totalViews.toLocaleString()}</p>
-          <p className="text-xs text-stone-500 uppercase font-semibold">Total Views</p>
-        </div>
-        <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100">
-          <Users className="w-5 h-5 text-emerald-600 mb-2" />
-          <p className="text-2xl font-bold text-stone-900">{totalApplications}</p>
-          <p className="text-xs text-stone-500 uppercase font-semibold">Applications</p>
-        </div>
-        <div className="p-4 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100">
-          <BarChart3 className="w-5 h-5 text-amber-600 mb-2" />
-          <p className="text-2xl font-bold text-stone-900">{avgConversion}%</p>
-          <p className="text-xs text-stone-500 uppercase font-semibold">Conversion Rate</p>
-        </div>
+        <StatCard
+          label="Active Jobs"
+          value={jobs.length}
+          icon={Briefcase}
+          iconClassName="text-brand-600 bg-brand-50"
+        />
+        <StatCard
+          label="Total Views"
+          value={totalViews.toLocaleString()}
+          icon={Eye}
+          iconClassName="text-sky-600 bg-sky-50"
+        />
+        <StatCard
+          label="Applications"
+          value={totalApplications}
+          icon={Users}
+          iconClassName="text-emerald-600 bg-emerald-50"
+        />
+        <StatCard
+          label="Conversion Rate"
+          value={`${avgConversion}%`}
+          icon={BarChart3}
+          iconClassName="text-amber-600 bg-amber-50"
+        />
       </div>
 
       {/* Quick Templates */}

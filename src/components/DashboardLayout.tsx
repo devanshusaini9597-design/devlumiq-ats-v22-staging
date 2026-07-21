@@ -18,7 +18,7 @@ import {
   Bell, Search, ChevronDown, ChevronLeft, Command, FolderOpen, FileText,
   LayoutGrid, Mail, MessageCircle, Calendar, ChevronRight,
   Sparkles, Crown, Star, Zap, FileCheck, MessageSquare, Upload, Share2, Briefcase, Shield,
-  Building, Puzzle, Info, CheckCircle2, AlertTriangle, Inbox, Clock, Lock, Tags, Archive
+  Building, Puzzle, Info, CheckCircle2, AlertTriangle, Inbox, Clock, Tags, Archive
 } from 'lucide-react';
 import { ROLE_PERMISSIONS, Role } from '@/lib/roles';
 import { roleBadgeClass } from '@/lib/roleUi';
@@ -194,7 +194,7 @@ export default function DashboardLayout({
       { labelKey: 'dashboard.jobs', icon: FolderOpen, path: '/dashboard/jobs', requiredPermission: 'VIEW_JOBS' },
       { labelKey: 'dashboard.talentPools', icon: Archive, path: '/dashboard/talent-pools', requiredPermission: 'VIEW_CANDIDATES' },
     ]},
-    { key: 'premium', labelKey: 'premium.title', icon: Crown, roles: _STAFF, items: [
+    { key: 'premium', labelKey: 'premium.title', icon: Crown, roles: ['ADMIN','RECRUITER','HIRING_MANAGER','INTERVIEWER'], items: [
       { labelKey: 'premium.smartSearch.title', icon: Search, path: '/dashboard/premium/search', requiredPermission: 'USE_SMART_SEARCH' },
       { labelKey: 'premium.emailTemplates.title', icon: Mail, path: '/dashboard/premium/email', requiredPermission: 'USE_EMAIL_TEMPLATES' },
       { labelKey: 'premium.interviewScoring.title', icon: Star, path: '/dashboard/premium/scoring', requiredPermission: 'SCORE_INTERVIEW' },
@@ -213,7 +213,7 @@ export default function DashboardLayout({
       { labelKey: 'dashboard.esignature', icon: FileCheck, path: '/dashboard/esignature', requiredPermission: 'USE_ESIGNATURE' },
       { labelKey: 'dashboard.backgroundChecks', icon: Shield, path: '/dashboard/background-checks', requiredPermission: 'VIEW_BACKGROUND_CHECKS' },
     ]},
-    { key: 'analytics', labelKey: 'dashboard.navAnalytics', icon: BarChart3, roles: _ALL, items: [
+    { key: 'analytics', labelKey: 'dashboard.navAnalytics', icon: BarChart3, roles: ['ADMIN','RECRUITER','HIRING_MANAGER','VIEWER'], items: [
       { labelKey: 'dashboard.analytics', icon: BarChart3, path: '/dashboard/analytics', requiredPermission: 'VIEW_ANALYTICS' },
       { labelKey: 'dashboard.reports', icon: FileText, path: '/dashboard/reports', requiredPermission: 'VIEW_REPORTS' },
       { labelKey: 'dashboard.dei', icon: Shield, path: '/dashboard/dei', requiredPermission: 'MANAGE_SETTINGS' },
@@ -507,23 +507,7 @@ export default function DashboardLayout({
                                 const ItemIcon = item.icon;
                                 const active = pathname === item.path;
                                 const locked = !canAccessItem(item.requiredPermission);
-                                if (locked) {
-                                  return (
-                                    <div
-                                      key={item.path}
-                                      title={`Requires ${(item.requiredPermission ?? '').replace(/_/g, ' ')} permission`}
-                                      className="cursor-not-allowed select-none"
-                                    >
-                                      <div className="relative flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium opacity-35">
-                                        <span className="relative flex-shrink-0">
-                                          <ItemIcon className="w-3.5 h-3.5 text-stone-600" />
-                                        </span>
-                                        <span className="flex-1 text-stone-600 truncate">{t(item.labelKey)}</span>
-                                        <Lock className="w-3 h-3 flex-shrink-0 text-stone-700" />
-                                      </div>
-                                    </div>
-                                  );
-                                }
+                                if (locked) return null;
                                 return (
                                   <Link key={item.path} href={item.path} onClick={() => setSidebarOpen(false)}>
                                     <div className={`relative flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
@@ -577,8 +561,9 @@ export default function DashboardLayout({
             </Link>
           </motion.div>
 
-          {/* Settings group (Settings + role-gated links) */}
+          {/* Settings group (Settings + role-gated links) — staff only */}
           {(() => {
+            if (!['ADMIN', 'RECRUITER', 'HIRING_MANAGER'].includes(userRole)) return null;
             const settingsPaths = ['/dashboard/settings', '/dashboard/settings/users', '/dashboard/settings/audit-log'];
             const isSettingsActive = settingsPaths.some(p => pathname.startsWith(p));
             const isSettingsOpen = openNavGroups.has('settings');
@@ -679,7 +664,7 @@ export default function DashboardLayout({
                     <p className="text-[11px] text-stone-500 truncate leading-tight">{userEmail}</p>
                   </div>
                   {userRole && (
-                    <span className="inline-flex items-center mt-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-brand-500/20 text-brand-300 uppercase tracking-wide">
+                    <span className={`inline-flex items-center mt-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide border ${roleBadgeClass(userRole)}`}>
                       {userRole.replace('_', ' ')}
                     </span>
                   )}
@@ -734,23 +719,7 @@ export default function DashboardLayout({
                     const ItemIcon = item.icon;
                     const active = pathname === item.path;
                     const flyoutLocked = !canAccessItem(item.requiredPermission);
-                    if (flyoutLocked) {
-                      return (
-                        <div
-                          key={item.path}
-                          title={`Requires ${(item.requiredPermission ?? '').replace(/_/g, ' ')} permission`}
-                          className="cursor-not-allowed select-none"
-                        >
-                          <div className="flex items-center gap-3 mx-1.5 px-3 py-2.5 rounded-lg text-sm font-medium opacity-35">
-                            <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 bg-stone-800 text-stone-600">
-                              <ItemIcon className="w-3.5 h-3.5" />
-                            </div>
-                            <span className="flex-1 min-w-0 truncate text-stone-600">{t(item.labelKey)}</span>
-                            <Lock className="w-3.5 h-3.5 text-stone-700 flex-shrink-0" />
-                          </div>
-                        </div>
-                      );
-                    }
+                    if (flyoutLocked) return null;
                     return (
                       <Link
                         key={item.path}

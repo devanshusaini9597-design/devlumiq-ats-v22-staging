@@ -11,6 +11,7 @@ import {
 import { EmptyState } from '@/components/ui/EmptyState';
 import PageHeader from '@/components/ui/PageHeader';
 import PageShell from '@/components/ui/PageShell';
+import StatCard from '@/components/ui/StatCard';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -309,54 +310,31 @@ export default function InboxPage() {
 
       {/* Stats Row */}
       {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-4 rounded-xl bg-gradient-to-br from-brand-50 to-teal-50 border border-brand-200"
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <MessageSquare className="w-4 h-4 text-brand-600" />
-              <span className="text-xs text-stone-600">Total</span>
-            </div>
-            <p className="text-2xl font-bold text-stone-900">{stats.totalThreads}</p>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-            className="p-4 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200"
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <Mail className="w-4 h-4 text-amber-600" />
-              <span className="text-xs text-stone-600">Unread</span>
-            </div>
-            <p className="text-2xl font-bold text-stone-900">{stats.unreadCount}</p>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200"
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <CheckCircle className="w-4 h-4 text-emerald-600" />
-              <span className="text-xs text-stone-600">Sent</span>
-            </div>
-            <p className="text-2xl font-bold text-stone-900">{stats.outboundCount}</p>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200"
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="w-4 h-4 text-blue-600" />
-              <span className="text-xs text-stone-600">Reply Rate</span>
-            </div>
-            <p className="text-2xl font-bold text-stone-900">{stats.replyRate}%</p>
-          </motion.div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <StatCard
+            label="Total"
+            value={stats.totalThreads}
+            icon={MessageSquare}
+            iconClassName="text-brand-600 bg-brand-50"
+          />
+          <StatCard
+            label="Unread"
+            value={stats.unreadCount}
+            icon={Mail}
+            iconClassName="text-amber-600 bg-amber-50"
+          />
+          <StatCard
+            label="Sent"
+            value={stats.outboundCount}
+            icon={CheckCircle}
+            iconClassName="text-emerald-600 bg-emerald-50"
+          />
+          <StatCard
+            label="Reply Rate"
+            value={`${stats.replyRate}%`}
+            icon={TrendingUp}
+            iconClassName="text-sky-600 bg-sky-50"
+          />
         </div>
       )}
 

@@ -15,6 +15,10 @@ import {
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import PageShell from '@/components/ui/PageShell';
+import StatCard from '@/components/ui/StatCard';
+import RoleBadge from '@/components/ui/RoleBadge';
+import { ROLE_UI } from '@/lib/roleUi';
+import { ROLE_DESCRIPTIONS, type Role } from '@/lib/roles';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
 import { WeeklyChart, PipelineDoughnut } from '@/components/charts/DashboardCharts';
@@ -117,7 +121,6 @@ function RecruiterDashboard() {
   const displayName = userName || (userEmail && userEmail.includes('@') ? userEmail.split('@')[0] : userEmail) || t('dashboard.user') || 'User';
   
   // Refs for stable rendering without flickering
-  const hasAnimatedRef = useRef(false);
   const lastDataRef = useRef<DashboardSummary | null>(null);
 
   useEffect(() => {
@@ -168,7 +171,6 @@ function RecruiterDashboard() {
             setDashboardData(data);
             setDisplayData(data);
             setIsLoading(false);
-            hasAnimatedRef.current = true;
           }
         }
       } catch {
@@ -449,67 +451,68 @@ function RecruiterDashboard() {
   // Early returns AFTER all hooks
   if (displayData === null && !loadError) {
     return (
-      <div className="space-y-3 sm:space-y-4 animate-pulse">
-        <div className="h-10 w-64 rounded-xl bg-stone-200" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-28 sm:h-32 rounded-2xl bg-stone-100" />
-          ))}
+      <PageShell className="animate-pulse">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="h-10 w-64 rounded-xl bg-stone-200" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-28 sm:h-32 rounded-2xl bg-stone-100" />
+            ))}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-48 sm:h-52 rounded-2xl bg-stone-100" />
+            ))}
+          </div>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 sm:gap-4">
+            <div className="xl:col-span-2 h-56 sm:h-64 rounded-2xl bg-stone-100" />
+            <div className="h-56 sm:h-64 rounded-2xl bg-stone-100" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div className="lg:col-span-2 h-64 rounded-2xl bg-stone-100" />
+            <div className="h-32 rounded-2xl bg-stone-100" />
+          </div>
+          <div className="h-48 rounded-2xl bg-stone-100" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-48 sm:h-52 rounded-2xl bg-stone-100" />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 sm:gap-4">
-          <div className="xl:col-span-2 h-56 sm:h-64 rounded-2xl bg-stone-100" />
-          <div className="h-56 sm:h-64 rounded-2xl bg-stone-100" />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
-          <div className="lg:col-span-2 h-64 rounded-2xl bg-stone-100" />
-          <div className="h-32 rounded-2xl bg-stone-100" />
-        </div>
-        <div className="h-48 rounded-2xl bg-stone-100" />
-      </div>
+      </PageShell>
     );
   }
 
   // Error state with retry button
   if (loadError) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center max-w-md"
-        >
-          <div className="w-20 h-20 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-6">
-            <AlertCircle className="w-10 h-10 text-red-500" />
-          </div>
-          <h2 className="text-xl font-bold text-stone-900 mb-2">
-            {t('dashboard.error.loadFailed')}
-          </h2>
-          <p className="text-stone-500 mb-6">
-            {t('dashboard.error.loadMessage')}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={() => loadDashboardData()}
-              disabled={isLoading}
-              className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-              {isLoading ? t('dashboard.button.retrying') : t('dashboard.button.tryAgain')}
-            </button>
-            <Link
-              href="/dashboard"
-              className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl border-2 border-stone-200 text-stone-700 font-semibold hover:border-brand-300 hover:bg-brand-50/50 transition-colors"
-            >
-              {t('dashboard.button.refresh')}
-            </Link>
-          </div>
-        </motion.div>
-      </div>
+      <PageShell>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center max-w-md"
+          >
+            <div className="w-20 h-20 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="w-10 h-10 text-red-500" />
+            </div>
+            <h2 className="text-xl font-bold text-stone-900 mb-2">
+              {t('dashboard.error.loadFailed')}
+            </h2>
+            <p className="text-stone-500 mb-6">
+              {t('dashboard.error.loadMessage')}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={() => loadDashboardData()}
+                disabled={isLoading}
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                {isLoading ? t('dashboard.button.retrying') : t('dashboard.button.tryAgain')}
+              </button>
+              <Link href="/dashboard" className="btn-secondary">
+                {t('dashboard.button.refresh')}
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </PageShell>
     );
   }
 
@@ -519,50 +522,6 @@ function RecruiterDashboard() {
   const callbacks = d.callbacks ?? [];
   const activities = d.activities ?? [];
   const upcomingInterviews = d.upcomingInterviews ?? [];
-
-  // Stable Stat Card - colored gradient with blob decoration (matches reference image)
-  const StatCard = ({ icon: Icon, label, value, trend, gradient, blobColor, iconBg, iconColor, onClick }: {
-    icon: React.ElementType; label: string; value: number; trend?: number | null; gradient: string; blobColor: string; iconBg: string; iconColor: string; onClick?: () => void;
-  }) => {
-    const hasAnimated = hasAnimatedRef.current;
-    return (
-      <motion.div
-        initial={hasAnimated ? false : { opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
-        whileHover={{ y: -4, scale: 1.01 }}
-        onClick={onClick}
-        className={`relative overflow-hidden rounded-2xl p-4 sm:p-5 ${gradient} ${onClick ? 'cursor-pointer' : ''} transition-all duration-300`}
-      >
-        {/* Decorative blobs */}
-        <div className={`absolute -top-6 -right-6 w-28 h-28 rounded-full ${blobColor} opacity-35 blur-sm pointer-events-none`} />
-        <div className={`absolute -bottom-4 -right-8 w-20 h-20 rounded-full ${blobColor} opacity-20 pointer-events-none`} />
-        {/* Icon chip */}
-        <div className={`relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl ${iconBg} flex items-center justify-center mb-2 sm:mb-4 shadow-sm flex-shrink-0`}>
-          <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${iconColor}`} />
-        </div>
-        {/* Value */}
-        <motion.p
-          key={value}
-          initial={hasAnimated ? { scale: 1.06 } : false}
-          animate={{ scale: 1 }}
-          transition={{ duration: 0.2 }}
-          className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-stone-800 tabular-nums tracking-tight leading-none"
-        >
-          {value}
-        </motion.p>
-        {/* Label */}
-        <p className="text-[11px] sm:text-sm font-medium text-stone-500 mt-1 leading-tight">{label}</p>
-        {/* Trend */}
-        {trend !== undefined && trend !== null && (
-          <div className="flex items-center gap-1 mt-1.5 min-w-0">
-            {trend >= 0 ? <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 flex-shrink-0" /> : <TrendingDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-red-500 flex-shrink-0" />}
-            <span className={`text-[10px] sm:text-xs font-bold truncate ${trend >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{trend >= 0 ? '+' : ''}{trend}%<span className="hidden sm:inline font-normal"> {t('dashboard.trendVsLastMonth')}</span></span>
-          </div>
-        )}
-      </motion.div>
-    );
-  };
 
   return (
     <>
@@ -575,96 +534,86 @@ function RecruiterDashboard() {
         transition={{ duration: 0.3 }}
         className="space-y-6"
       >
-      {/* Premium Header with Live Indicator - Repositioned for mobile */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-          <PageHeader
-            icon={LayoutDashboard}
-            title={<>{t('dashboard.welcomeBack')}, <span className="text-gradient">{displayName}</span>!</>}
-            subtitle={`${t('dashboard.overviewFor')} ${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}.`}
-          />
-          
-          {/* Premium Live Data Status - Top right positioning */}
-          <div 
-            className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 rounded-2xl bg-white border border-stone-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-300 self-end sm:self-center"
-          >
-            {/* Animated Live Indicator */}
-            <div className="relative flex items-center gap-2">
-              <div className={`w-2.5 h-2.5 rounded-full ${isRefreshing ? 'bg-amber-500' : isLive ? 'bg-emerald-500' : 'bg-red-500'} ${isRefreshing ? 'animate-pulse' : ''}`} />
-              <div className={`absolute inset-0 w-2.5 h-2.5 rounded-full ${isRefreshing ? 'bg-amber-500' : isLive ? 'bg-emerald-500' : 'bg-red-500'} animate-ping opacity-40`} />
-            </div>
-            
-            <span className={`text-sm font-semibold ${isRefreshing ? 'text-amber-600' : isLive ? 'text-emerald-600' : 'text-red-600'}`}>
-              {isRefreshing ? t('dashboard.status.syncing') : isLive ? t('dashboard.status.live') : t('dashboard.status.offline')}
-            </span>
-            
-            {lastUpdated && (
-              <span className="text-xs text-stone-400 font-medium hidden sm:inline">
-                {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
-            
-            <div className="h-4 w-px bg-stone-200 mx-1 hidden sm:block" />
-            
-            <button 
-              onClick={() => loadDashboardData(true)}
-              disabled={isRefreshing}
-              className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-400 hover:text-stone-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Press 'R' to refresh"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : 'hover:rotate-180 transition-transform duration-300'}`} />
-            </button>
+      {/* Premium Header with Live Indicator */}
+      <PageHeader
+        icon={LayoutDashboard}
+        title={<>{t('dashboard.welcomeBack')}, <span className="text-gradient">{displayName}</span>!</>}
+        subtitle={`${t('dashboard.overviewFor')} ${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}.`}
+      >
+        <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 rounded-2xl bg-white border border-stone-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-300">
+          <div className="relative flex items-center gap-2">
+            <div className={`w-2.5 h-2.5 rounded-full ${isRefreshing ? 'bg-amber-500' : isLive ? 'bg-emerald-500' : 'bg-red-500'} ${isRefreshing ? 'animate-pulse' : ''}`} />
+            <div className={`absolute inset-0 w-2.5 h-2.5 rounded-full ${isRefreshing ? 'bg-amber-500' : isLive ? 'bg-emerald-500' : 'bg-red-500'} animate-ping opacity-40`} />
           </div>
+          <span className={`text-sm font-semibold ${isRefreshing ? 'text-amber-600' : isLive ? 'text-emerald-600' : 'text-red-600'}`}>
+            {isRefreshing ? t('dashboard.status.syncing') : isLive ? t('dashboard.status.live') : t('dashboard.status.offline')}
+          </span>
+          {lastUpdated && (
+            <span className="text-xs text-stone-400 font-medium hidden sm:inline">
+              {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+          <div className="h-4 w-px bg-stone-200 mx-1 hidden sm:block" />
+          <button
+            onClick={() => loadDashboardData(true)}
+            disabled={isRefreshing}
+            className="btn-secondary !p-1.5 !px-1.5 !py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Press 'R' to refresh"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : 'hover:rotate-180 transition-transform duration-300'}`} />
+          </button>
         </div>
-      </div>
+      </PageHeader>
 
       {/* Role Context Banner */}
       {user?.role && (() => {
-        const roleMeta: Record<string, { label: string; desc: string; color: string; border: string; icon: string; actions: { label: string; href: string; }[] }> = {
-          ADMIN: {
-            label: 'Admin', desc: 'Full system access — manage users, settings, and all data.',
-            color: 'bg-orange-50', border: 'border-orange-200/70', icon: '👑',
-            actions: [{ label: 'Manage Users', href: '/dashboard/settings/users' }, { label: 'Audit Logs', href: '/dashboard/settings/audit-log' }, { label: 'Company Settings', href: '/dashboard/company' }],
-          },
-          RECRUITER: {
-            label: 'Recruiter', desc: 'Manage candidates, jobs, and the hiring pipeline.',
-            color: 'bg-blue-50', border: 'border-blue-200/70', icon: '💼',
-            actions: [{ label: 'Add Candidate', href: '/dashboard/candidates' }, { label: 'Post Job', href: '/dashboard/jobs' }, { label: 'Pipeline', href: '/dashboard/kanban' }],
-          },
-          HIRING_MANAGER: {
-            label: 'HR Manager', desc: 'Review candidates and manage interview stages for your team.',
-            color: 'bg-purple-50', border: 'border-purple-200/70', icon: '🧑‍💼',
-            actions: [{ label: 'View Candidates', href: '/dashboard/candidates' }, { label: 'Interviews', href: '/dashboard/calendar' }, { label: 'Analytics', href: '/dashboard/analytics' }],
-          },
-          INTERVIEWER: {
-            label: 'Interviewer', desc: 'View your assigned interviews and submit scorecards.',
-            color: 'bg-teal-50', border: 'border-teal-200/70', icon: '⭐',
-            actions: [{ label: 'My Interviews', href: '/dashboard/calendar' }, { label: 'Score Interviews', href: '/dashboard/premium/scoring' }, { label: 'Candidates', href: '/dashboard/candidates' }],
-          },
-          VIEWER: {
-            label: 'Viewer', desc: 'Read-only access — you can view data but cannot make changes.',
-            color: 'bg-stone-50', border: 'border-stone-200/70', icon: '👁️',
-            actions: [{ label: 'Candidates', href: '/dashboard/candidates' }, { label: 'Jobs', href: '/dashboard/jobs' }, { label: 'Analytics', href: '/dashboard/analytics' }],
-          },
+        const role = user.role as Role;
+        const ui = ROLE_UI[role];
+        if (!ui) return null;
+        const actions: Record<Role, { label: string; href: string }[]> = {
+          ADMIN: [
+            { label: 'Manage Users', href: '/dashboard/settings/users' },
+            { label: 'Audit Logs', href: '/dashboard/settings/audit-log' },
+            { label: 'Company', href: '/dashboard/company' },
+          ],
+          RECRUITER: [
+            { label: 'Add Candidate', href: '/dashboard/candidates' },
+            { label: 'Post Job', href: '/dashboard/jobs' },
+            { label: 'Pipeline', href: '/dashboard/kanban' },
+          ],
+          HIRING_MANAGER: [
+            { label: 'View Candidates', href: '/dashboard/candidates' },
+            { label: 'Interviews', href: '/dashboard/calendar' },
+            { label: 'Analytics', href: '/dashboard/analytics' },
+          ],
+          INTERVIEWER: [
+            { label: 'My Interviews', href: '/dashboard/calendar' },
+            { label: 'Score Interviews', href: '/dashboard/premium/scoring' },
+            { label: 'Candidates', href: '/dashboard/candidates' },
+          ],
+          VIEWER: [
+            { label: 'Candidates', href: '/dashboard/candidates' },
+            { label: 'Jobs', href: '/dashboard/jobs' },
+            { label: 'Analytics', href: '/dashboard/analytics' },
+          ],
         };
-        const meta = roleMeta[user.role];
-        if (!meta) return null;
+        const roleActions = actions[role] ?? [];
         return (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className={`flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl px-4 py-3 border ${meta.color} ${meta.border}`}
+            className={`card-ats-bordered flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3 ${ui.badge.replace(/text-\S+/g, '').trim()}`}
           >
             <div className="flex items-center gap-2.5 flex-1 min-w-0">
-              <span className="text-lg leading-none flex-shrink-0">{meta.icon}</span>
+              <RoleBadge role={role} showIcon />
               <div className="min-w-0">
-                <span className="text-xs font-bold text-stone-500 uppercase tracking-wide">{meta.label} View</span>
-                <p className="text-xs text-stone-600 truncate">{meta.desc}</p>
+                <span className="text-xs font-bold text-stone-500 uppercase tracking-wide">{ui.label} View</span>
+                <p className="text-xs text-stone-600 truncate">{ROLE_DESCRIPTIONS[role]}</p>
               </div>
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
-              {meta.actions.map((a) => (
+              {roleActions.map((a) => (
                 <Link key={a.href} href={a.href} className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-white/80 border border-stone-200 text-stone-700 hover:bg-white hover:border-stone-300 hover:text-stone-900 transition-all whitespace-nowrap">
                   {a.label}
                 </Link>
@@ -674,7 +623,7 @@ function RecruiterDashboard() {
         );
       })()}
 
-      {/* Premium Smart Insights Section - Glassmorphism Design */}
+      {/* Premium Smart Insights Section */}
       {generateAIInsights().length > 0 && (
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -683,26 +632,26 @@ function RecruiterDashboard() {
           className="relative rounded-2xl overflow-hidden"
         >
           {/* Glassmorphism Background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-50/90 via-fuchsia-50/80 to-purple-50/90 backdrop-blur-sm" />
-          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(139,92,246,0.1)_0%,rgba(217,70,239,0.05)_50%,rgba(139,92,246,0.1)_100%)]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-50 via-teal-50/80 to-brand-50/90 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(13,148,136,0.1)_0%,rgba(20,184,166,0.05)_50%,rgba(13,148,136,0.1)_100%)]" />
           
           {/* Animated Border Glow */}
-          <div className="absolute inset-0 rounded-2xl p-[1px] bg-gradient-to-r from-violet-400/40 via-fuchsia-400/40 to-violet-400/40" />
+          <div className="absolute inset-0 rounded-2xl p-[1px] bg-gradient-to-r from-brand-400/40 via-teal-400/40 to-brand-400/40" />
           
           <div className="relative p-4 sm:p-5">
             {/* Header with AI Badge */}
             <div className="flex items-center gap-3 mb-4">
-              <div className="relative p-3 rounded-xl bg-gradient-to-br from-violet-600 via-fuchsia-600 to-purple-600 shadow-lg shadow-violet-500/25">
+              <div className="relative p-3 rounded-xl bg-gradient-to-br from-brand-600 via-teal-600 to-brand-700 shadow-lg shadow-brand-500/25">
                 <Bot className="w-5 h-5 text-white" />
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white animate-pulse" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-bold text-violet-700 px-2.5 py-1 rounded-full bg-white/80 border border-violet-200 shadow-sm">
+                  <span className="text-xs font-bold text-brand-700 px-2.5 py-1 rounded-full bg-white/80 border border-brand-200 shadow-sm">
                     SMART INSIGHTS
                   </span>
                   {isRefreshing && (
-                    <span className="flex items-center gap-1.5 text-xs text-violet-600 font-medium">
+                    <span className="flex items-center gap-1.5 text-xs text-brand-600 font-medium">
                       <Loader2 className="w-3.5 h-3.5 animate-spin" /> 
                       Analyzing...
                     </span>
@@ -711,7 +660,7 @@ function RecruiterDashboard() {
               </div>
               <Link 
                 href="/dashboard/analytics" 
-                className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-violet-700 hover:text-violet-800 px-3 py-1.5 rounded-lg bg-white/60 hover:bg-white/80 border border-violet-200/50 transition-all"
+                className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:text-brand-800 px-3 py-1.5 rounded-lg bg-white/60 hover:bg-white/80 border border-brand-200/50 transition-all"
               >
                 View All <ArrowUpRight className="w-3.5 h-3.5" />
               </Link>
@@ -734,7 +683,7 @@ function RecruiterDashboard() {
                         ? 'bg-gradient-to-br from-emerald-50/90 to-teal-50/90 border border-emerald-200/60 hover:border-emerald-300 hover:shadow-[0_4px_20px_rgba(52,211,153,0.15)]' :
                       insight.type === 'tip' 
                         ? 'bg-gradient-to-br from-blue-50/90 to-cyan-50/90 border border-blue-200/60 hover:border-blue-300 hover:shadow-[0_4px_20px_rgba(96,165,250,0.15)]' :
-                        'bg-gradient-to-br from-violet-50/90 to-purple-50/90 border border-violet-200/60 hover:border-violet-300 hover:shadow-[0_4px_20px_rgba(139,92,246,0.15)]'
+                        'bg-gradient-to-br from-brand-50/90 to-teal-50/90 border border-brand-200/60 hover:border-brand-300 hover:shadow-[0_4px_20px_rgba(13,148,136,0.15)]'
                     }`}
                   >
                     {/* Icon with gradient */}
@@ -742,7 +691,7 @@ function RecruiterDashboard() {
                       insight.type === 'warning' ? 'bg-gradient-to-br from-amber-500 to-orange-500 shadow-lg shadow-amber-500/25' :
                       insight.type === 'success' ? 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg shadow-emerald-500/25' :
                       insight.type === 'tip' ? 'bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg shadow-blue-500/25' :
-                      'bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/25'
+                      'bg-gradient-to-br from-brand-500 to-teal-500 shadow-lg shadow-brand-500/25'
                     }`}>
                       {insight.type === 'warning' ? <AlertTriangle className="w-5 h-5 text-white" /> :
                        insight.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-white" /> :
@@ -764,7 +713,7 @@ function RecruiterDashboard() {
                           insight.type === 'warning' ? 'text-amber-700 hover:text-amber-800' :
                           insight.type === 'success' ? 'text-emerald-700 hover:text-emerald-800' :
                           insight.type === 'tip' ? 'text-blue-700 hover:text-blue-800' :
-                          'text-violet-700 hover:text-violet-800'
+                          'text-brand-700 hover:text-brand-800'
                         }`}
                       >
                         {insight.action} <ArrowRight className="w-3 h-3" />
@@ -783,7 +732,7 @@ function RecruiterDashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.06 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50/80 to-amber-50 border border-amber-200/80 p-4 sm:p-5 shadow-sm"
+        className="card-ats-bordered relative overflow-hidden bg-gradient-to-r from-amber-50 via-orange-50/80 to-amber-50 border-amber-200/80 p-4 sm:p-5"
       >
         {/* Decorative background elements */}
         <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 via-transparent to-orange-500/5" />
@@ -814,12 +763,12 @@ function RecruiterDashboard() {
         </div>
       </motion.div>
 
-      {/* Stats Grid - 4 columns on xl, 2 on sm, 1 on mobile - Stable rendering */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
-        <StatCard icon={Users}    label={t('dashboard.totalCandidates')} value={d.totalCandidates} trend={d.candidateTrend} gradient="bg-gradient-to-br from-blue-50 to-indigo-100"  blobColor="bg-indigo-300" iconBg="bg-blue-100"   iconColor="text-blue-600"   />
-        <StatCard icon={UserPlus} label={t('dashboard.addedThisMonth')}  value={d.thisMonth}        gradient="bg-gradient-to-br from-teal-50 to-emerald-100"  blobColor="bg-teal-200"   iconBg="bg-teal-100"   iconColor="text-teal-600"   />
-        <StatCard icon={Clock}    label={t('dashboard.pendingReview')}   value={d.pendingReview}    gradient="bg-gradient-to-br from-amber-50 to-orange-100"  blobColor="bg-amber-200"  iconBg="bg-amber-100"  iconColor="text-amber-600"  />
-        <StatCard icon={Briefcase} label={t('dashboard.hiredJoined')}  value={d.pipeline.filter((p) => p.stage === 'Hired' || p.stage === 'Joined').reduce((s, p) => s + p.count, 0)} gradient="bg-gradient-to-br from-violet-50 to-purple-100" blobColor="bg-violet-200" iconBg="bg-violet-100" iconColor="text-violet-600" />
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <StatCard icon={Users} label={t('dashboard.totalCandidates')} value={d.totalCandidates} trend={d.candidateTrend} trendLabel={t('dashboard.trendVsLastMonth')} iconClassName="text-brand-600 bg-brand-50" />
+        <StatCard icon={UserPlus} label={t('dashboard.addedThisMonth')} value={d.thisMonth} iconClassName="text-emerald-600 bg-emerald-50" />
+        <StatCard icon={Clock} label={t('dashboard.pendingReview')} value={d.pendingReview} iconClassName="text-amber-600 bg-amber-50" />
+        <StatCard icon={Briefcase} label={t('dashboard.hiredJoined')} value={d.pipeline.filter((p) => p.stage === 'Hired' || p.stage === 'Joined').reduce((s, p) => s + p.count, 0)} iconClassName="text-violet-600 bg-violet-50" />
       </div>
 
       {/* Premium Widgets - 3 columns on lg, 2 on md, 1 on mobile */}
@@ -830,7 +779,7 @@ function RecruiterDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.1 }}
           whileHover={{ y: -4 }}
-          className="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white p-5 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-elevated)] transition-all duration-300"
+          className="card-ats-bordered relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white p-5 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-elevated)] transition-all duration-300"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-brand-50/30 to-transparent pointer-events-none" />
           <div className="relative">
@@ -869,7 +818,7 @@ function RecruiterDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.15 }}
           whileHover={{ y: -4 }}
-          className="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white p-5 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-elevated)] transition-all duration-300"
+          className="card-ats-bordered relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white p-5 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-elevated)] transition-all duration-300"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-warm-50/30 to-transparent pointer-events-none" />
           <div className="relative">
@@ -917,7 +866,7 @@ function RecruiterDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.2 }}
           whileHover={{ y: -4 }}
-          className="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white p-5 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-elevated)] transition-all duration-300 md:col-span-2 lg:col-span-1"
+          className="card-ats-bordered relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white p-5 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-elevated)] transition-all duration-300 md:col-span-2 lg:col-span-1"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/30 to-transparent pointer-events-none" />
           <div className="relative">
@@ -975,7 +924,7 @@ function RecruiterDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.25 }}
           whileHover={{ y: -4 }}
-          className="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white p-5 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-elevated)] transition-all duration-300 md:col-span-2 lg:col-span-1"
+          className="card-ats-bordered relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white p-5 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-elevated)] transition-all duration-300 md:col-span-2 lg:col-span-1"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-amber-50/30 to-transparent pointer-events-none" />
           <div className="relative">
@@ -1049,7 +998,7 @@ function RecruiterDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.1 }}
-          className="xl:col-span-2 rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200"
+          className="card-ats-bordered xl:col-span-2 rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200"
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base sm:text-lg font-bold text-stone-900">{t('dashboard.weeklyApplications')}</h2>
@@ -1065,7 +1014,7 @@ function RecruiterDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.15 }}
-          className="rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200"
+          className="card-ats-bordered rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200"
         >
           <h2 className="text-base sm:text-lg font-bold text-stone-900 mb-4">{t('dashboard.pipelineOverview')}</h2>
           <div className="h-56 sm:h-64 flex items-center justify-center">
@@ -1080,7 +1029,7 @@ function RecruiterDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.2 }}
-          className="lg:col-span-2 rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300 overflow-hidden"
+          className="card-ats-bordered lg:col-span-2 rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300 overflow-hidden"
         >
           {/* Premium Header with Mobile-Optimized Tabs */}
           <div className="flex flex-col gap-3 mb-5">
@@ -1186,10 +1135,7 @@ function RecruiterDashboard() {
                 </div>
                 <p className="text-stone-700 font-semibold">No Candidates Yet</p>
                 <p className="text-sm text-stone-500 mt-1 max-w-[240px]">Start building your talent pool by adding your first candidate</p>
-                <Link 
-                  href="/dashboard/candidates" 
-                  className="mt-4 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-teal-600 text-white text-sm font-semibold shadow-lg shadow-brand-500/25 hover:shadow-brand-500/35 hover:scale-[1.02] transition-all"
-                >
+                <Link href="/dashboard/candidates" className="btn-primary mt-4">
                   Add First Candidate
                 </Link>
               </div>
@@ -1202,7 +1148,7 @@ function RecruiterDashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.25 }}
-            className="rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-200"
+            className="card-ats-bordered rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-200"
           >
             <div className="flex items-center gap-2 mb-4">
               <div className="p-2 rounded-lg bg-warm-100"><Bell className="w-5 h-5 text-warm-600" /></div>
@@ -1230,7 +1176,7 @@ function RecruiterDashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.3 }}
-            className="rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-all duration-300"
+            className="card-ats-bordered rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-all duration-300"
           >
             {/* Header - Unified Typography */}
             <div className="flex items-center gap-3 mb-4">
@@ -1243,18 +1189,12 @@ function RecruiterDashboard() {
             {/* Action Buttons - Consistent 48px Height */}
             <div className="space-y-2.5">
               {/* Primary Action - Add Candidate */}
-              <Link href="/dashboard/candidates" className="block">
-                <motion.div 
-                  whileHover={{ scale: 1.01, y: -1 }} 
-                  whileTap={{ scale: 0.99 }}
-                  className="w-full h-12 px-4 rounded-xl font-semibold bg-gradient-to-r from-brand-600 to-teal-600 text-white text-sm shadow-lg shadow-brand-500/25 hover:shadow-brand-500/35 transition-all flex items-center gap-3 group"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors flex-shrink-0">
-                    <UserPlus className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="flex-1">{t('dashboard.addCandidate')}</span>
-                  <ArrowRight className="w-4 h-4 text-white/70 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
-                </motion.div>
+              <Link href="/dashboard/candidates" className="btn-primary w-full !justify-start gap-3 h-12">
+                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <UserPlus className="w-4 h-4 text-white" />
+                </div>
+                <span className="flex-1 text-left">{t('dashboard.addCandidate')}</span>
+                <ArrowRight className="w-4 h-4 text-white/70" />
               </Link>
               
               {/* Secondary Actions - Unified 44px Height */}
@@ -1298,7 +1238,7 @@ function RecruiterDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.35 }}
-          className="rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200"
+          className="card-ats-bordered rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200"
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base sm:text-lg font-bold text-stone-900 flex items-center gap-2">
@@ -1337,7 +1277,7 @@ function RecruiterDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.4 }}
-          className="rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200"
+          className="card-ats-bordered rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200"
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base sm:text-lg font-bold text-stone-900 flex items-center gap-2">
@@ -1372,7 +1312,7 @@ function RecruiterDashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.45 }}
-        className="rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200"
+        className="card-ats-bordered rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200"
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base sm:text-lg font-bold text-stone-900">{t('dashboard.hiringPipeline')}</h2>

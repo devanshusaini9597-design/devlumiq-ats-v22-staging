@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { FileSignature, FileCheck, Clock, XCircle, CheckCircle, Send, Download, FileText, Pen, AlertCircle } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import PageShell from '@/components/ui/PageShell';
+import StatCard from '@/components/ui/StatCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
@@ -161,64 +162,30 @@ export default function ESignaturePage() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-stone-200/80 bg-white p-4"
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center">
-              <FileText className="w-4 h-4 text-brand-600" />
-            </div>
-            <span className="text-xs text-stone-500">{t('esignature.total') || 'Total'}</span>
-          </div>
-          <p className="text-2xl font-bold text-stone-900">{stats.total}</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="rounded-xl border border-stone-200/80 bg-white p-4"
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-              <Clock className="w-4 h-4 text-amber-600" />
-            </div>
-            <span className="text-xs text-stone-500">{t('esignature.pending') || 'Pending'}</span>
-          </div>
-          <p className="text-2xl font-bold text-stone-900">{stats.pending}</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="rounded-xl border border-stone-200/80 bg-white p-4"
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-              <CheckCircle className="w-4 h-4 text-emerald-600" />
-            </div>
-            <span className="text-xs text-stone-500">{t('esignature.completed') || 'Completed'}</span>
-          </div>
-          <p className="text-2xl font-bold text-stone-900">{stats.completed}</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="rounded-xl border border-stone-200/80 bg-white p-4"
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
-              <XCircle className="w-4 h-4 text-red-600" />
-            </div>
-            <span className="text-xs text-stone-500">{t('esignature.declined') || 'Declined'}</span>
-          </div>
-          <p className="text-2xl font-bold text-stone-900">{stats.declined}</p>
-        </motion.div>
+        <StatCard
+          label={t('esignature.total') || 'Total'}
+          value={stats.total}
+          icon={FileText}
+          iconClassName="text-brand-600 bg-brand-50"
+        />
+        <StatCard
+          label={t('esignature.pending') || 'Pending'}
+          value={stats.pending}
+          icon={Clock}
+          iconClassName="text-amber-600 bg-amber-50"
+        />
+        <StatCard
+          label={t('esignature.completed') || 'Completed'}
+          value={stats.completed}
+          icon={CheckCircle}
+          iconClassName="text-emerald-600 bg-emerald-50"
+        />
+        <StatCard
+          label={t('esignature.declined') || 'Declined'}
+          value={stats.declined}
+          icon={XCircle}
+          iconClassName="text-violet-600 bg-violet-50"
+        />
       </div>
 
       {/* Filter Tabs */}

@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  BarChart3, Users, Target, Clock, TrendingUp, TrendingDown,
-  Activity, Briefcase, ArrowUpRight, CheckCircle2
+  BarChart3, Users, Target, Clock, Activity, Briefcase, ArrowUpRight, CheckCircle2
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import PageShell from '@/components/ui/PageShell';
+import StatCard from '@/components/ui/StatCard';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { WeeklyChart, PipelineDoughnut } from '@/components/charts/DashboardCharts';
 
@@ -76,10 +76,10 @@ export default function AnalyticsPage() {
   }
 
   const statCards = [
-    { label: t('analytics.totalCandidates'), value: String(d.totalCandidates), icon: Users, trend: d.candidateTrend, gradient: 'bg-gradient-to-br from-blue-50 to-indigo-100', blob: 'bg-indigo-300', iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
-    { label: t('analytics.thisMonth'), value: String(d.thisMonth), icon: Activity, gradient: 'bg-gradient-to-br from-teal-50 to-emerald-100', blob: 'bg-teal-200', iconBg: 'bg-teal-100', iconColor: 'text-teal-600' },
-    { label: t('analytics.conversionRate'), value: `${d.conversionRate ?? 0}%`, icon: Target, gradient: 'bg-gradient-to-br from-violet-50 to-purple-100', blob: 'bg-violet-200', iconBg: 'bg-violet-100', iconColor: 'text-violet-600' },
-    { label: t('analytics.pendingReview'), value: String(d.pendingReview), icon: Clock, gradient: 'bg-gradient-to-br from-amber-50 to-orange-100', blob: 'bg-amber-200', iconBg: 'bg-amber-100', iconColor: 'text-amber-600' },
+    { label: t('analytics.totalCandidates'), value: String(d.totalCandidates), icon: Users, trend: d.candidateTrend, iconClassName: 'text-brand-600 bg-brand-50' },
+    { label: t('analytics.thisMonth'), value: String(d.thisMonth), icon: Activity, iconClassName: 'text-emerald-600 bg-emerald-50' },
+    { label: t('analytics.conversionRate'), value: `${d.conversionRate ?? 0}%`, icon: Target, iconClassName: 'text-violet-600 bg-violet-50' },
+    { label: t('analytics.pendingReview'), value: String(d.pendingReview), icon: Clock, iconClassName: 'text-amber-600 bg-amber-50' },
   ];
 
   const maxPos = Math.max(...(d.topPositions ?? []).map(p => p.count), 1);
@@ -92,27 +92,16 @@ export default function AnalyticsPage() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {statCards.map((s, i) => {
-          const Icon = s.icon;
-          return (
-            <motion.div key={s.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} whileHover={{ y: -4, scale: 1.01 }}
-              className={`relative overflow-hidden rounded-2xl p-4 sm:p-5 ${s.gradient} transition-all duration-300`}>
-              <div className={`absolute -top-6 -right-6 w-28 h-28 rounded-full ${s.blob} opacity-35 blur-sm pointer-events-none`} />
-              <div className={`absolute -bottom-3 -right-7 w-16 h-16 rounded-full ${s.blob} opacity-20 pointer-events-none`} />
-              <div className={`relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl ${s.iconBg} flex items-center justify-center mb-2 sm:mb-3 shadow-sm`}>
-                <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${s.iconColor}`} />
-              </div>
-              <p className="text-xl sm:text-2xl font-extrabold text-stone-800 tabular-nums tracking-tight leading-none">{s.value}</p>
-              <p className="text-[11px] sm:text-sm font-medium text-stone-500 mt-0.5 leading-tight">{s.label}</p>
-              {s.trend !== undefined && s.trend !== null && (
-                <div className="flex items-center gap-1 mt-1.5 min-w-0">
-                  {s.trend >= 0 ? <TrendingUp className="w-3 h-3 text-emerald-600 flex-shrink-0" /> : <TrendingDown className="w-3 h-3 text-red-500 flex-shrink-0" />}
-                  <span className={`text-[10px] sm:text-xs font-bold ${s.trend >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{s.trend >= 0 ? '+' : ''}{s.trend}%</span>
-                </div>
-              )}
-            </motion.div>
-          );
-        })}
+        {statCards.map((s) => (
+          <StatCard
+            key={s.label}
+            label={s.label}
+            value={s.value}
+            icon={s.icon}
+            iconClassName={s.iconClassName}
+            trend={s.trend}
+          />
+        ))}
       </div>
 
       {/* Charts */}

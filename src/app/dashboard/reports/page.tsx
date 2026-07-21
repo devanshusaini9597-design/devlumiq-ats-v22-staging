@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { FileText, Download, Calendar, TrendingUp, Users, Clock, BarChart2, Loader2, Target } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import PageShell from '@/components/ui/PageShell';
+import StatCard from '@/components/ui/StatCard';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
 import { jsPDF } from 'jspdf';
@@ -99,26 +100,30 @@ export default function ReportsPage() {
       <PageHeader icon={FileText} title={t('reports.title')} subtitle={t('reports.subtitle')} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {([
-          { labelKey: 'reports.totalCandidates', value: String(d.totalCandidates), icon: Users,      gradient: 'bg-gradient-to-br from-blue-50 to-indigo-100',  blob: 'bg-indigo-300', iconBg: 'bg-blue-100',   iconColor: 'text-blue-600'   },
-          { labelKey: 'reports.thisMonth',        value: String(d.thisMonth),       icon: TrendingUp, gradient: 'bg-gradient-to-br from-teal-50 to-emerald-100', blob: 'bg-teal-200',   iconBg: 'bg-teal-100',   iconColor: 'text-teal-600'   },
-          { labelKey: 'reports.conversionRate',   value: `${d.conversionRate ?? 0}%`,            icon: Target,     gradient: 'bg-gradient-to-br from-violet-50 to-purple-100', blob: 'bg-violet-200', iconBg: 'bg-violet-100', iconColor: 'text-violet-600' },
-          { labelKey: 'reports.avgTimeToHireLabel', value: `${d.avgTimeToHire ?? 0} ${t('reports.days')}`, icon: Clock, gradient: 'bg-gradient-to-br from-amber-50 to-orange-100', blob: 'bg-amber-200', iconBg: 'bg-amber-100', iconColor: 'text-amber-600' },
-        ] as const).map((stat, i) => {
-          const Icon = stat.icon;
-          return (
-            <motion.div key={stat.labelKey} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} whileHover={{ y: -4, scale: 1.01 }}
-              className={`relative overflow-hidden rounded-2xl p-5 ${stat.gradient} transition-all duration-300`}>
-              <div className={`absolute -top-6 -right-6 w-28 h-28 rounded-full ${stat.blob} opacity-30 blur-sm pointer-events-none`} />
-              <div className={`absolute -bottom-3 -right-7 w-16 h-16 rounded-full ${stat.blob} opacity-15 pointer-events-none`} />
-              <div className={`relative w-10 h-10 rounded-xl ${stat.iconBg} flex items-center justify-center mb-3 shadow-sm`}>
-                <Icon className={`w-5 h-5 ${stat.iconColor}`} />
-              </div>
-              <p className="text-2xl sm:text-3xl font-extrabold text-stone-800 tabular-nums tracking-tight">{stat.value}</p>
-              <p className="text-xs sm:text-sm font-medium text-stone-500 mt-0.5">{t(stat.labelKey)}</p>
-            </motion.div>
-          );
-        })}
+        <StatCard
+          label={t('reports.totalCandidates')}
+          value={String(d.totalCandidates)}
+          icon={Users}
+          iconClassName="text-brand-600 bg-brand-50"
+        />
+        <StatCard
+          label={t('reports.thisMonth')}
+          value={String(d.thisMonth)}
+          icon={TrendingUp}
+          iconClassName="text-emerald-600 bg-emerald-50"
+        />
+        <StatCard
+          label={t('reports.conversionRate')}
+          value={`${d.conversionRate ?? 0}%`}
+          icon={Target}
+          iconClassName="text-violet-600 bg-violet-50"
+        />
+        <StatCard
+          label={t('reports.avgTimeToHireLabel')}
+          value={`${d.avgTimeToHire ?? 0} ${t('reports.days')}`}
+          icon={Clock}
+          iconClassName="text-amber-600 bg-amber-50"
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

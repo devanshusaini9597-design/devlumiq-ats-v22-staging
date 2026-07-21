@@ -6,64 +6,65 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Mail, Lock, Shield, LogIn, Eye, EyeOff, Loader2, Sparkles, Users, BarChart3, Crown, Briefcase, UserCheck, Star } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Mail, Lock, Shield, Eye, EyeOff, Loader2, Sparkles, Users, BarChart3 } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
 import { email as validateEmail } from '@/lib/validation';
+import { ROLE_UI } from '@/lib/roleUi';
 
 const DEMO_ROLES = [
   {
-    role: 'ADMIN',
+    role: 'ADMIN' as const,
     label: 'Admin',
     email: 'admin@devlumiq.com',
-    icon: Crown,
-    bg: 'bg-orange-500',
-    ringColor: 'ring-orange-400/50',
-    labelBg: 'bg-orange-50',
-    labelText: 'text-orange-700',
+    icon: ROLE_UI.ADMIN.icon,
+    bg: 'bg-violet-500',
+    ringColor: 'ring-violet-400/50',
+    labelBg: 'bg-violet-50',
+    labelText: 'text-violet-700',
   },
   {
-    role: 'RECRUITER',
+    role: 'RECRUITER' as const,
     label: 'Recruiter',
     email: 'recruiter@devlumiq.com',
-    icon: Briefcase,
-    bg: 'bg-blue-500',
-    ringColor: 'ring-blue-400/50',
-    labelBg: 'bg-blue-50',
-    labelText: 'text-blue-700',
+    icon: ROLE_UI.RECRUITER.icon,
+    bg: 'bg-brand-500',
+    ringColor: 'ring-brand-400/50',
+    labelBg: 'bg-brand-50',
+    labelText: 'text-brand-700',
   },
   {
-    role: 'HIRING_MANAGER',
+    role: 'HIRING_MANAGER' as const,
     label: 'HR Manager',
     email: 'hiring@devlumiq.com',
-    icon: UserCheck,
-    bg: 'bg-purple-500',
-    ringColor: 'ring-purple-400/50',
-    labelBg: 'bg-purple-50',
-    labelText: 'text-purple-700',
+    icon: ROLE_UI.HIRING_MANAGER.icon,
+    bg: 'bg-amber-500',
+    ringColor: 'ring-amber-400/50',
+    labelBg: 'bg-amber-50',
+    labelText: 'text-amber-700',
   },
   {
-    role: 'INTERVIEWER',
+    role: 'INTERVIEWER' as const,
     label: 'Interviewer',
     email: 'interviewer@devlumiq.com',
-    icon: Star,
-    bg: 'bg-teal-500',
-    ringColor: 'ring-teal-400/50',
-    labelBg: 'bg-teal-50',
-    labelText: 'text-teal-700',
+    icon: ROLE_UI.INTERVIEWER.icon,
+    bg: 'bg-sky-500',
+    ringColor: 'ring-sky-400/50',
+    labelBg: 'bg-sky-50',
+    labelText: 'text-sky-700',
   },
   {
-    role: 'VIEWER',
+    role: 'VIEWER' as const,
     label: 'Viewer',
     email: 'viewer@devlumiq.com',
-    icon: Eye,
+    icon: ROLE_UI.VIEWER.icon,
     bg: 'bg-stone-500',
     ringColor: 'ring-stone-400/50',
     labelBg: 'bg-stone-100',
     labelText: 'text-stone-700',
   },
-] as const;
+];
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
