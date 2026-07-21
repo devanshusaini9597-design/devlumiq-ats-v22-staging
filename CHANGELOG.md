@@ -5,6 +5,28 @@ Product updates for DevLumiq ATS — written for customers and hiring teams.
 
 ---
 
+## Marketing accuracy pass — July 21, 2026
+
+Landing and docs were updated so public claims match what the product actually ships. **No product modules were removed** — marketing layout stayed; inaccurate copy was edited in place.
+
+### Landing website
+- Hero, CTA, pricing teasers, and FAQ copy aligned with a **self-hosted source-code** product (not SaaS trial language)
+- Removed/replaced inflated claims: fake “14-day trial”, “500+ companies”, “Beta User” labels, and ROI percentages that were not measured
+- Integration status on the home page matches the product docs (e.g. Zapier/Checkr available with config; Slack/Outlook planned; Google Calendar local unless OAuth is set)
+- Stack badges updated to **Next.js 15**
+- Testimonials, blog teaser, comparison, and social-proof UI **kept**; only wording/labels edited
+
+### Documentation
+- `docs/API.md` — job board post endpoint described as live-when-credentials / otherwise draft (not “stub only”)
+- Changelog / README / Documentation integration notes kept consistent with the Integration Status table
+
+### Still honest / unchanged product facts
+- DocuSign remains a **stub** (workflow ready; bring your own SDK)
+- Slack and Outlook remain **not connected** (planned)
+- Optional OpenAI tools still work with **rule-based fallbacks** when no API key is set
+
+---
+
 ## What’s new in 2.2 — July 2026
 
 **If you already use DevLumiq:** this is an add-on update. Your current data and workflows stay the same. New tools only appear when you turn them on or connect an optional service.
@@ -113,7 +135,7 @@ v1 included everything you need to run recruitment operations:
 
 ### v2 (Upgraded Product)
 
-v2 adds enterprise-grade security, multi-tenancy, and optional AI on top of everything in v1.
+v2 adds stronger security controls, multi-tenancy, and optional AI on top of everything in v1.
 
 **Security Hardening**
 - CSRF protection with origin validation
@@ -133,7 +155,7 @@ v2 adds enterprise-grade security, multi-tenancy, and optional AI on top of ever
 - Organization-scoped queries throughout the API
 - Data isolation between companies
 
-**AI Integration (Optional â€” works with AND without API key)**
+**AI Integration (Optional — works with AND without API key)**
 - AI Resume Parsing (fallback: regex extraction)
 - AI Candidate Ranking (fallback: skill-match scoring)
 - AI Candidate Screening (fallback: rule-based verdict)
@@ -146,7 +168,7 @@ v2 adds enterprise-grade security, multi-tenancy, and optional AI on top of ever
 - Chrome Extension token auth for LinkedIn import
 - WhatsApp Business API messaging
 - DocuSign stub workflow (SDK integration required for live signing)
-- Job board posting stub (DB records, board APIs not connected)
+- Job board posting to LinkedIn / Indeed / Glassdoor when org credentials are configured; otherwise draft records are stored
 
 **Infrastructure**
 - S3 / Cloudflare R2 file storage with local fallback
@@ -154,7 +176,7 @@ v2 adds enterprise-grade security, multi-tenancy, and optional AI on top of ever
 - Complete API reference (`docs/API.md`)
 
 **Marketing Fixes**
-- Removed false AI claims ("AI screening" â†’ "Smart screening")
+- Removed false AI claims ("AI screening" → "Smart screening")
 - Removed false `connected: true` on unimplemented integrations
 - Removed hardcoded sample data from all API routes
 
@@ -185,7 +207,7 @@ This script does everything automatically:
 
 ### After Upgrade
 
-- **All your data is still there.** Candidates, jobs, applications, messages â€” everything.
+- **All your data is still there.** Candidates, jobs, applications, messages — everything.
 - **Users must reset passwords.** Existing v1 users need to click "Forgot Password" once to set a new password before logging in.
 - **Do NOT run `npm run seed`.** The seed script detects real data and refuses to run to protect your data.
 - Log in as admin and review company settings at `/dashboard/settings`.

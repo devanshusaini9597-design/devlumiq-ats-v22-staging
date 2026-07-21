@@ -2,7 +2,7 @@
 
 Turn a DevLumiq ATS deployment into a fully branded product for a client — without forking the codebase.
 
-**Included with:** Enterprise plan, or the purchasable `whiteLabelKit` add-on (`Subscription.addOns.whiteLabelKit`).
+**Included with:** Extended / Enterprise entitlement, or the purchasable `whiteLabelKit` add-on (`Subscription.addOns.whiteLabelKit`).
 
 **Grandfathered for all plans:** careers colors, logo, favicon, hero copy, and Company Builder basics. Existing buyers keep what they already use.
 

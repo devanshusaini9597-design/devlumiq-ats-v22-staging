@@ -136,8 +136,11 @@ All AI endpoints work **with or without** an OpenAI API key. Without a key, rule
 
 | Method | Path | Permission | Description |
 |--------|------|-----------|-------------|
-| POST | `/jobboards/post` | MANAGE_INTEGRATIONS | Post job to boards (stub — DB record only) |
+| POST | `/jobboards/post` | MANAGE_INTEGRATIONS | Post job to boards (live HTTP when credentials exist; otherwise draft DB record) |
 | GET | `/jobboards/post?jobId=` | MANAGE_INTEGRATIONS | Get board postings for a job |
+| GET | `/jobboards/credentials` | MANAGE_INTEGRATIONS | List org board credentials (secrets masked) |
+| PUT | `/jobboards/credentials` | MANAGE_INTEGRATIONS | Save encrypted LinkedIn / Indeed / Glassdoor credentials |
+| DELETE | `/jobboards/credentials` | MANAGE_INTEGRATIONS | Remove board credentials |
 | POST | `/linkedin/import` | CREATE_CANDIDATE | Import LinkedIn profile (via Chrome extension) |
 | POST | `/esignature/send` | USE_ESIGNATURE | Send e-signature request (DocuSign stub) |
 | GET | `/esignature/send?candidateId=` | Any authenticated | Get signature requests |

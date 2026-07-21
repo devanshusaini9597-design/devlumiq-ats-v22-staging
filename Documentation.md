@@ -354,7 +354,8 @@ Stripe optional price env vars: `STRIPE_PRICE_WHITELABEL_KIT`, `STRIPE_PRICE_ANA
 Devlumiq ATS supports 10 languages: English, Spanish, Arabic, French, German, Portuguese, Hindi, Chinese, Japanese, and Russian.
 
 - All translation strings are in **`src/lib/translations.ts`**.
-- Edit or add keys in that file. The active locale is picked up automatically.
+- **English (`en`) is the source of truth** for marketing and product claims. Other locales may still contain older marketing wording until they are synced.
+- Edit or add keys in that file. The active locale is picked up automatically. Missing keys fall back to English.
 - Users can switch language via the locale switcher in the header or dashboard sidebar.
 
 ---
