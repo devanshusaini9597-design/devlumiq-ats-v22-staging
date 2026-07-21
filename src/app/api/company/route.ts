@@ -1,7 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth, withPermission } from '@/lib/with-permission';
+import { hasEntitlement } from '@/lib/plan-limits';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
+/** Kit extras — colors/logo stay available to all plans (grandfathered) */
+async function stripKitExtrasIfNotEntitled(
+  orgId: string,
+  data: Record<string, unknown>
+): Promise<{ data: Record<string, unknown>; blocked?: string }> {
+  const { allowed } = await hasEntitlement(orgId, 'whiteLabel');
+  if (allowed) return { data };
+  const blocked: string[] = [];
+  if (data.customCss !== undefined && data.customCss) {
+    delete data.customCss;
+    blocked.push('customCss');
+  }
+  if (data.customDomain !== undefined && data.customDomain) {
+    delete data.customDomain;
+    blocked.push('customDomain');
+  }
+  if (blocked.length) {
+    return {
+      data,
+      blocked: `White-Label Kit required to set: ${blocked.join(', ')}. Colors and logo remain available on all plans.`,
+    };
+  }
+  return { data };
+}
 // GET /api/company - Get company profile
 export const GET = withAuth(async () => {
   try {
@@ -25,7 +51,7 @@ export const GET = withAuth(async () => {
 });
 
 // POST /api/company - Create or update company profile
-export const POST = withPermission('MANAGE_COMPANY', async (request: NextRequest) => {
+export const POST = withPermission('MANAGE_COMPANY', async (request: NextRequest, _ctx, session) => {
   try {
     const data = await request.json();
     
@@ -64,8 +90,10 @@ export const POST = withPermission('MANAGE_COMPANY', async (request: NextRequest
 
     // Check if company exists
     const existing = await prisma.company.findFirst();
-
-    const companyData: any = {
+    const orgIdOrErr = requireOrgId(session);
+    if (isOrgError(orgIdOrErr)) return orgIdOrErr;
+    const orgId = orgIdOrErr;
+    let companyData: any = {
       name,
       slug,
       description,
@@ -94,6 +122,15 @@ export const POST = withPermission('MANAGE_COMPANY', async (request: NextRequest
       enableEmailShare,
       isPublished,
     };
+
+    if (orgId) {
+      const gated = await stripKitExtrasIfNotEntitled(orgId, companyData);
+      companyData = gated.data;
+      if (gated.blocked && (customCss || customDomain)) {
+        // Soft-warn but still save grandfathered fields
+        console.info('[white-label]', gated.blocked);
+      }
+    }
 
     let company;
 
@@ -189,7 +226,7 @@ export const POST = withPermission('MANAGE_COMPANY', async (request: NextRequest
 });
 
 // PATCH /api/company - Partial update
-export const PATCH = withPermission('MANAGE_COMPANY', async (request: NextRequest) => {
+export const PATCH = withPermission('MANAGE_COMPANY', async (request: NextRequest, _ctx, session) => {
   try {
     const data = await request.json();
     const existing = await prisma.company.findFirst();
@@ -229,9 +266,20 @@ export const PATCH = withPermission('MANAGE_COMPANY', async (request: NextReques
       }
     }
 
+    const orgIdOrErr = requireOrgId(session);
+    if (isOrgError(orgIdOrErr)) return orgIdOrErr;
+    const orgId = orgIdOrErr;
+    const gated = await stripKitExtrasIfNotEntitled(orgId, allowed);
+    if (gated.blocked && (data.customCss || data.customDomain)) {
+      return NextResponse.json(
+        { error: gated.blocked, code: 'WHITELABEL_KIT_REQUIRED' },
+        { status: 403 }
+      );
+    }
+
     const company = await prisma.company.update({
       where: { id: existing.id },
-      data: allowed,
+      data: gated.data,
     });
 
     return NextResponse.json(company);

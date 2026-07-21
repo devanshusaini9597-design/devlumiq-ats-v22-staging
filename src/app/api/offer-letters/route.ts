@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth, withPermission } from '@/lib/with-permission';
 import { sanitizeHtml } from '@/lib/sanitize';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 export const GET = withAuth(async (_req, _ctx, session) => {
   try {
-    const orgFilter = session.organizationId
-      ? { candidate: { organizationId: session.organizationId } }
-      : {};
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
+    const orgFilter = { candidate: { organizationId: orgId } };
     const offers = await prisma.offerLetter.findMany({
       where: orgFilter,
       include: {
@@ -24,14 +26,15 @@ export const GET = withAuth(async (_req, _ctx, session) => {
 
 export const POST = withPermission('GENERATE_OFFER_LETTER', async (req: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const data = await req.json();
 
     // Resolve jobId: use provided, or find from candidate's application
     let jobId = data.jobId;
     if (!jobId && data.candidateId) {
-      const orgJobIds = session.organizationId
-        ? (await prisma.job.findMany({ where: { companyId: session.organizationId }, select: { id: true } })).map(j => j.id)
-        : [];
+      const orgJobIds = (await prisma.job.findMany({ where: { companyId: orgId }, select: { id: true } })).map(j => j.id);
       const app = await prisma.application.findFirst({
         where: {
           candidateId: data.candidateId,
@@ -44,7 +47,7 @@ export const POST = withPermission('GENERATE_OFFER_LETTER', async (req: NextRequ
     }
     if (!jobId) {
       const job = await prisma.job.findFirst({
-        where: session.organizationId ? { companyId: session.organizationId } : {},
+        where: { companyId: orgId },
         select: { id: true },
       });
       jobId = job?.id;
@@ -54,9 +57,9 @@ export const POST = withPermission('GENERATE_OFFER_LETTER', async (req: NextRequ
     }
 
     // Verify candidate belongs to org if candidateId provided
-    if (data.candidateId && session.organizationId) {
+    if (data.candidateId) {
       const candidate = await prisma.candidate.findFirst({
-        where: { id: data.candidateId, organizationId: session.organizationId },
+        where: { id: data.candidateId, organizationId: orgId },
         select: { id: true },
       });
       if (!candidate) {

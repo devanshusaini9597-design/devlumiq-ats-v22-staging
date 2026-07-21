@@ -1,20 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth';
+import { withAuth } from '@/lib/with-permission';
+
+type Ctx = { params: Promise<{ id: string }> };
 
 // POST /api/integrations/[id]/connect — persist connection in Integration table
-export async function POST(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAuth(async (_request: NextRequest, ctx: Ctx, user) => {
   try {
-    const user = await requireAuth();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { id } = await params;
+    const { id } = await ctx.params;
     const provider = id.toUpperCase();
 
-    // Upsert: mark as active (real OAuth tokens would be stored here per-provider)
     await prisma.integration.upsert({
       where: { userId_provider: { userId: user.id, provider } },
       create: {
@@ -32,18 +27,12 @@ export async function POST(
     console.error('POST /api/integrations/[id]/connect', e);
     return NextResponse.json({ error: 'Failed to connect integration' }, { status: 500 });
   }
-}
+});
 
 // DELETE /api/integrations/[id]/connect — soft-disconnect
-export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAuth(async (_request: NextRequest, ctx: Ctx, user) => {
   try {
-    const user = await requireAuth();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { id } = await params;
+    const { id } = await ctx.params;
     const provider = id.toUpperCase();
 
     await prisma.integration.updateMany({
@@ -56,4 +45,4 @@ export async function DELETE(
     console.error('DELETE /api/integrations/[id]/connect', e);
     return NextResponse.json({ error: 'Failed to disconnect integration' }, { status: 500 });
   }
-}
+});

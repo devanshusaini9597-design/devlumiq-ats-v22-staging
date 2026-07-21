@@ -1,21 +1,41 @@
-// Content script for LinkedIn profile pages - Enhanced Version
-(function() {
+// Content script for LinkedIn profile pages — hardened SPA + resilient selectors
+(function () {
   'use strict';
 
-  // Configuration
   const CONFIG = {
     SELECTORS: {
-      name: 'h1[class*="inline"]',
-      headline: '[class*="text-body-medium"]',
-      location: '[class*="top-card__subline-item"]',
-      experience: '#experience',
-      education: '#education',
-      skills: '#skills',
-      about: '#about',
-      actionBar: '.pv-top-card-v2-ctas, [class*="pv-top-card__actions"], [class*="profile-buttons"]'
+      name: [
+        'h1.text-heading-xlarge',
+        'h1[class*="inline"]',
+        'main section h1',
+        'h1',
+      ],
+      headline: [
+        '.text-body-medium.break-words',
+        'div.text-body-medium',
+        '[data-generated-suggestion-target]',
+        '.top-card-layout__headline',
+      ],
+      location: [
+        '.text-body-small.inline.t-black--light.break-words',
+        'span.text-body-small.inline',
+        '.top-card__subline-item',
+        '.top-card-layout__first-subline',
+      ],
+      experience: ['#experience', 'section[id*="experience"]', 'div[id*="experience"]'],
+      education: ['#education', 'section[id*="education"]'],
+      skills: ['#skills', 'section[id*="skills"]', 'div[id*="skills"]'],
+      about: ['#about', 'section[id*="about"]'],
+      actionBar: [
+        '.pv-top-card-v2-ctas',
+        '.pvs-profile-actions',
+        'div.ph5.pb5',
+        '[class*="pv-top-card__actions"]',
+        'main section:first-of-type div.mt2',
+      ],
     },
     MAX_SKILLS: 50,
-    MAX_EXPERIENCE: 10
+    MAX_EXPERIENCE: 10,
   };
 
   const BUTTON_STATES = {
@@ -23,29 +43,66 @@
     importing: { text: 'Importing...', class: 'ats-btn-loading' },
     success: { text: '✓ Imported!', class: 'ats-btn-success' },
     error: { text: '✗ Failed', class: 'ats-btn-error' },
-    validating: { text: 'Checking...', class: 'ats-btn-loading' }
+    validating: { text: 'Checking...', class: 'ats-btn-loading' },
   };
 
   let importButton = null;
   let isProcessing = false;
+  let lastUrl = location.href;
+  let buttonRetryTimer = null;
 
-  // Check if we're on a profile page
-  function isProfilePage() {
-    return window.location.href.includes('/in/') && 
-           document.querySelector(CONFIG.SELECTORS.name) !== null;
+  function firstText(selectors) {
+    for (const selector of selectors) {
+      const el = document.querySelector(selector);
+      const text = el?.textContent?.trim();
+      if (text) return text;
+    }
+    return '';
   }
 
-  // Create and add import button
-  function createImportButton() {
-    // Remove existing button
-    removeImportButton();
+  function firstEl(selectors) {
+    for (const selector of selectors) {
+      const el = document.querySelector(selector);
+      if (el) return el;
+    }
+    return null;
+  }
 
+  function isProfilePage() {
+    return /linkedin\.com\/in\//i.test(location.href);
+  }
+
+  function expandSeeMore() {
+    document
+      .querySelectorAll(
+        'button.inline-show-more-text__button, button[aria-label*="more" i], button[aria-expanded="false"]'
+      )
+      .forEach((btn) => {
+        try {
+          if (/more|see|show/i.test(btn.textContent || btn.getAttribute('aria-label') || '')) {
+            btn.click();
+          }
+        } catch {
+          /* ignore */
+        }
+      });
+  }
+
+  function createImportButton() {
+    removeImportButton();
     if (!isProfilePage()) return;
 
-    // Create button element
+    // Wait for name to appear (LinkedIn SPA)
+    if (!firstText(CONFIG.SELECTORS.name)) {
+      if (buttonRetryTimer) clearTimeout(buttonRetryTimer);
+      buttonRetryTimer = setTimeout(createImportButton, 800);
+      return;
+    }
+
     importButton = document.createElement('button');
     importButton.id = 'ats-import-btn';
     importButton.className = 'ats-import-button';
+    importButton.type = 'button';
     importButton.innerHTML = `
       <span class="ats-btn-icon">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -54,63 +111,41 @@
       </span>
       <span class="ats-btn-text">Import to ATS</span>
     `;
-    
-    // Add click handler
     importButton.addEventListener('click', handleImportClick);
 
-    // Find insertion point
-    const actionBar = document.querySelector(CONFIG.SELECTORS.actionBar);
+    const actionBar = firstEl(CONFIG.SELECTORS.actionBar);
     if (actionBar) {
-      // Insert as first button
       actionBar.insertBefore(importButton, actionBar.firstChild);
     } else {
-      // Fallback: Try to find alternative locations
-      const header = document.querySelector('header') || document.querySelector('[class*="profile-header"]');
-      if (header) {
-        const container = document.createElement('div');
-        container.className = 'ats-button-container';
-        container.appendChild(importButton);
-        header.appendChild(container);
-      }
+      const header =
+        document.querySelector('main section') ||
+        document.querySelector('header') ||
+        document.body;
+      const container = document.createElement('div');
+      container.className = 'ats-button-container';
+      container.appendChild(importButton);
+      header.prepend(container);
     }
   }
 
   function removeImportButton() {
-    const existingBtn = document.getElementById('ats-import-btn');
-    if (existingBtn) {
-      existingBtn.remove();
-    }
-    const existingContainer = document.querySelector('.ats-button-container');
-    if (existingContainer) {
-      existingContainer.remove();
-    }
+    document.getElementById('ats-import-btn')?.remove();
+    document.querySelector('.ats-button-container')?.remove();
     importButton = null;
   }
 
   function updateButtonState(state, errorMessage = '') {
     if (!importButton) return;
-    
     const config = BUTTON_STATES[state];
     const textSpan = importButton.querySelector('.ats-btn-text');
-    
-    if (textSpan) {
-      textSpan.textContent = config.text;
-    }
-    
-    // Remove all state classes
-    Object.values(BUTTON_STATES).forEach(s => {
+    if (textSpan) textSpan.textContent = config.text;
+
+    Object.values(BUTTON_STATES).forEach((s) => {
       if (s.class) importButton.classList.remove(s.class);
     });
-    
-    // Add new state class
-    if (config.class) {
-      importButton.classList.add(config.class);
-    }
-    
-    // Update disabled state
-    importButton.disabled = (state === 'importing' || state === 'validating');
-    
-    // Show error tooltip if error
+    if (config.class) importButton.classList.add(config.class);
+    importButton.disabled = state === 'importing' || state === 'validating';
+
     if (state === 'error' && errorMessage) {
       showTooltip(importButton, errorMessage);
     }
@@ -121,275 +156,214 @@
     tooltip.className = 'ats-tooltip';
     tooltip.textContent = message;
     document.body.appendChild(tooltip);
-    
     const rect = element.getBoundingClientRect();
     tooltip.style.left = `${rect.left + rect.width / 2}px`;
     tooltip.style.top = `${rect.bottom + 8}px`;
-    
-    setTimeout(() => tooltip.remove(), 3000);
+    setTimeout(() => tooltip.remove(), 4000);
   }
 
-  // Enhanced profile data extraction
+  function extractListItems(section, max) {
+    if (!section) return [];
+    const items = [];
+    const nodes = section.querySelectorAll(
+      'li.artdeco-list__item, li, div[data-view-name*="profile-component-entity"]'
+    );
+    nodes.forEach((item) => {
+      if (items.length >= max) return;
+      const titleEl = item.querySelector(
+        'div[class*="hoverable-link-text"] span[aria-hidden="true"], .mr1.t-bold span[aria-hidden="true"], h3, span.mr1 span[aria-hidden="true"]'
+      );
+      const companyEl = item.querySelector(
+        'span.t-14.t-normal span[aria-hidden="true"], .t-14.t-normal:not(.t-black--light) span[aria-hidden="true"]'
+      );
+      const dateEl = item.querySelector(
+        '.t-black--light span[aria-hidden="true"], span.pvs-entity__caption-wrapper'
+      );
+      const title = titleEl?.textContent?.trim() || '';
+      const company = companyEl?.textContent?.trim() || '';
+      if (title || company) {
+        items.push({
+          title,
+          company,
+          duration: dateEl?.textContent?.trim() || '',
+        });
+      }
+    });
+    return items;
+  }
+
   function extractProfileData() {
-    const data = {
-      name: '',
-      headline: '',
-      currentTitle: '',
-      currentCompany: '',
-      location: '',
-      about: '',
-      experience: [],
-      education: [],
-      skills: [],
-      linkedInUrl: window.location.href,
-      extractedAt: new Date().toISOString()
-    };
+    expandSeeMore();
 
-    try {
-      // Name - try multiple selectors
-      const nameSelectors = [
-        'h1[class*="inline"]',
-        'h1',
-        '[class*="profile-name"]',
-        'h1[class*="top-card-layout__title"]'
-      ];
-      for (const selector of nameSelectors) {
-        const el = document.querySelector(selector);
-        if (el?.textContent?.trim()) {
-          data.name = el.textContent.trim();
-          break;
-        }
+    const name = firstText(CONFIG.SELECTORS.name);
+    const headline = firstText(CONFIG.SELECTORS.headline);
+    let location = '';
+    for (const selector of CONFIG.SELECTORS.location) {
+      const el = document.querySelector(selector);
+      const text = el?.textContent?.trim();
+      if (text && !/followers|connections|contact/i.test(text)) {
+        location = text;
+        break;
       }
-
-      // Headline
-      const headlineSelectors = [
-        '[class*="text-body-medium"]',
-        '[class*="headline"]',
-        'h2[class*="top-card-layout__headline"]'
-      ];
-      for (const selector of headlineSelectors) {
-        const el = document.querySelector(selector);
-        if (el?.textContent?.trim()) {
-          data.headline = el.textContent.trim();
-          break;
-        }
-      }
-
-      // Location
-      const locationSelectors = [
-        '[class*="top-card__subline-item"]',
-        '[class*="location"]',
-        '[class*="top-card__right-column"] [class*="text-body-small"]'
-      ];
-      for (const selector of locationSelectors) {
-        const el = document.querySelector(selector);
-        if (el?.textContent?.trim()) {
-          const text = el.textContent.trim();
-          if (text.includes(',') || text.toLowerCase().includes('area')) {
-            data.location = text;
-            break;
-          }
-        }
-      }
-
-      // Current Experience
-      const expSection = document.querySelector(CONFIG.SELECTORS.experience);
-      if (expSection) {
-        const expItems = expSection.querySelectorAll('li, [class*="experience-item"]');
-        let count = 0;
-        expItems.forEach(item => {
-          if (count >= CONFIG.MAX_EXPERIENCE) return;
-          
-          const titleEl = item.querySelector('[class*="experience-item__title"], h3, [class*="title"]');
-          const companyEl = item.querySelector('[class*="experience-item__subtitle"], [class*="company"]');
-          const dateEl = item.querySelector('[class*="date-range"], [class*="duration"]');
-          
-          if (titleEl || companyEl) {
-            const exp = {
-              title: titleEl?.textContent?.trim() || '',
-              company: companyEl?.textContent?.trim() || '',
-              duration: dateEl?.textContent?.trim() || ''
-            };
-            data.experience.push(exp);
-            
-            // Set current position from first experience
-            if (count === 0) {
-              data.currentTitle = exp.title;
-              data.currentCompany = exp.company;
-            }
-            count++;
-          }
-        });
-      }
-
-      // Education
-      const eduSection = document.querySelector(CONFIG.SELECTORS.education);
-      if (eduSection) {
-        const eduItems = eduSection.querySelectorAll('li, [class*="education-item"]');
-        eduItems.forEach(item => {
-          const schoolEl = item.querySelector('[class*="education__school"], h3');
-          const degreeEl = item.querySelector('[class*="education__item"], [class*="degree"]');
-          
-          if (schoolEl) {
-            data.education.push({
-              school: schoolEl.textContent?.trim() || '',
-              degree: degreeEl?.textContent?.trim() || ''
-            });
-          }
-        });
-      }
-
-      // Skills
-      const skillsSection = document.querySelector(CONFIG.SELECTORS.skills);
-      if (skillsSection) {
-        const skillItems = skillsSection.querySelectorAll(
-          '.pv-skill-category-entity__name-text, [class*="skill-name"], [class*="skill-entity__skill-name"]'
-        );
-        let count = 0;
-        skillItems.forEach(el => {
-          if (count >= CONFIG.MAX_SKILLS) return;
-          const skill = el.textContent?.trim();
-          if (skill) {
-            data.skills.push(skill);
-            count++;
-          }
-        });
-      }
-
-      // About/Summary
-      const aboutSection = document.querySelector(CONFIG.SELECTORS.about);
-      if (aboutSection) {
-        const aboutSelectors = [
-          '.inline-show-more-text',
-          '[class*="about__summary"]',
-          '[class*="text-body-small"]',
-          'span[class*="visually-hidden"]'
-        ];
-        for (const selector of aboutSelectors) {
-          const aboutText = aboutSection.querySelector(selector);
-          if (aboutText?.textContent?.trim()) {
-            data.about = aboutText.textContent.trim();
-            break;
-          }
-        }
-      }
-
-    } catch (error) {
-      console.error('Error extracting profile data:', error);
     }
 
-    return data;
+    const experience = extractListItems(firstEl(CONFIG.SELECTORS.experience), CONFIG.MAX_EXPERIENCE);
+    const educationRaw = extractListItems(firstEl(CONFIG.SELECTORS.education), 5);
+    const education = educationRaw.map((e) => ({
+      school: e.title || e.company,
+      degree: e.company && e.title ? e.company : e.duration,
+    }));
+
+    const skills = [];
+    const skillsSection = firstEl(CONFIG.SELECTORS.skills);
+    if (skillsSection) {
+      skillsSection
+        .querySelectorAll(
+          'a[data-field="skill_card_skill_topic"] span[aria-hidden="true"], .hoverable-link-text span[aria-hidden="true"], span[class*="skill"]'
+        )
+        .forEach((el) => {
+          if (skills.length >= CONFIG.MAX_SKILLS) return;
+          const skill = el.textContent?.trim();
+          if (skill && skill.length < 60 && !skills.includes(skill)) skills.push(skill);
+        });
+    }
+
+    // Fallback: pull skills-like tokens from headline
+    if (!skills.length && headline) {
+      headline.split(/[|•·,]/).forEach((part) => {
+        const s = part.trim();
+        if (s && s.length > 1 && s.length < 40 && skills.length < 10) skills.push(s);
+      });
+    }
+
+    let about = '';
+    const aboutSection = firstEl(CONFIG.SELECTORS.about);
+    if (aboutSection) {
+      about =
+        aboutSection.querySelector('span[aria-hidden="true"]')?.textContent?.trim() ||
+        aboutSection.textContent?.trim().slice(0, 2000) ||
+        '';
+    }
+
+    return {
+      name,
+      headline,
+      currentTitle: experience[0]?.title || headline,
+      currentCompany: experience[0]?.company || '',
+      location,
+      about,
+      experience,
+      education,
+      skills,
+      yearsOfExperience: Math.min(40, experience.length * 2),
+      linkedInUrl: normalizeProfileUrl(location.href),
+      extractedAt: new Date().toISOString(),
+    };
   }
 
-  // Handle import button click
+  function normalizeProfileUrl(href) {
+    try {
+      const u = new URL(href);
+      const m = u.pathname.match(/\/in\/([^/]+)/i);
+      if (m) return `https://www.linkedin.com/in/${m[1]}`;
+    } catch {
+      /* ignore */
+    }
+    return href.split('?')[0];
+  }
+
   async function handleImportClick() {
     if (isProcessing) return;
     isProcessing = true;
-    
     updateButtonState('importing');
-    
+
     try {
       const profileData = extractProfileData();
-      
-      // Validate extracted data
       if (!profileData.name) {
-        throw new Error('Could not extract candidate name. Please wait for the page to fully load.');
+        throw new Error('Could not extract candidate name. Scroll the page and try again.');
       }
 
-      // Send to background script
       const response = await chrome.runtime.sendMessage({
         type: 'IMPORT_CANDIDATE',
         data: {
-          linkedInUrl: window.location.href,
-          linkedInData: profileData
-        }
+          linkedInUrl: normalizeProfileUrl(window.location.href),
+          linkedInData: profileData,
+        },
       });
 
-      if (response.success) {
+      if (response?.success) {
         updateButtonState('success');
-        
-        // Store candidate ID for status checking
         if (response.candidateId) {
           chrome.storage.local.set({
             [`lastImport_${response.candidateId}`]: {
               candidateId: response.candidateId,
               candidateName: profileData.name,
-              importedAt: new Date().toISOString()
-            }
+              importedAt: new Date().toISOString(),
+              updated: !!response.updated,
+            },
           });
         }
       } else {
-        throw new Error(response.error || 'Import failed');
+        throw new Error(response?.error || 'Import failed');
       }
-
     } catch (error) {
       console.error('Import error:', error);
-      updateButtonState('error', error.message);
+      updateButtonState('error', error.message || String(error));
     } finally {
       isProcessing = false;
-      
-      // Reset button after delay
-      setTimeout(() => {
-        updateButtonState('default');
-      }, 3000);
+      setTimeout(() => updateButtonState('default'), 3500);
     }
   }
 
-  // Listen for messages from background script
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    switch (message.type) {
-      case 'TRIGGER_IMPORT':
-        if (importButton && !isProcessing) {
-          handleImportClick();
-        }
-        sendResponse({ triggered: true });
-        break;
-        
-      case 'SHOW_NOTIFICATION':
-        showTooltip(importButton || document.body, message.message);
-        sendResponse({ shown: true });
-        break;
-        
-      default:
-        sendResponse({ error: 'Unknown message type' });
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message.type === 'TRIGGER_IMPORT') {
+      if (importButton && !isProcessing) handleImportClick();
+      sendResponse({ triggered: true });
+    } else if (message.type === 'SHOW_NOTIFICATION') {
+      showTooltip(importButton || document.body, message.message);
+      sendResponse({ shown: true });
+    } else {
+      sendResponse({ error: 'Unknown message type' });
     }
     return true;
   });
 
-  // Watch for page changes (LinkedIn is a SPA)
-  let lastUrl = location.href;
-  const observer = new MutationObserver(() => {
-    const url = location.href;
-    if (url !== lastUrl) {
-      lastUrl = url;
-      // Small delay to let LinkedIn render the new content
-      setTimeout(() => {
-        if (isProfilePage()) {
-          createImportButton();
-        } else {
-          removeImportButton();
-        }
-      }, 1500);
+  function onNavigation() {
+    if (location.href === lastUrl) {
+      // Soft re-render on same URL — ensure button exists
+      if (isProfilePage() && !document.getElementById('ats-import-btn')) {
+        createImportButton();
+      }
+      return;
     }
-  });
-
-  // Start observing
-  observer.observe(document, { subtree: true, childList: true });
-
-  // Initial button creation with delay for page load
-  if (document.readyState === 'complete') {
-    setTimeout(createImportButton, 2000);
-  } else {
-    window.addEventListener('load', () => {
-      setTimeout(createImportButton, 2000);
-    });
+    lastUrl = location.href;
+    setTimeout(() => {
+      if (isProfilePage()) createImportButton();
+      else removeImportButton();
+    }, 600);
   }
 
-  // Handle visibility changes (when user switches tabs)
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && isProfilePage()) {
-      setTimeout(createImportButton, 500);
-    }
-  });
+  const observer = new MutationObserver(() => onNavigation());
+  observer.observe(document.documentElement, { subtree: true, childList: true });
 
+  // LinkedIn history API navigation
+  ['pushState', 'replaceState'].forEach((method) => {
+    const original = history[method];
+    history[method] = function (...args) {
+      const result = original.apply(this, args);
+      setTimeout(onNavigation, 50);
+      return result;
+    };
+  });
+  window.addEventListener('popstate', () => setTimeout(onNavigation, 50));
+
+  if (document.readyState === 'complete') {
+    setTimeout(createImportButton, 1200);
+  } else {
+    window.addEventListener('load', () => setTimeout(createImportButton, 1200));
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && isProfilePage()) setTimeout(createImportButton, 400);
+  });
 })();

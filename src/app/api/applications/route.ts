@@ -7,14 +7,16 @@ import {
   maskCandidateForList,
   shouldBlindScreen,
 } from '@/lib/blind-screening';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 /** GET: list all applications with candidate + job (for kanban by stage) */
 export const GET = withAuth(async (_req, _ctx, session) => {
   try {
-    const orgJobIds = session.organizationId
-      ? (await prisma.job.findMany({ where: { companyId: session.organizationId }, select: { id: true } })).map(j => j.id)
-      : [];
-    const orgFilter = orgJobIds.length > 0 ? { jobId: { in: orgJobIds } } : {};
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
+    const orgJobIds = (await prisma.job.findMany({ where: { companyId: orgId }, select: { id: true } })).map(j => j.id);
+    const orgFilter = { jobId: { in: orgJobIds } };
     const blindEnabled = shouldBlindScreen(
       session.role,
       await isOrgBlindScreeningEnabled(session.organizationId),

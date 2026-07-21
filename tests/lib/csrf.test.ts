@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { validateCsrf } from '@/lib/csrf';
 
-function makeRequest(method: string, headers: Record<string, string> = {}) {
+function makeRequest(method: string, headers: Record<string, string> = {}, pathname = '/api/candidates') {
   return {
     method,
     headers: new Headers(headers),
+    nextUrl: { pathname },
   } as any;
 }
 
@@ -41,6 +42,20 @@ describe('CSRF Protection', () => {
   it('blocks POST with mismatched origin', () => {
     const result = validateCsrf(makeRequest('POST', { origin: 'https://evil.com' }));
     expect(result).not.toBeNull();
+  });
+
+  it('skips CSRF for Bearer API keys', () => {
+    const result = validateCsrf(
+      makeRequest('POST', { authorization: 'Bearer ext_token_abc' })
+    );
+    expect(result).toBeNull();
+  });
+
+  it('skips CSRF for exempt webhook paths', () => {
+    const req = makeRequest('POST');
+    (req as any).nextUrl = { pathname: '/api/webhooks/twilio' };
+    const result = validateCsrf(req as any);
+    expect(result).toBeNull();
   });
 
   it('allows all requests in development', () => {

@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { signSession, sessionCookieOptions, SESSION_COOKIE, createUserSession } from '@/lib/auth';
-import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { rateLimitAsync, getClientIp } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
     const ip = getClientIp(request);
-    const rl = rateLimit(`login:${ip}`, 10, 15 * 60 * 1000);
+    const rl = await rateLimitAsync(`login:${ip}`, 10, 15 * 60 * 1000);
     if (!rl.success) {
       return NextResponse.json(
         { error: 'Too many login attempts. Please try again later.' },

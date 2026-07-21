@@ -303,11 +303,13 @@ The file storage utility is at `src/lib/file-storage.ts`.
 | Email/SMTP | ✅ Working | Set SMTP_* vars in .env |
 | Checkr (background checks) | ✅ Working | Set CHECKR_API_KEY in .env |
 | Zapier | ✅ Working | Set ZAPIER_WEBHOOK_URL in .env |
-| Chrome Extension (LinkedIn) | ✅ Working | Set EXTENSION_API_KEY in .env |
+| Chrome Extension (LinkedIn) | ✅ Working | Settings → Chrome Extension (domain + token); load unpacked `chrome-extension/` |
 | WhatsApp | ✅ Working | Set WHATSAPP_TOKEN in .env |
 | AI (OpenAI) | ✅ Working (optional) | Set OPENAI_API_KEY in .env |
 | DocuSign | 🔧 Stub | Workflow works, real DocuSign SDK not integrated |
-| Job Boards (LinkedIn, Indeed) | 🔧 Stub | DB records created, board APIs not connected |
+| Job Boards (LinkedIn, Indeed, Glassdoor) | ✅ Live | Save encrypted credentials via `/api/jobboards/credentials`; live HTTP post + unpublish when present, else draft |
+| SSO / SAML | ✅ Opt-in (Enterprise) | Settings → Security → SSO; `/api/auth/sso/login?slug=` |
+| White-Label Kit | ✅ Add-on SKU | `docs/white-label-kit.md`; Enterprise or `addOns.whiteLabelKit` |
 | Google Calendar | 🔧 Local only | Events in DB, external sync needs OAuth |
 | Slack | ❌ Not connected | Planned |
 | Outlook | ❌ Not connected | Planned |
@@ -316,7 +318,7 @@ The file storage utility is at `src/lib/file-storage.ts`.
 
 ## 12. Security
 
-- **Authentication:** JWT stored in httpOnly cookie (`ats_session`)
+- **Authentication:** JWT stored in httpOnly cookie (`ats_session`); optional SAML SSO (Enterprise) without removing password login
 - **Passwords:** bcrypt hashed (12 rounds)
 - **RBAC:** 5 roles (Admin, Recruiter, Hiring Manager, Interviewer, Viewer) with 30+ granular permissions
 - **Rate Limiting:** Per-IP rate limiting on auth and upload endpoints
@@ -324,7 +326,26 @@ The file storage utility is at `src/lib/file-storage.ts`.
 - **Headers:** X-Frame-Options, CSP, HSTS, X-Content-Type-Options, Permissions-Policy
 - **Webhooks:** HMAC signature verification (Checkr, DocuSign)
 - **API Keys:** Hashed storage for integration keys
-- **Data Isolation:** Organization-scoped queries
+- **Data Isolation:** Organization-scoped queries (fail-closed — missing org context returns 403)
+- **GDPR:** Staff export/erase at `/api/admin/gdpr/*`; candidate export/erase at `/api/admin/gdpr/candidates/*`; **candidate self-service** at `/api/portal/gdpr/*` + UI `/portal/privacy`
+- **Trusted proxy:** Set `TRUSTED_PROXY=true` behind Vercel/nginx so rate limits use real client IPs
+
+---
+
+## 12b. Product add-ons (existing buyers unaffected)
+
+All of the following are **additive / opt-in**. Missing plan, add-on, or credentials = previous behavior.
+
+| SKU / Feature | Gate | Notes |
+|---------------|------|-------|
+| Chrome LinkedIn Import | Always available | Fix-and-flip differentiator |
+| Candidate GDPR portal | Always available | Art. 20 / Art. 17 self-service |
+| White-Label Kit | `whiteLabel` or `addOns.whiteLabelKit` | Colors/logo grandfathered for all plans |
+| Job board live post | Org `JobBoardCredential` | Else draft records |
+| SSO / SAML | `sso` or `addOns.sso` | Password login stays default |
+| Analytics Plus | `advancedAnalytics` or `addOns.analyticsPlus` | Summary dashboard stays for all |
+
+Stripe optional price env vars: `STRIPE_PRICE_WHITELABEL_KIT`, `STRIPE_PRICE_ANALYTICS_PLUS`, `STRIPE_PRICE_SSO`.
 
 ---
 

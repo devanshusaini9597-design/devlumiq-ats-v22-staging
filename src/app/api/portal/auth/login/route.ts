@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { rateLimitAsync, getClientIp } from '@/lib/rate-limit';
 
 // POST /api/portal/auth/login - Login candidate portal
 export async function POST(request: NextRequest) {
   try {
     const ip = getClientIp(request);
-    const rl = rateLimit(`portal-login:${ip}`, 10, 15 * 60 * 1000);
+    const rl = await rateLimitAsync(`portal-login:${ip}`, 10, 15 * 60 * 1000);
     if (!rl.success) {
       return NextResponse.json(
         { error: 'Too many login attempts. Please try again later.' },

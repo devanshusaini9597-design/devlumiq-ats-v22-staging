@@ -4,17 +4,19 @@ import { withPermission } from '@/lib/with-permission';
 import { isAIEnabled, rankCandidatesWithAI } from '@/lib/ai';
 import { hasFeature } from '@/lib/plan-limits';
 import { getPlanContext } from '@/lib/with-plan';
+import { requireOrgId, requireOrgFilter, requireCompanyFilter, isOrgError } from '@/lib/require-org';
 
 // POST /api/ai/rank — Rank candidates against a job using AI
 // Falls back to simple skill-matching score if AI is not configured
 export const POST = withPermission('USE_SMART_SEARCH', async (request: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     // Plan feature gate: AI ranking requires AI-enabled plan
-    if (session.organizationId) {
-      const { plan } = await getPlanContext(session.organizationId);
-      if (!hasFeature(plan, 'ai')) {
-        return NextResponse.json({ error: 'AI features require a STARTER or higher plan.', code: 'PLAN_UPGRADE_REQUIRED' }, { status: 403 });
-      }
+    const { plan } = await getPlanContext(orgId);
+    if (!hasFeature(plan, 'ai')) {
+      return NextResponse.json({ error: 'AI features require a STARTER or higher plan.', code: 'PLAN_UPGRADE_REQUIRED' }, { status: 403 });
     }
 
     const { jobId, candidateIds } = await request.json();
@@ -23,7 +25,8 @@ export const POST = withPermission('USE_SMART_SEARCH', async (request: NextReque
       return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
     }
 
-    const orgFilter = session.organizationId ? { companyId: session.organizationId } : {};
+    const orgFilter = requireCompanyFilter(session);
+    if (isOrgError(orgFilter)) return orgFilter;
 
     // Fetch job
     const job = await prisma.job.findUnique({
@@ -43,7 +46,8 @@ export const POST = withPermission('USE_SMART_SEARCH', async (request: NextReque
     const jobSkillsList = extractSkillsFromText(job.requirements);
 
     // Fetch candidates — either specific IDs or all candidates with applications for this job
-    const candidateOrgFilter = session.organizationId ? { organizationId: session.organizationId } : {};
+    const candidateOrgFilter = requireOrgFilter(session);
+    if (isOrgError(candidateOrgFilter)) return candidateOrgFilter;
     const candidates = await prisma.candidate.findMany({
       where: candidateIds?.length
         ? { id: { in: candidateIds }, ...candidateOrgFilter }

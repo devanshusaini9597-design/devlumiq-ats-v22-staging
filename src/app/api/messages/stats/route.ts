@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 // GET /api/messages/stats - Get inbox statistics
 export async function GET() {
@@ -8,10 +9,11 @@ export async function GET() {
     const user = await requireAuth();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const orgFilter = user.organizationId ? { organizationId: user.organizationId } : {};
-    const msgOrgFilter = user.organizationId
-      ? { thread: { organizationId: user.organizationId } }
-      : {};
+    const orgId = requireOrgId(user);
+    if (isOrgError(orgId)) return orgId;
+
+    const orgFilter = { organizationId: orgId };
+    const msgOrgFilter = { thread: { organizationId: orgId } };
 
     const [
       totalThreads,

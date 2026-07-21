@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth, withPermission } from '@/lib/with-permission';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 export const GET = withAuth(async (_req, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const templates = await prisma.emailTemplate.findMany({
       where: {
         OR: [
           { isSystem: true },
-          { organizationId: session.organizationId ?? undefined },
+          { organizationId: orgId },
         ],
       },
       orderBy: { createdAt: 'desc' },
@@ -21,6 +25,9 @@ export const GET = withAuth(async (_req, _ctx, session) => {
 
 export const POST = withPermission('USE_EMAIL_TEMPLATES', async (req: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const data = await req.json();
     const template = await prisma.emailTemplate.create({
       data: {
@@ -32,7 +39,7 @@ export const POST = withPermission('USE_EMAIL_TEMPLATES', async (req: NextReques
         category: data.category || 'general',
         variables: data.variables || '{{candidateName}},{{position}},{{companyName}}',
         isDefault: data.isDefault || false,
-        organizationId: session.organizationId ?? undefined,
+        organizationId: orgId,
       },
     });
     return NextResponse.json({ template }, { status: 201 });
@@ -43,6 +50,9 @@ export const POST = withPermission('USE_EMAIL_TEMPLATES', async (req: NextReques
 
 export const PATCH = withPermission('USE_EMAIL_TEMPLATES', async (req: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const data = await req.json();
     const id = typeof data.id === 'string' ? data.id : '';
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
@@ -51,15 +61,13 @@ export const PATCH = withPermission('USE_EMAIL_TEMPLATES', async (req: NextReque
       where: {
         id,
         OR: [
-          { organizationId: session.organizationId ?? undefined },
+          { organizationId: orgId },
           { isSystem: true },
         ],
       },
     });
     if (!existing) return NextResponse.json({ error: 'Template not found' }, { status: 404 });
-    if (existing.isSystem && existing.organizationId !== session.organizationId) {
-      // Allow org to customize short forms on system templates by cloning fields in-place when org-owned;
-      // system global templates: only update sms/whatsapp if org owns a copy — block name/body edits
+    if (existing.isSystem && existing.organizationId !== orgId) {
       if (!existing.organizationId) {
         return NextResponse.json(
           { error: 'System templates are read-only — create a copy for your organization' },

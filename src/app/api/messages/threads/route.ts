@@ -1,17 +1,18 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth';
+import { withAuth } from '@/lib/with-permission';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
-export async function GET() {
+export const GET = withAuth(async (_req, _ctx, user) => {
   try {
-    const user = await requireAuth();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const orgId = requireOrgId(user);
+    if (isOrgError(orgId)) return orgId;
 
     const threads = await prisma.messageThread.findMany({
       orderBy: { lastMessageAt: 'desc' },
       where: {
         messages: { some: { isDeleted: false } },
-        ...(user.organizationId ? { organizationId: user.organizationId } : {}),
+        organizationId: orgId,
       },
       include: {
         messages: {
@@ -59,27 +60,24 @@ export async function GET() {
     console.error('GET /api/messages/threads', e);
     return NextResponse.json({ error: 'Failed to load threads' }, { status: 500 });
   }
-}
+});
 
-// POST /api/messages/threads - Create new thread with first message
-export async function POST(request: Request) {
+export const POST = withAuth(async (request: NextRequest, _ctx, user) => {
   try {
-    const user = await requireAuth();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const orgId = requireOrgId(user);
+    if (isOrgError(orgId)) return orgId;
 
     const body = await request.json();
     const { subject, toEmail, message, attachments } = body;
 
-    // Create thread
     const thread = await prisma.messageThread.create({
       data: {
         subject: subject || 'No Subject',
         lastMessageAt: new Date(),
-        ...(user.organizationId ? { organizationId: user.organizationId } : {}),
+        organizationId: orgId,
       },
     });
 
-    // Create first message
     const msg = await prisma.message.create({
       data: {
         threadId: thread.id,
@@ -119,4 +117,4 @@ export async function POST(request: Request) {
     console.error('POST /api/messages/threads', e);
     return NextResponse.json({ error: 'Failed to create thread' }, { status: 500 });
   }
-}
+});

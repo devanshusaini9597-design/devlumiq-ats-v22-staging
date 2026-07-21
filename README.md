@@ -43,7 +43,7 @@ All premium tools are integrated directly into the dashboard:
 | **AI Candidate Screening** | Automated fit assessment with verdict, matching/missing skills, and recommendation |
 | **AI Job Description Generator** | Generate complete, inclusive job descriptions from a title and department |
 | **AI Email Drafting** | Draft professional outreach, rejection, offer, and follow-up emails |
-| **Job Board Integrations** | Stub — creates DB records for LinkedIn, Indeed, Glassdoor (API integration required for live posting) |
+| **Job Board Integrations** | Live posting to LinkedIn, Indeed, Glassdoor when org credentials are configured (AES-encrypted); drafts without credentials |
 | **WhatsApp Messaging** | Send candidate communications via WhatsApp |
 
 ---
@@ -287,11 +287,15 @@ src/
 | **Email/SMTP** | ✅ Real | Nodemailer — configure SMTP in .env |
 | **Checkr** | ✅ Real | Background checks via Checkr API |
 | **Zapier** | ✅ Real | Webhook-based integration |
-| **Chrome Extension** | ✅ Real | LinkedIn profile import |
+| **Chrome Extension** | ✅ Real | LinkedIn one-click import — configure domain + token in Settings → Chrome Extension |
 | **WhatsApp** | ✅ Real | Business API messaging |
 | **AI (OpenAI)** | ✅ Real (optional) | Resume parsing, ranking, screening, JD gen, email drafting |
 | **DocuSign** | 🔧 Stub | Workflow functional, SDK integration required |
-| **Job Boards** | 🔧 Stub | DB records created, board API integration required |
+| **Job Boards** | ✅ Live | Posts via LinkedIn / Indeed / Glassdoor APIs when credentials set; otherwise draft records |
+| **SSO / SAML** | ✅ Opt-in | Enterprise / SSO add-on — Settings → Security; password login remains default |
+| **White-Label Kit** | ✅ Add-on SKU | See `docs/white-label-kit.md` — colors/logo stay free; kit extras gated |
+| **Candidate GDPR** | ✅ Real | Portal self-service export/erase at `/portal/privacy` |
+| **Advanced Analytics** | ✅ Gated | Time-to-hire / sources / DEI funnel — PRO or Analytics Plus add-on |
 | **Google Calendar** | 🔧 Local only | Events in DB, external sync requires OAuth setup |
 | **Slack** | ❌ Not connected | Planned integration |
 | **Outlook** | ❌ Not connected | Planned integration |

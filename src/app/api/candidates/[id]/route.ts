@@ -1,32 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { stageToDisplay } from '@/lib/api-helpers';
-import { withAuth, withPermission } from '@/lib/with-permission';
+import { withPermission } from '@/lib/with-permission';
+import { withSessionOrApiKey } from '@/lib/with-api-key';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 import {
   applyBlindScreening,
   isOrgBlindScreeningEnabled,
   shouldBlindScreen,
 } from '@/lib/blind-screening';
 
-export const GET = withAuth(async (
+export const GET = withSessionOrApiKey(null, ['read'], async (
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
   session
 ) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await params;
-    const candidate = await prisma.candidate.findUnique({
-      where: { id },
+    const candidate = await prisma.candidate.findFirst({
+      where: { id, organizationId: orgId },
       include: {
         applications: { include: { job: true } },
       },
     });
 
     if (!candidate) {
-      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
-    }
-
-    if (session.organizationId && candidate.organizationId && candidate.organizationId !== session.organizationId) {
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
     }
 
@@ -92,13 +93,16 @@ export const PATCH = withPermission('EDIT_CANDIDATE', async (
   session
 ) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await params;
 
-    const existing = await prisma.candidate.findUnique({ where: { id }, select: { organizationId: true } });
+    const existing = await prisma.candidate.findFirst({
+      where: { id, organizationId: orgId },
+      select: { id: true },
+    });
     if (!existing) return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
-    if (session.organizationId && existing.organizationId && existing.organizationId !== session.organizationId) {
-      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
-    }
 
     const body = await request.json();
     const { name, email, phone, source } = body as {
@@ -147,13 +151,16 @@ export const DELETE = withPermission('DELETE_CANDIDATE', async (
   session
 ) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await params;
 
-    const existing = await prisma.candidate.findUnique({ where: { id }, select: { organizationId: true } });
+    const existing = await prisma.candidate.findFirst({
+      where: { id, organizationId: orgId },
+      select: { id: true },
+    });
     if (!existing) return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
-    if (session.organizationId && existing.organizationId && existing.organizationId !== session.organizationId) {
-      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
-    }
 
     await prisma.application.deleteMany({ where: { candidateId: id } });
     await prisma.candidate.delete({ where: { id } });

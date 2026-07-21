@@ -205,7 +205,127 @@ export default function AnalyticsPage() {
         </motion.div>
       </div>
       {/* --- Section: Analytics Root - end --- */}
+
+      {/* Advanced analytics add-on (PRO / analyticsPlus) — summary above stays for all plans */}
+      <AdvancedAnalyticsSection />
     </motion.div>
+  );
+}
+
+function AdvancedAnalyticsSection() {
+  const [state, setState] = useState<'loading' | 'denied' | 'ok'>('loading');
+  const [period, setPeriod] = useState('30d');
+  const [adv, setAdv] = useState<{
+    stats?: { totalApplicants?: number; avgTimeToHire?: number | null };
+    topSources?: { source: string; applicants?: number; hires?: number }[];
+    diversityFunnel?: { responses: number; byGender: Record<string, number> } | null;
+    timeToHire?: { totalTimeToHire: number | null }[];
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/analytics/dashboard?period=${period}`, { credentials: 'include' })
+      .then(async (res) => {
+        if (res.status === 403) {
+          if (!cancelled) setState('denied');
+          return;
+        }
+        if (!res.ok) throw new Error('fail');
+        const json = await res.json();
+        if (!cancelled) {
+          setAdv(json);
+          setState('ok');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setState('denied');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [period]);
+
+  if (state === 'loading') {
+    return <div className="h-40 rounded-2xl bg-stone-100 animate-pulse" />;
+  }
+
+  if (state === 'denied') {
+    return (
+      <div className="rounded-2xl border border-dashed border-stone-200 bg-white p-6 text-center">
+        <p className="text-sm font-semibold text-stone-800">Advanced analytics</p>
+        <p className="text-xs text-stone-500 mt-1">
+          Time-to-hire, source effectiveness, and diversity funnel unlock on Professional or with the Analytics Plus add-on.
+        </p>
+      </div>
+    );
+  }
+
+  const avgDays =
+    adv?.stats?.avgTimeToHire != null
+      ? Math.round(Number(adv.stats.avgTimeToHire) / 24)
+      : null;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-base font-bold text-stone-900">Advanced reports</h2>
+        <select
+          value={period}
+          onChange={(e) => setPeriod(e.target.value)}
+          className="px-3 py-1.5 text-xs border border-stone-200 rounded-lg"
+        >
+          <option value="7d">7 days</option>
+          <option value="30d">30 days</option>
+          <option value="90d">90 days</option>
+        </select>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="rounded-2xl border border-stone-200 bg-white p-5">
+          <p className="text-xs text-stone-500 font-medium">Applicants (period)</p>
+          <p className="text-2xl font-bold text-stone-900 mt-1">{adv?.stats?.totalApplicants ?? 0}</p>
+        </div>
+        <div className="rounded-2xl border border-stone-200 bg-white p-5">
+          <p className="text-xs text-stone-500 font-medium">Avg time to hire</p>
+          <p className="text-2xl font-bold text-stone-900 mt-1">{avgDays != null ? `${avgDays}d` : '—'}</p>
+        </div>
+        <div className="rounded-2xl border border-stone-200 bg-white p-5">
+          <p className="text-xs text-stone-500 font-medium">DEI responses</p>
+          <p className="text-2xl font-bold text-stone-900 mt-1">{adv?.diversityFunnel?.responses ?? 0}</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-stone-200 bg-white p-5">
+          <h3 className="text-sm font-bold text-stone-900 mb-3">Source effectiveness</h3>
+          <ul className="space-y-2">
+            {(adv?.topSources || []).slice(0, 6).map((s) => (
+              <li key={s.source} className="flex justify-between text-sm">
+                <span className="text-stone-700 capitalize">{s.source}</span>
+                <span className="text-stone-500 text-xs">
+                  {s.applicants ?? 0} apps · {s.hires ?? 0} hires
+                </span>
+              </li>
+            ))}
+            {(adv?.topSources || []).length === 0 && (
+              <li className="text-xs text-stone-400">No source metrics yet — they accumulate as candidates move stages.</li>
+            )}
+          </ul>
+        </div>
+        <div className="rounded-2xl border border-stone-200 bg-white p-5">
+          <h3 className="text-sm font-bold text-stone-900 mb-3">Diversity funnel (self-ID)</h3>
+          <ul className="space-y-1.5">
+            {Object.entries(adv?.diversityFunnel?.byGender || {}).map(([k, v]) => (
+              <li key={k} className="flex justify-between text-sm">
+                <span className="text-stone-600 capitalize">{k.replace(/_/g, ' ')}</span>
+                <span className="font-medium text-stone-800">{v}</span>
+              </li>
+            ))}
+            {!adv?.diversityFunnel?.responses && (
+              <li className="text-xs text-stone-400">No voluntary self-ID responses yet.</li>
+            )}
+          </ul>
+        </div>
+      </div>
+    </div>
   );
 }
 

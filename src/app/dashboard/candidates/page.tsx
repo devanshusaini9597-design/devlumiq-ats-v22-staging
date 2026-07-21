@@ -12,7 +12,7 @@ import {
   createColumnHelper,
   type ColumnFiltersState,
 } from '@tanstack/react-table';
-import * as XLSX from 'xlsx';
+import * as ExcelJS from 'exceljs';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
@@ -603,7 +603,7 @@ export default function CandidatesPage() {
     getPaginationRowModel: getPaginationRowModel(),
   });
 
-  const exportExcel = () => {
+  const exportExcel = async () => {
     const rows = filteredData.map((c) => ({
       [t('candidates.candidate')]: c.name,
       [t('candidates.position')]: c.position,
@@ -612,10 +612,30 @@ export default function CandidatesPage() {
       [t('candidates.status')]: c.status,
       [t('candidates.smartMatch')]: `${c.smartMatch ?? 0}%`,
     }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Candidates');
-    XLSX.writeFile(wb, 'candidates.xlsx');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Candidates');
+    const headers = Object.keys(rows[0] ?? {
+      Candidate: '',
+      Position: '',
+      Experience: '',
+      Source: '',
+      Status: '',
+      Match: '',
+    });
+    worksheet.columns = headers.map((header) => ({ header, key: header, width: 20 }));
+    for (const row of rows) {
+      worksheet.addRow(row);
+    }
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'candidates.xlsx';
+    a.click();
+    URL.revokeObjectURL(url);
     toast.success(t('candidates.exportExcelSuccess'), t('candidates.exportExcelDone'));
   };
 

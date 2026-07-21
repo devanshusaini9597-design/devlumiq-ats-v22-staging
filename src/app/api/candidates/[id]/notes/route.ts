@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth } from '@/lib/with-permission';
 import { sanitizeHtml } from '@/lib/sanitize';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 export const GET = withAuth(async (
   _request: NextRequest,
@@ -9,14 +10,16 @@ export const GET = withAuth(async (
   session
 ) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id: candidateId } = await params;
-    if (session.organizationId) {
-      const candidate = await prisma.candidate.findUnique({ where: { id: candidateId }, select: { organizationId: true } });
-      if (!candidate) return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
-      if (candidate.organizationId && candidate.organizationId !== session.organizationId) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      }
-    }
+    const candidate = await prisma.candidate.findFirst({
+      where: { id: candidateId, organizationId: orgId },
+      select: { id: true },
+    });
+    if (!candidate) return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
+
     const notes = await prisma.candidateNote.findMany({
       where: { candidateId },
       orderBy: { createdAt: 'desc' },
@@ -41,6 +44,9 @@ export const POST = withAuth(async (
   session
 ) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id: candidateId } = await params;
     const body = await request.json();
     const authorName = (body?.authorName ?? body?.author ?? 'Recruiter').toString().trim() || 'Recruiter';
@@ -48,12 +54,11 @@ export const POST = withAuth(async (
     if (!noteBody) {
       return NextResponse.json({ error: 'Body is required' }, { status: 400 });
     }
-    const candidate = await prisma.candidate.findUnique({ where: { id: candidateId } });
+    const candidate = await prisma.candidate.findFirst({
+      where: { id: candidateId, organizationId: orgId },
+    });
     if (!candidate) {
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
-    }
-    if (session.organizationId && candidate.organizationId && candidate.organizationId !== session.organizationId) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     const note = await prisma.candidateNote.create({
       data: { candidateId, authorName, body: noteBody },

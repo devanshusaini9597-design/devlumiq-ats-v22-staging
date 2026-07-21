@@ -3,26 +3,26 @@ import { prisma } from '@/lib/prisma';
 import { withPermission, withAuth } from '@/lib/with-permission';
 import { checkOrgLimit } from '@/lib/plan-limits';
 import type { SessionUser } from '@/lib/auth';
+import { requireOrgId, requireCompanyFilter, isOrgError } from '@/lib/require-org';
 
 // Get or create company for a given session
-async function resolveCompany(organizationId: string | null) {
-  if (organizationId) {
-    const company = await prisma.company.findUnique({ where: { id: organizationId } });
-    if (company) return company;
-  }
+async function resolveCompany(organizationId: string) {
+  const company = await prisma.company.findUnique({ where: { id: organizationId } });
+  if (company) return company;
   // Fallback: find first or create a default
-  let company = await prisma.company.findFirst();
-  if (!company) {
-    company = await prisma.company.create({
+  let fallback = await prisma.company.findFirst();
+  if (!fallback) {
+    fallback = await prisma.company.create({
       data: { name: 'Default Company', slug: `default-${Date.now()}` },
     });
   }
-  return company;
+  return fallback;
 }
 
 export const GET = withAuth(async (_req, _ctx, session: SessionUser) => {
   try {
-    const orgFilter = session.organizationId ? { companyId: session.organizationId } : {};
+    const orgFilter = requireCompanyFilter(session);
+    if (isOrgError(orgFilter)) return orgFilter;
     const jobs = await prisma.job.findMany({
       where: orgFilter,
       orderBy: { createdAt: 'desc' },
@@ -60,6 +60,9 @@ export const GET = withAuth(async (_req, _ctx, session: SessionUser) => {
 
 export const POST = withPermission('CREATE_JOB', async (request: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const body = await request.json();
     const { title, department, location, type, status, description, requirements } = body;
 
@@ -68,17 +71,15 @@ export const POST = withPermission('CREATE_JOB', async (request: NextRequest, _c
     }
 
     // Enforce plan job limit
-    if (session.organizationId) {
-      const limitCheck = await checkOrgLimit(session.organizationId, 'jobs');
-      if (!limitCheck.allowed) {
-        return NextResponse.json(
-          { error: `Job limit reached (${limitCheck.current}/${limitCheck.limit}). Upgrade your plan to add more jobs.`, code: 'PLAN_LIMIT_REACHED' },
-          { status: 403 }
-        );
-      }
+    const limitCheck = await checkOrgLimit(orgId, 'jobs');
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        { error: `Job limit reached (${limitCheck.current}/${limitCheck.limit}). Upgrade your plan to add more jobs.`, code: 'PLAN_LIMIT_REACHED' },
+        { status: 403 }
+      );
     }
 
-    const company = await resolveCompany(session.organizationId);
+    const company = await resolveCompany(orgId);
 
     const job = await prisma.job.create({
       data: {

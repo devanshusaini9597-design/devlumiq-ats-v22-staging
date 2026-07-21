@@ -2,23 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withPermission } from '@/lib/with-permission';
 import { validateCsrf } from '@/lib/csrf';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 type Ctx = { params: Promise<{ id: string }> };
 
-async function assertJobAccess(jobId: string, organizationId: string | null) {
+async function assertJobAccess(jobId: string, organizationId: string) {
   return prisma.job.findFirst({
-    where: {
-      id: jobId,
-      ...(organizationId ? { companyId: organizationId } : {}),
-    },
+    where: { id: jobId, companyId: organizationId },
     select: { id: true },
   });
 }
 
 export const GET = withPermission('VIEW_JOBS', async (_req, ctx: Ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await ctx.params;
-    const job = await assertJobAccess(id, session.organizationId);
+    const job = await assertJobAccess(id, orgId);
     if (!job) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
 
     const skills = await prisma.jobSkill.findMany({
@@ -39,8 +40,11 @@ export const PUT = withPermission('EDIT_JOB', async (req: NextRequest, ctx: Ctx,
   if (csrfError) return csrfError;
 
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await ctx.params;
-    const job = await assertJobAccess(id, session.organizationId);
+    const job = await assertJobAccess(id, orgId);
     if (!job) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
 
     const body = await req.json();
@@ -58,10 +62,7 @@ export const PUT = withPermission('EDIT_JOB', async (req: NextRequest, ctx: Ctx,
     const found = await prisma.skill.findMany({
       where: {
         id: { in: skillIds },
-        OR: [
-          { isSystem: true },
-          ...(session.organizationId ? [{ organizationId: session.organizationId }] : []),
-        ],
+        OR: [{ isSystem: true }, { organizationId: orgId }],
       },
       select: { id: true },
     });

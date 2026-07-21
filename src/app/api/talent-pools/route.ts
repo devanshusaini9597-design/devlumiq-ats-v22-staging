@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withPermission } from '@/lib/with-permission';
-import { validateCsrf } from '@/lib/csrf';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 export const GET = withPermission('VIEW_CANDIDATES', async (req: NextRequest, _ctx, session) => {
   try {
-    if (!session.organizationId) {
-      return NextResponse.json({ pools: [] });
-    }
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { searchParams } = new URL(req.url);
     const poolType = searchParams.get('type') || undefined;
     const q = searchParams.get('q')?.trim();
 
     const pools = await prisma.talentPool.findMany({
       where: {
-        organizationId: session.organizationId,
+        organizationId: orgId,
         isActive: true,
         ...(poolType ? { poolType } : {}),
         ...(q
@@ -40,13 +40,10 @@ export const GET = withPermission('VIEW_CANDIDATES', async (req: NextRequest, _c
 });
 
 export const POST = withPermission('CREATE_CANDIDATE', async (req: NextRequest, _ctx, session) => {
-  const csrfError = validateCsrf(req);
-  if (csrfError) return csrfError;
-
   try {
-    if (!session.organizationId) {
-      return NextResponse.json({ error: 'Organization required' }, { status: 400 });
-    }
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const body = await req.json();
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     if (!name) {
@@ -55,7 +52,7 @@ export const POST = withPermission('CREATE_CANDIDATE', async (req: NextRequest, 
 
     const pool = await prisma.talentPool.create({
       data: {
-        organizationId: session.organizationId,
+        organizationId: orgId,
         name,
         description: typeof body.description === 'string' ? body.description : null,
         poolType: typeof body.poolType === 'string' ? body.poolType : 'general',

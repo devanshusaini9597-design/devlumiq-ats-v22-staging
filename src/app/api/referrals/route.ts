@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth, withPermission } from '@/lib/with-permission';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 
 // GET /api/referrals - Get all referrals
 export const GET = withAuth(async (request: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { searchParams } = new URL(request.url);
     const referrerId = searchParams.get('referrerId');
-    const orgFilter = session.organizationId ? { program: { organizationId: session.organizationId } } : {};
+    const orgFilter = { program: { organizationId: orgId } };
 
     const referrals = await prisma.referral.findMany({
       where: { ...orgFilter, ...(referrerId ? { referrerId } : {}) },

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { rateLimit } from '@/lib/rate-limit';
+import { rateLimitAsync, getClientIp } from '@/lib/rate-limit';
 
 /**
  * Public voluntary EEO self-ID (careers apply flow).
@@ -8,8 +8,8 @@ import { rateLimit } from '@/lib/rate-limit';
  */
 export async function POST(req: NextRequest) {
   try {
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'anon';
-    const rl = await rateLimit(`dei-selfid:${ip}`, 20, 60 * 60 * 1000);
+    const ip = getClientIp(req);
+    const rl = await rateLimitAsync(`dei-selfid:${ip}`, 20, 60 * 60 * 1000);
     if (!rl.success) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }

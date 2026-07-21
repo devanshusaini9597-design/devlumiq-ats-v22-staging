@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
-import { mkdir } from 'fs/promises';
+import { uploadFile } from '@/lib/file-storage';
 import { sendEmail, generateApplicationConfirmationEmail, generateNewApplicationNotificationEmail } from '@/lib/email';
 import { notifyNewApplication } from '@/lib/push';
 import { careersCorsHeaders, careersCorsOptions, jsonWithCors } from '@/lib/careers-cors';
@@ -60,20 +58,13 @@ export async function POST(request: NextRequest) {
         return jsonWithCors(request, { error: 'File size too large. Maximum 5MB allowed.' }, { status: 400 });
       }
 
-      // Save file
+      // Save via shared storage abstraction (local public/, S3, or R2)
       const bytes = await resume.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      
-      const uploadDir = join(process.cwd(), 'uploads', 'resumes');
-      await mkdir(uploadDir, { recursive: true });
-      
-      const fileName = `${Date.now()}-${resume.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-      const filePath = join(uploadDir, fileName);
-      
-      await writeFile(filePath, buffer);
-      resumeUrl = `/uploads/resumes/${fileName}`;
-      
-      // For now, store filename as resumeText (can be enhanced with PDF parsing later)
+      const safeName = resume.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const key = `resumes/${Date.now()}-${safeName}`;
+      const uploaded = await uploadFile(buffer, key, resume.type || 'application/octet-stream');
+      resumeUrl = uploaded.url;
       resumeText = resume.name;
     }
 
@@ -130,6 +121,25 @@ export async function POST(request: NextRequest) {
         stage: 'Applied',
       },
     });
+
+    // Non-fatal analytics — never break apply for existing buyers
+    try {
+      const { recordSourceEvent, recordPipelineStageChange } = await import('@/lib/analytics-metrics');
+      if (job.companyId) {
+        await recordSourceEvent({
+          organizationId: job.companyId,
+          source: candidate.source || 'careers',
+          event: 'applicant',
+        });
+        await recordPipelineStageChange({
+          jobId,
+          stageName: 'APPLIED',
+          organizationId: job.companyId,
+        });
+      }
+    } catch {
+      /* non-fatal */
+    }
 
     // Voluntary EEO self-ID (optional, stored separately from hiring data)
     const organizationId = job.companyId;

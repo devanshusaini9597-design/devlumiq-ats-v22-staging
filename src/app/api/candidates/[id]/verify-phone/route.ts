@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { withPermission } from '@/lib/with-permission';
 import { validateCsrf } from '@/lib/csrf';
 import { normalizePhone, isValidE164, sendTwilioSms, twilioConfigured } from '@/lib/messaging';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -19,6 +20,9 @@ export const POST = withPermission('EDIT_CANDIDATE', async (req: NextRequest, ct
   if (csrfError) return csrfError;
 
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await ctx.params;
     const body = await req.json();
     const action = body.action === 'confirm' ? 'confirm' : 'send';
@@ -26,7 +30,7 @@ export const POST = withPermission('EDIT_CANDIDATE', async (req: NextRequest, ct
     const candidate = await prisma.candidate.findFirst({
       where: {
         id,
-        ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+        organizationId: orgId,
       },
     });
     if (!candidate) return NextResponse.json({ error: 'Not found' }, { status: 404 });

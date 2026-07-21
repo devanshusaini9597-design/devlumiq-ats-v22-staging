@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withPermission } from '@/lib/with-permission';
 import { prisma } from '@/lib/prisma';
 import { getJobCandidateMatch } from '@/lib/skills';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 /** GET ?jobId=&candidateId=  OR ?jobId= (returns matches for all candidates with skills) */
 export const GET = withPermission('VIEW_CANDIDATES', async (req: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { searchParams } = new URL(req.url);
     const jobId = searchParams.get('jobId');
     const candidateId = searchParams.get('candidateId');
@@ -17,7 +21,7 @@ export const GET = withPermission('VIEW_CANDIDATES', async (req: NextRequest, _c
     const job = await prisma.job.findFirst({
       where: {
         id: jobId,
-        ...(session.organizationId ? { companyId: session.organizationId } : {}),
+        companyId: orgId,
       },
       select: { id: true },
     });
@@ -27,7 +31,7 @@ export const GET = withPermission('VIEW_CANDIDATES', async (req: NextRequest, _c
       const candidate = await prisma.candidate.findFirst({
         where: {
           id: candidateId,
-          ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+          organizationId: orgId,
         },
         select: { id: true, name: true },
       });

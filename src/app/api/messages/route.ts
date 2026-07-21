@@ -1,23 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth';
+import { withAuth } from '@/lib/with-permission';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 // POST /api/messages - Create new message
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, _ctx, user) => {
   try {
-    const user = await requireAuth();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const orgId = requireOrgId(user);
+    if (isOrgError(orgId)) return orgId;
 
     const body = await request.json();
     const { threadId, toEmail, subject, body: messageBody, attachments, candidateId } = body;
 
-    // If no threadId, create new thread
     let thread;
     if (!threadId) {
       thread = await prisma.messageThread.create({
         data: {
           subject: subject || 'No Subject',
-          organizationId: user.organizationId ?? undefined,
+          organizationId: orgId,
           candidateId: typeof candidateId === 'string' ? candidateId : undefined,
           lastMessageAt: new Date(),
         },
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       thread = await prisma.messageThread.findFirst({
         where: {
           id: threadId,
-          ...(user.organizationId ? { organizationId: user.organizationId } : {}),
+          organizationId: orgId,
         },
       });
       if (!thread) {
@@ -34,7 +34,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create message (email channel — SMS/WhatsApp use dedicated routes)
     const message = await prisma.message.create({
       data: {
         threadId: thread.id,
@@ -51,7 +50,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Update thread lastMessageAt
     await prisma.messageThread.update({
       where: { id: thread.id },
       data: { lastMessageAt: new Date() },
@@ -62,13 +60,13 @@ export async function POST(request: NextRequest) {
     console.error('POST /api/messages', e);
     return NextResponse.json({ error: 'Failed to send message' }, { status: 500 });
   }
-}
+});
 
 // GET /api/messages - Get all messages with filtering
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, _ctx, user) => {
   try {
-    const user = await requireAuth();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const orgId = requireOrgId(user);
+    if (isOrgError(orgId)) return orgId;
 
     const { searchParams } = new URL(request.url);
     const threadId = searchParams.get('threadId');
@@ -77,9 +75,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    const orgFilter = user.organizationId
-      ? { thread: { organizationId: user.organizationId } }
-      : {};
+    const orgFilter = { thread: { organizationId: orgId } };
 
     const where: Record<string, unknown> = {
       isDeleted: false,
@@ -132,4 +128,4 @@ export async function GET(request: NextRequest) {
     console.error('GET /api/messages', e);
     return NextResponse.json({ error: 'Failed to load messages' }, { status: 500 });
   }
-}
+});

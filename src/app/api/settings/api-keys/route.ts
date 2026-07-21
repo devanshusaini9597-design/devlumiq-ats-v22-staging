@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
+import { withAuth } from '@/lib/with-permission';
 import { encrypt, decrypt, maskKey } from '@/lib/encryption';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 const ALLOWED_PROVIDERS = ['openai', 'checkr', 'smtp', 'whatsapp', 'docusign', 'judge0', 'recall'];
 
@@ -9,13 +10,11 @@ const ALLOWED_PROVIDERS = ['openai', 'checkr', 'smtp', 'whatsapp', 'docusign', '
  * GET /api/settings/api-keys
  * Returns masked API keys for the org (BYOK).
  */
-export async function GET() {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const GET = withAuth(async (_req, _ctx, session) => {
   if (session.role !== 'ADMIN') return NextResponse.json({ error: 'Admins only' }, { status: 403 });
 
-  const orgId = session.organizationId;
-  if (!orgId) return NextResponse.json({ error: 'No organization' }, { status: 400 });
+  const orgId = requireOrgId(session);
+  if (isOrgError(orgId)) return orgId;
 
   const keys = await prisma.orgApiKeyConfig.findMany({ where: { organizationId: orgId } });
 
@@ -35,22 +34,18 @@ export async function GET() {
   });
 
   return NextResponse.json({ keys: masked, providers: ALLOWED_PROVIDERS });
-}
+});
 
 /**
  * POST /api/settings/api-keys
  * Body: { provider: string, apiKey: string }
- * Upserts an encrypted API key for a provider.
  */
-export async function POST(req: NextRequest) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const POST = withAuth(async (req: NextRequest, _ctx, session) => {
   if (session.role !== 'ADMIN') return NextResponse.json({ error: 'Admins only' }, { status: 403 });
 
-  const orgId = session.organizationId;
-  if (!orgId) return NextResponse.json({ error: 'No organization' }, { status: 400 });
+  const orgId = requireOrgId(session);
+  if (isOrgError(orgId)) return orgId;
 
-  // Check if ENCRYPTION_KEY is set
   if (!process.env.ENCRYPTION_KEY || process.env.ENCRYPTION_KEY.length !== 64) {
     return NextResponse.json({ error: 'ENCRYPTION_KEY env var not configured (64 hex chars required)' }, { status: 503 });
   }
@@ -73,20 +68,17 @@ export async function POST(req: NextRequest) {
   });
 
   return NextResponse.json({ id: result.id, provider: result.provider, maskedKey: maskKey(apiKey) });
-}
+});
 
 /**
  * DELETE /api/settings/api-keys
  * Body: { provider: string }
- * Deletes an API key for a provider.
  */
-export async function DELETE(req: NextRequest) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const DELETE = withAuth(async (req: NextRequest, _ctx, session) => {
   if (session.role !== 'ADMIN') return NextResponse.json({ error: 'Admins only' }, { status: 403 });
 
-  const orgId = session.organizationId;
-  if (!orgId) return NextResponse.json({ error: 'No organization' }, { status: 400 });
+  const orgId = requireOrgId(session);
+  if (isOrgError(orgId)) return orgId;
 
   const body = await req.json().catch(() => null);
   const { provider } = body ?? {};
@@ -95,4 +87,4 @@ export async function DELETE(req: NextRequest) {
   await prisma.orgApiKeyConfig.deleteMany({ where: { organizationId: orgId, provider } });
 
   return NextResponse.json({ deleted: true });
-}
+});

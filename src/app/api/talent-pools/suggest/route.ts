@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withPermission } from '@/lib/with-permission';
 import { getJobCandidateMatch } from '@/lib/skills';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 /**
  * GET /api/talent-pools/suggest?jobId=
@@ -9,20 +10,23 @@ import { getJobCandidateMatch } from '@/lib/skills';
  */
 export const GET = withPermission('VIEW_CANDIDATES', async (req: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const jobId = new URL(req.url).searchParams.get('jobId');
-    if (!jobId || !session.organizationId) {
-      return NextResponse.json({ error: 'jobId and organization required' }, { status: 400 });
+    if (!jobId) {
+      return NextResponse.json({ error: 'jobId required' }, { status: 400 });
     }
 
     const job = await prisma.job.findFirst({
-      where: { id: jobId, companyId: session.organizationId },
+      where: { id: jobId, companyId: orgId },
       select: { id: true, title: true, requirements: true },
     });
     if (!job) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
 
     const members = await prisma.talentPoolMember.findMany({
       where: {
-        pool: { organizationId: session.organizationId, isActive: true },
+        pool: { organizationId: orgId, isActive: true },
         candidate: { talentPoolConsent: true },
       },
       include: {

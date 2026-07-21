@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth, withPermission } from '@/lib/with-permission';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 // GET /api/scorecards/templates - Get all scorecard templates
 export const GET = withAuth(async (_req, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const templates = await prisma.scorecardTemplate.findMany({
       where: {
         isActive: true,
         OR: [
           { organizationId: null },
-          { organizationId: session.organizationId ?? undefined },
+          { organizationId: orgId },
         ],
       },
       include: {
@@ -31,6 +35,9 @@ export const GET = withAuth(async (_req, _ctx, session) => {
 // POST /api/scorecards/templates - Create scorecard template
 export const POST = withPermission('SCORE_INTERVIEW', async (request: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { name, description, category, criteria, isDefault } = await request.json();
 
     const template = await prisma.scorecardTemplate.create({
@@ -39,7 +46,7 @@ export const POST = withPermission('SCORE_INTERVIEW', async (request: NextReques
         description,
         category,
         isDefault,
-        organizationId: session.organizationId ?? undefined,
+        organizationId: orgId,
         criteria: {
           create: criteria.map((c: any, index: number) => ({
             name: c.name,

@@ -1,21 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withPermission, withAuth } from '@/lib/with-permission';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 // id param = candidateId (used from the candidate profile page)
 export const GET = withAuth(async (_req: NextRequest, ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id: candidateId } = await (ctx.params as Promise<{ id: string }>);
 
     // Verify candidate belongs to user's org
-    if (session.organizationId) {
-      const candidate = await prisma.candidate.findFirst({
-        where: { id: candidateId, organizationId: session.organizationId },
-        select: { id: true },
-      });
-      if (!candidate) {
-        return NextResponse.json({ scores: [] }, { status: 403 });
-      }
+    const candidate = await prisma.candidate.findFirst({
+      where: { id: candidateId, organizationId: orgId },
+      select: { id: true },
+    });
+    if (!candidate) {
+      return NextResponse.json({ scores: [] }, { status: 403 });
     }
 
     // Get all interviews for this candidate, with their scores
@@ -46,18 +48,19 @@ export const GET = withAuth(async (_req: NextRequest, ctx, session) => {
 
 export const POST = withPermission('SCORE_INTERVIEW', async (req: NextRequest, ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id: candidateId } = await (ctx.params as Promise<{ id: string }>);
     const data = await req.json();
 
     // Verify candidate belongs to user's org
-    if (session.organizationId) {
-      const candidate = await prisma.candidate.findFirst({
-        where: { id: candidateId, organizationId: session.organizationId },
-        select: { id: true },
-      });
-      if (!candidate) {
-        return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
-      }
+    const candidate = await prisma.candidate.findFirst({
+      where: { id: candidateId, organizationId: orgId },
+      select: { id: true },
+    });
+    if (!candidate) {
+      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
     }
 
     // Find or create an interview event for this candidate
@@ -71,7 +74,7 @@ export const POST = withPermission('SCORE_INTERVIEW', async (req: NextRequest, c
       const user = await prisma.user.findFirst({
         where: {
           role: 'ADMIN',
-          ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+          organizationId: orgId,
         },
       });
       if (!user) {

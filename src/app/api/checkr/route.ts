@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth, withPermission } from '@/lib/with-permission';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 // Checkr API Configuration
 const CHECKR_API_URL = process.env.CHECKR_API_URL || 'https://api.checkr.com/v1';
@@ -117,6 +118,9 @@ export const POST = withPermission('VIEW_BACKGROUND_CHECKS', async (request: Nex
 // GET /api/checkr - List background checks
 export const GET = withAuth(async (request: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { searchParams } = new URL(request.url);
     const candidateId = searchParams.get('candidateId');
     const status = searchParams.get('status');
@@ -126,7 +130,7 @@ export const GET = withAuth(async (request: NextRequest, _ctx, session) => {
         ...(candidateId && { candidateId }),
         ...(status && { status }),
         provider: 'CHECKR',
-        ...(session.organizationId ? { candidate: { organizationId: session.organizationId } } : {}),
+        candidate: { organizationId: orgId },
       },
       include: {
         candidate: {

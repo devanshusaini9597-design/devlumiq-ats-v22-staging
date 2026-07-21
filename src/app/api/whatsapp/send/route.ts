@@ -8,6 +8,7 @@ import {
   sendWhatsAppCloud,
   whatsappConfigured,
 } from '@/lib/messaging';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 /**
  * POST /api/whatsapp/send
@@ -16,6 +17,9 @@ import {
  * Prefer /api/messages/whatsapp/send for consent-gated inbox sync.
  */
 export const POST = withPermission('USE_EMAIL_TEMPLATES', async (request: NextRequest, _ctx, session) => {
+  const orgId = requireOrgId(session);
+  if (isOrgError(orgId)) return orgId;
+
   const { phone, message, candidateId } = await request.json();
 
   if (!phone || !message) {
@@ -37,7 +41,7 @@ export const POST = withPermission('USE_EMAIL_TEMPLATES', async (request: NextRe
       const candidate = await prisma.candidate.findFirst({
         where: {
           id: candidateId,
-          ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+          organizationId: orgId,
         },
         select: { id: true, name: true, whatsappOptIn: true },
       });
@@ -61,14 +65,14 @@ export const POST = withPermission('USE_EMAIL_TEMPLATES', async (request: NextRe
       const candidate = await prisma.candidate.findFirst({
         where: {
           id: candidateId,
-          ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+          organizationId: orgId,
         },
         select: { id: true, name: true },
       });
       if (candidate) {
         const thread = await findOrCreateCandidateThread({
           candidateId: candidate.id,
-          organizationId: session.organizationId,
+          organizationId: orgId,
           subject: `WhatsApp · ${candidate.name}`,
         });
         await appendOutboundMessage({

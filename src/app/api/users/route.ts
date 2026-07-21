@@ -6,11 +6,13 @@ import { ROLES } from '@/lib/roles';
 import { checkOrgLimit } from '@/lib/plan-limits';
 import type { SessionUser } from '@/lib/auth';
 import { sendEmail, generateInviteEmail } from '@/lib/email';
+import { requireOrgId, requireOrgFilter, isOrgError } from '@/lib/require-org';
 
 /** GET /api/users — list users in the same org (ADMIN only) */
 export const GET = withPermission('MANAGE_USERS', async (_req: NextRequest, _ctx, session: SessionUser) => {
   try {
-    const orgFilter = session.organizationId ? { organizationId: session.organizationId } : {};
+    const orgFilter = requireOrgFilter(session);
+    if (isOrgError(orgFilter)) return orgFilter;
     const users = await prisma.user.findMany({
       where: orgFilter,
       orderBy: { createdAt: 'desc' },
@@ -36,6 +38,9 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 /** POST /api/users — invite a user into the same org (ADMIN only) */
 export const POST = withPermission('MANAGE_USERS', async (request: NextRequest, _ctx, session: SessionUser) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const body = await request.json();
     const name = (body?.name ?? '').toString().trim();
     const email = (body?.email ?? '').toString().trim().toLowerCase();
@@ -50,21 +55,19 @@ export const POST = withPermission('MANAGE_USERS', async (request: NextRequest, 
     }
 
     // Enforce plan seat limit
-    if (session.organizationId) {
-      const limitCheck = await checkOrgLimit(session.organizationId, 'seats');
-      if (!limitCheck.allowed) {
-        return NextResponse.json(
-          { error: `Seat limit reached (${limitCheck.current}/${limitCheck.limit}). Upgrade your plan to add more users.`, code: 'PLAN_LIMIT_REACHED' },
-          { status: 403 }
-        );
-      }
+    const limitCheck = await checkOrgLimit(orgId, 'seats');
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        { error: `Seat limit reached (${limitCheck.current}/${limitCheck.limit}). Upgrade your plan to add more users.`, code: 'PLAN_LIMIT_REACHED' },
+        { status: 403 }
+      );
     }
 
-    // Check email uniqueness within the same organization (global check for unaffiliated users)
+    // Check email uniqueness within the same organization
     const existing = await prisma.user.findFirst({
       where: {
         email,
-        ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+        organizationId: orgId,
       },
     });
     if (existing) {
@@ -79,7 +82,7 @@ export const POST = withPermission('MANAGE_USERS', async (request: NextRequest, 
         name,
         email,
         role: role as keyof typeof ROLES,
-        organizationId: session.organizationId ?? undefined,
+        organizationId: orgId,
         isEmailVerified: false,
         inviteToken,
         inviteTokenExpiry,
@@ -88,9 +91,7 @@ export const POST = withPermission('MANAGE_USERS', async (request: NextRequest, 
     });
 
     // Resolve org name for the invite email
-    const org = session.organizationId
-      ? await prisma.company.findUnique({ where: { id: session.organizationId }, select: { name: true } })
-      : null;
+    const org = await prisma.company.findUnique({ where: { id: orgId }, select: { name: true } });
     const orgName = org?.name ?? 'your organisation';
 
     const setupUrl = `${APP_URL}/setup-account?token=${inviteToken}`;

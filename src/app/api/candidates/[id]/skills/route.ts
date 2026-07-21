@@ -3,24 +3,24 @@ import { prisma } from '@/lib/prisma';
 import { withPermission } from '@/lib/with-permission';
 import { validateCsrf } from '@/lib/csrf';
 import { syncCandidateSkillsJson } from '@/lib/skills';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 type Ctx = { params: Promise<{ id: string }> };
 
-async function assertCandidateAccess(candidateId: string, organizationId: string | null) {
-  const candidate = await prisma.candidate.findFirst({
-    where: {
-      id: candidateId,
-      ...(organizationId ? { organizationId } : {}),
-    },
+async function assertCandidateAccess(candidateId: string, organizationId: string) {
+  return prisma.candidate.findFirst({
+    where: { id: candidateId, organizationId },
     select: { id: true, organizationId: true },
   });
-  return candidate;
 }
 
 export const GET = withPermission('VIEW_CANDIDATES', async (_req, ctx: Ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await ctx.params;
-    const candidate = await assertCandidateAccess(id, session.organizationId);
+    const candidate = await assertCandidateAccess(id, orgId);
     if (!candidate) {
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
     }
@@ -44,8 +44,11 @@ export const PUT = withPermission('EDIT_CANDIDATE', async (req: NextRequest, ctx
   if (csrfError) return csrfError;
 
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await ctx.params;
-    const candidate = await assertCandidateAccess(id, session.organizationId);
+    const candidate = await assertCandidateAccess(id, orgId);
     if (!candidate) {
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
     }
@@ -66,10 +69,7 @@ export const PUT = withPermission('EDIT_CANDIDATE', async (req: NextRequest, ctx
     const found = await prisma.skill.findMany({
       where: {
         id: { in: skillIds },
-        OR: [
-          { isSystem: true },
-          ...(session.organizationId ? [{ organizationId: session.organizationId }] : []),
-        ],
+        OR: [{ isSystem: true }, { organizationId: orgId }],
       },
       select: { id: true },
     });

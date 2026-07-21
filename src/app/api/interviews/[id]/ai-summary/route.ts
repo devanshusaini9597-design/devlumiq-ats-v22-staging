@@ -5,6 +5,7 @@ import { validateCsrf } from '@/lib/csrf';
 import { summarizeInterviewTranscript } from '@/lib/ai';
 import { getPlanContext } from '@/lib/with-plan';
 import { hasFeature } from '@/lib/plan-limits';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -20,23 +21,19 @@ export const POST = withPermission('SCORE_INTERVIEW', async (req: NextRequest, c
   try {
     const { id } = await ctx.params;
 
-    if (session.organizationId) {
-      const { plan } = await getPlanContext(session.organizationId);
-      // Allow even without AI plan — falls back to rule summary
-      void hasFeature(plan, 'ai');
-    }
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
+    const { plan } = await getPlanContext(orgId);
+    void hasFeature(plan, 'ai');
 
     const interview = await prisma.interviewEvent.findFirst({
       where: {
         id,
-        ...(session.organizationId
-          ? {
-              OR: [
-                { candidate: { organizationId: session.organizationId } },
-                { job: { companyId: session.organizationId } },
-              ],
-            }
-          : {}),
+        OR: [
+          { candidate: { organizationId: orgId } },
+          { job: { companyId: orgId } },
+        ],
       },
       include: {
         transcript: true,

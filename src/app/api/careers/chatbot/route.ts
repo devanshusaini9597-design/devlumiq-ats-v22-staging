@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { callAI, isAIEnabled } from '@/lib/ai';
-import { rateLimit } from '@/lib/rate-limit';
+import { rateLimitAsync } from '@/lib/rate-limit';
 import { careersCorsOptions, jsonWithCors } from '@/lib/careers-cors';
 
 type FaqItem = { q: string; a: string; keywords: string[] };
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
       req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
       req.headers.get('x-real-ip') ||
       'anon';
-    const rl = await rateLimit(`careers-chatbot:${ip}`, 30, 15 * 60 * 1000);
+    const rl = await rateLimitAsync(`careers-chatbot:${ip}`, 30, 15 * 60 * 1000);
     if (!rl.success) {
       return jsonWithCors(req, { error: 'Too many requests. Please try again later.' }, { status: 429 });
     }

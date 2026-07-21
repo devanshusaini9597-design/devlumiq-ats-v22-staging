@@ -1,40 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withPermission, withAuth } from '@/lib/with-permission';
-import { validateCsrf } from '@/lib/csrf';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 export const GET = withAuth(async (_req, _ctx, session) => {
-  if (!session.organizationId) {
-    return NextResponse.json({
-      settings: {
-        blindScreeningEnabled: false,
-        diverseSlateAlerts: false,
-        selfIdFormEnabled: true,
-      },
-    });
-  }
+  const orgId = requireOrgId(session);
+  if (isOrgError(orgId)) return orgId;
+
   let settings = await prisma.orgDeiSettings.findUnique({
-    where: { organizationId: session.organizationId },
+    where: { organizationId: orgId },
   });
   if (!settings) {
     settings = await prisma.orgDeiSettings.create({
-      data: { organizationId: session.organizationId },
+      data: { organizationId: orgId },
     });
   }
   return NextResponse.json({ settings });
 });
 
 export const PATCH = withPermission('MANAGE_SETTINGS', async (req: NextRequest, _ctx, session) => {
-  const csrfError = validateCsrf(req);
-  if (csrfError) return csrfError;
-  if (!session.organizationId) {
-    return NextResponse.json({ error: 'Organization required' }, { status: 400 });
-  }
+  const orgId = requireOrgId(session);
+  if (isOrgError(orgId)) return orgId;
+
   const body = await req.json();
   const settings = await prisma.orgDeiSettings.upsert({
-    where: { organizationId: session.organizationId },
+    where: { organizationId: orgId },
     create: {
-      organizationId: session.organizationId,
+      organizationId: orgId,
       blindScreeningEnabled: !!body.blindScreeningEnabled,
       diverseSlateAlerts: !!body.diverseSlateAlerts,
       selfIdFormEnabled: body.selfIdFormEnabled !== false,

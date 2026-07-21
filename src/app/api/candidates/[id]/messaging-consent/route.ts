@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withPermission } from '@/lib/with-permission';
 import { validateCsrf } from '@/lib/csrf';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -14,11 +15,14 @@ export const PATCH = withPermission('EDIT_CANDIDATE', async (req: NextRequest, c
   if (csrfError) return csrfError;
 
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await ctx.params;
     const candidate = await prisma.candidate.findFirst({
       where: {
         id,
-        ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+        organizationId: orgId,
       },
     });
     if (!candidate) {
@@ -65,11 +69,14 @@ export const PATCH = withPermission('EDIT_CANDIDATE', async (req: NextRequest, c
 });
 
 export const GET = withPermission('VIEW_CANDIDATES', async (_req, ctx: Ctx, session) => {
+  const orgId = requireOrgId(session);
+  if (isOrgError(orgId)) return orgId;
+
   const { id } = await ctx.params;
   const candidate = await prisma.candidate.findFirst({
     where: {
       id,
-      ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+      organizationId: orgId,
     },
     select: {
       id: true,

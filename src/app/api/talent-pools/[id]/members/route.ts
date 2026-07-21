@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withPermission } from '@/lib/with-permission';
-import { validateCsrf } from '@/lib/csrf';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -10,17 +10,14 @@ type Ctx = { params: Promise<{ id: string }> };
  * Body: { candidateId } | { candidateIds: string[] } + addedReason?, tags?
  */
 export const POST = withPermission('EDIT_CANDIDATE', async (req: NextRequest, ctx: Ctx, session) => {
-  const csrfError = validateCsrf(req);
-  if (csrfError) return csrfError;
-
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id: poolId } = await ctx.params;
-    if (!session.organizationId) {
-      return NextResponse.json({ error: 'Organization required' }, { status: 400 });
-    }
 
     const pool = await prisma.talentPool.findFirst({
-      where: { id: poolId, organizationId: session.organizationId },
+      where: { id: poolId, organizationId: orgId },
     });
     if (!pool) return NextResponse.json({ error: 'Pool not found' }, { status: 404 });
 
@@ -37,7 +34,7 @@ export const POST = withPermission('EDIT_CANDIDATE', async (req: NextRequest, ct
     const candidates = await prisma.candidate.findMany({
       where: {
         id: { in: ids },
-        organizationId: session.organizationId,
+        organizationId: orgId,
       },
       select: { id: true, name: true, talentPoolConsent: true },
     });
@@ -84,8 +81,8 @@ export const POST = withPermission('EDIT_CANDIDATE', async (req: NextRequest, ct
 });
 
 export const DELETE = withPermission('EDIT_CANDIDATE', async (req: NextRequest, ctx: Ctx, session) => {
-  const csrfError = validateCsrf(req);
-  if (csrfError) return csrfError;
+  const orgId = requireOrgId(session);
+  if (isOrgError(orgId)) return orgId;
 
   const { id: poolId } = await ctx.params;
   const body = await req.json().catch(() => ({}));
@@ -95,7 +92,7 @@ export const DELETE = withPermission('EDIT_CANDIDATE', async (req: NextRequest, 
   }
 
   const pool = await prisma.talentPool.findFirst({
-    where: { id: poolId, organizationId: session.organizationId ?? undefined },
+    where: { id: poolId, organizationId: orgId },
   });
   if (!pool) return NextResponse.json({ error: 'Pool not found' }, { status: 404 });
 

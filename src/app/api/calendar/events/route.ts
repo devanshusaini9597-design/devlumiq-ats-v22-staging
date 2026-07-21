@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth } from '@/lib/with-permission';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 // ── Calendar Events (local database only) ────────────────────────────────────
-// Events are stored in the local DB only. There is no sync with external
-// calendar providers (Google Calendar, Outlook 365, etc.).
-// To add external sync, use the CalendarIntegration model in the DB and
-// implement OAuth + Calendar API calls in /api/calendar/integrations.
 export const GET = withAuth(async (request: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { searchParams } = new URL(request.url);
     const start = searchParams.get('start');
     const end = searchParams.get('end');
@@ -16,13 +16,14 @@ export const GET = withAuth(async (request: NextRequest, _ctx, session) => {
     const startDate = start ? new Date(start) : new Date(0);
     const endDate = end ? new Date(end) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
 
-    const orgJobIds = session.organizationId
-      ? (await prisma.job.findMany({ where: { companyId: session.organizationId }, select: { id: true } })).map(j => j.id)
-      : [];
+    const orgJobIds = (
+      await prisma.job.findMany({ where: { companyId: orgId }, select: { id: true } })
+    ).map((j) => j.id);
+
     const events = await prisma.interviewEvent.findMany({
       where: {
         start: { gte: startDate, lte: endDate },
-        ...(orgJobIds.length > 0 ? { jobId: { in: orgJobIds } } : {}),
+        jobId: { in: orgJobIds },
       },
       include: { candidate: true, job: true },
       orderBy: { start: 'asc' },

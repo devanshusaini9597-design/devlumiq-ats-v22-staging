@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
     case 'checkout.session.completed': {
       const orgId = obj.metadata?.orgId;
       const subId = obj.subscription;
+      const addOn = obj.metadata?.addOn as string | undefined;
       if (orgId && subId) {
         await prisma.subscription.update({
           where: { organizationId: orgId },
@@ -32,6 +33,18 @@ export async function POST(req: NextRequest) {
             status: 'ACTIVE',
           },
         });
+      }
+      // One-time / subscription add-on purchases
+      if (orgId && addOn) {
+        const sub = await prisma.subscription.findUnique({ where: { organizationId: orgId } });
+        if (sub) {
+          const current = (sub.addOns as Record<string, boolean>) || {};
+          const next = { ...current, [addOn]: true };
+          await prisma.subscription.update({
+            where: { id: sub.id },
+            data: { addOns: next },
+          });
+        }
       }
       break;
     }
@@ -46,6 +59,11 @@ export async function POST(req: NextRequest) {
         if (process.env.STRIPE_PRICE_PRO) planMap[process.env.STRIPE_PRICE_PRO] = 'PRO';
         if (process.env.STRIPE_PRICE_ENTERPRISE) planMap[process.env.STRIPE_PRICE_ENTERPRISE] = 'ENTERPRISE';
 
+        const addOnMap: Record<string, string> = {};
+        if (process.env.STRIPE_PRICE_WHITELABEL_KIT) addOnMap[process.env.STRIPE_PRICE_WHITELABEL_KIT] = 'whiteLabelKit';
+        if (process.env.STRIPE_PRICE_ANALYTICS_PLUS) addOnMap[process.env.STRIPE_PRICE_ANALYTICS_PLUS] = 'analyticsPlus';
+        if (process.env.STRIPE_PRICE_SSO) addOnMap[process.env.STRIPE_PRICE_SSO] = 'sso';
+
         const priceId = obj.items?.data?.[0]?.price?.id;
         const plan = priceId ? (planMap[priceId] ?? sub.plan) : sub.plan;
 
@@ -55,6 +73,12 @@ export async function POST(req: NextRequest) {
         else if (obj.status === 'canceled') status = 'CANCELED';
         else if (obj.status === 'trialing') status = 'TRIALING';
 
+        const addOns = { ...((sub.addOns as Record<string, boolean>) || {}) };
+        for (const item of obj.items?.data || []) {
+          const pid = item.price?.id;
+          if (pid && addOnMap[pid]) addOns[addOnMap[pid]] = true;
+        }
+
         await prisma.subscription.update({
           where: { id: sub.id },
           data: {
@@ -62,6 +86,7 @@ export async function POST(req: NextRequest) {
             status: status as any,
             cancelAtPeriodEnd: obj.cancel_at_period_end ?? false,
             currentPeriodEnd: obj.current_period_end ? new Date(obj.current_period_end * 1000) : null,
+            addOns,
           },
         });
       }

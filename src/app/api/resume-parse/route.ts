@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/with-permission';
-import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { rateLimitAsync, getClientIp } from '@/lib/rate-limit';
 import { isAIEnabled, parseResumeWithAI } from '@/lib/ai';
 import { hasFeature } from '@/lib/plan-limits';
 import { getPlanContext } from '@/lib/with-plan';
@@ -464,7 +464,7 @@ export const POST = withAuth(async (req: NextRequest, _ctx, session) => {
   try {
     // Rate limit: 10 parses per 10 minutes per IP
     const ip = getClientIp(req);
-    const rl = rateLimit(`resume-parse:${ip}`, 10, 10 * 60 * 1000);
+    const rl = await rateLimitAsync(`resume-parse:${ip}`, 10, 10 * 60 * 1000);
     if (!rl.success) {
       return NextResponse.json(
         { error: 'Rate limit exceeded. Try again in a few minutes.' },

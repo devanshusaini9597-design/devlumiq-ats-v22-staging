@@ -10,6 +10,7 @@ import {
   sendTwilioSms,
   twilioConfigured,
 } from '@/lib/messaging';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 const MAX_BULK = 100;
 
@@ -23,6 +24,9 @@ export const POST = withPermission('USE_EMAIL_TEMPLATES', async (req: NextReques
   if (csrfError) return csrfError;
 
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     if (!twilioConfigured()) {
       return NextResponse.json(
         { error: 'SMS is not configured', code: 'SMS_NOT_CONFIGURED' },
@@ -47,7 +51,7 @@ export const POST = withPermission('USE_EMAIL_TEMPLATES', async (req: NextReques
     const candidates = await prisma.candidate.findMany({
       where: {
         id: { in: ids },
-        ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+        organizationId: orgId,
       },
     });
 
@@ -79,7 +83,7 @@ export const POST = withPermission('USE_EMAIL_TEMPLATES', async (req: NextReques
         const { sid, status } = await sendTwilioSms(to, text);
         const thread = await findOrCreateCandidateThread({
           candidateId: c.id,
-          organizationId: session.organizationId,
+          organizationId: orgId,
           subject: `SMS · ${c.name}`,
         });
         await appendOutboundMessage({

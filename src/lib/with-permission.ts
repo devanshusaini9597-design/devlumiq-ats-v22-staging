@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, SessionUser } from '@/lib/auth';
 import { hasPermission, hasAnyPermission, Permission, Role } from '@/lib/roles';
+import { validateCsrf } from '@/lib/csrf';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RouteContext = { params: Promise<any> };
@@ -10,9 +11,16 @@ type AuthedHandler<T extends RouteContext = RouteContext> = (
   session: SessionUser,
 ) => Promise<NextResponse> | NextResponse;
 
+/** Cookie-session CSRF check; skipped for Bearer API-key callers (no cookie CSRF risk). */
+function csrfGuard(req: NextRequest): NextResponse | null {
+  if (req.headers.get('authorization')?.startsWith('Bearer ')) return null;
+  return validateCsrf(req);
+}
+
 /**
  * Wraps an API route handler and enforces a single permission check.
  * Returns 401 if unauthenticated, 403 if missing permission.
+ * Mutating methods also run CSRF origin validation.
  *
  * Usage:
  *   export const POST = withPermission('CREATE_JOB', async (req, ctx, session) => { ... });
@@ -22,6 +30,9 @@ export function withPermission<T extends RouteContext>(
   handler: AuthedHandler<T>,
 ) {
   return async (req: NextRequest, ctx: T) => {
+    const csrfError = csrfGuard(req);
+    if (csrfError) return csrfError;
+
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -46,6 +57,9 @@ export function withAnyPermission<T extends RouteContext>(
   requireAll = false,
 ) {
   return async (req: NextRequest, ctx: T) => {
+    const csrfError = csrfGuard(req);
+    if (csrfError) return csrfError;
+
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -68,9 +82,13 @@ export function withAnyPermission<T extends RouteContext>(
 /**
  * Only requires authentication — no specific permission needed.
  * Use for routes that just need to know who the user is.
+ * Mutating methods also run CSRF origin validation.
  */
 export function withAuth<T extends RouteContext>(handler: AuthedHandler<T>) {
   return async (req: NextRequest, ctx: T) => {
+    const csrfError = csrfGuard(req);
+    if (csrfError) return csrfError;
+
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

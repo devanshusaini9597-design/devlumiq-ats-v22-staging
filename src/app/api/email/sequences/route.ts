@@ -11,13 +11,17 @@ import {
 } from '@/lib/messaging';
 import { resolveChannelBody } from '@/lib/short-templates';
 import { sendEmail } from '@/lib/email';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 export const GET = withPermission('USE_EMAIL_TEMPLATES', async (_req, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const sequences = await prisma.emailSequence.findMany({
       where: {
         isActive: true,
-        ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+        organizationId: orgId,
       },
       include: {
         steps: {
@@ -40,6 +44,9 @@ export const GET = withPermission('USE_EMAIL_TEMPLATES', async (_req, _ctx, sess
 
 export const POST = withPermission('MANAGE_EMAIL_SEQUENCES', async (request: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { name, description, triggerType, steps } = await request.json();
 
     const sequence = await prisma.emailSequence.create({
@@ -47,7 +54,7 @@ export const POST = withPermission('MANAGE_EMAIL_SEQUENCES', async (request: Nex
         name,
         description,
         triggerType,
-        ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+        organizationId: orgId,
         steps: {
           create: (steps || []).map((s: {
             delayHours?: number;
@@ -165,25 +172,25 @@ export const PATCH = withPermission('MANAGE_EMAIL_SEQUENCES', async (request: Ne
             .replace(/\{\{name\}\}/gi, candidate.name)
             .slice(0, 1600);
           const { sid } = await sendTwilioSms(to, text);
-          const orgId = session.organizationId || candidate.organizationId;
-          if (orgId) {
-            const thread = await findOrCreateCandidateThread({
-              candidateId: candidate.id,
-              organizationId: orgId,
-              subject: `Sequence · ${sequence.name}`,
-            });
-            await appendOutboundMessage({
-              threadId: thread.id,
-              fromUserId: session.id,
-              fromName: session.name,
-              fromEmail: session.email,
-              channel: 'SMS',
-              body: text,
-              toPhone: to,
-              externalId: sid,
-              metadata: { sequenceId, stepId: firstStep.id },
-            });
-          }
+          const orgIdOrErr = requireOrgId(session);
+          if (isOrgError(orgIdOrErr)) return orgIdOrErr;
+          const orgId = orgIdOrErr;
+          const thread = await findOrCreateCandidateThread({
+            candidateId: candidate.id,
+            organizationId: orgId,
+            subject: `Sequence · ${sequence.name}`,
+          });
+          await appendOutboundMessage({
+            threadId: thread.id,
+            fromUserId: session.id,
+            fromName: session.name,
+            fromEmail: session.email,
+            channel: 'SMS',
+            body: text,
+            toPhone: to,
+            externalId: sid,
+            metadata: { sequenceId, stepId: firstStep.id },
+          });
           await prisma.emailSequenceEnrollment.update({
             where: { id: enrollment.id },
             data: { currentStep: 1 },

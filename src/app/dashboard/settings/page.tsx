@@ -7,7 +7,7 @@ import {
   Eye, EyeOff, Lock, KeyRound, Palette, Building2, Globe,
   Smartphone, Monitor, Sun, Moon, Sparkles, ChevronRight,
   ClipboardCopy, LogOut, AlertTriangle, Camera, AtSign,
-  Clock, BarChart3, UserCheck, Zap, CreditCard, Key,
+  Clock, BarChart3, UserCheck, Zap, CreditCard, Key, Chrome,
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { useLocale } from '@/components/providers/LocaleProvider';
@@ -15,6 +15,8 @@ import { useToast } from '@/components/ui/Toast';
 import { required, email as validateEmail } from '@/lib/validation';
 import BillingSettings from '@/components/dashboard/BillingSettings';
 import ApiKeyManager from '@/components/dashboard/ApiKeyManager';
+import ExtensionSettings from '@/components/dashboard/ExtensionSettings';
+import SsoSettings from '@/components/dashboard/SsoSettings';
 import { PushNotificationSettings } from '@/components/dashboard/PushNotificationSettings';
 
 //  nav tabs 
@@ -26,6 +28,7 @@ const TABS = [
   { id: 'workspace',     label: 'Workspace',       icon: Building2 },
   { id: 'billing',       label: 'Billing',         icon: CreditCard },
   { id: 'api-keys',      label: 'API Keys',        icon: Key },
+  { id: 'extension',     label: 'Chrome Extension', icon: Chrome },
   { id: 'danger',        label: 'Danger Zone',     icon: AlertTriangle },
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
@@ -456,6 +459,12 @@ export default function SettingsPage() {
                       ))}
                     </div>
                   </div>
+
+                  {/* SSO / SAML — Enterprise only; password login unchanged */}
+                  <div className="rounded-2xl border border-stone-200/80 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
+                    {sectionHd(<Shield className="w-4.5 h-4.5 text-violet-600" />, 'SSO / SAML', 'Enterprise single sign-on — optional; email/password stays available')}
+                    <SsoSettings />
+                  </div>
                 </div>
               )}
 
@@ -708,6 +717,16 @@ export default function SettingsPage() {
                   <div className="rounded-2xl border border-stone-200 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
                     {sectionHd(<Key className="w-5 h-5 text-brand-600" />, 'API Key Vault (BYOK)', 'Store your own provider keys — encrypted with AES-256-GCM')}
                     <ApiKeyManager />
+                  </div>
+                </div>
+              )}
+
+              {/* CHROME EXTENSION */}
+              {tab === 'extension' && (
+                <div className="space-y-6">
+                  <div className="rounded-2xl border border-stone-200 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
+                    {sectionHd(<Chrome className="w-5 h-5 text-brand-600" />, 'Chrome Extension', 'One-click LinkedIn profile import — a real ATS differentiator')}
+                    <ExtensionSettings />
                   </div>
                 </div>
               )}

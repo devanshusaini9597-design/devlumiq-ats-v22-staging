@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withPermission } from '@/lib/with-permission';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 const STAGES = ['APPLIED', 'SCREENING', 'INTERVIEW', 'OFFER', 'HIRED'];
 
@@ -10,11 +11,9 @@ const STAGES = ['APPLIED', 'SCREENING', 'INTERVIEW', 'OFFER', 'HIRED'];
  */
 export const GET = withPermission('MANAGE_SETTINGS', async (req: NextRequest, _ctx, session) => {
   try {
-    if (!session.organizationId) {
-      return NextResponse.json({ funnel: [], alert: null });
-    }
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
 
-    const orgId = session.organizationId;
     const jobId = new URL(req.url).searchParams.get('jobId');
 
     const selfIds = await prisma.candidateSelfId.findMany({
@@ -177,11 +176,11 @@ function disabilityAggregate(breakdown: Record<string, unknown>): number {
 
 /** POST export — OFCCP / EEO-1 style aggregate CSV (admin/compliance) */
 export const POST = withPermission('MANAGE_SETTINGS', async (req: NextRequest, _ctx, session) => {
-  if (!session.organizationId) {
-    return NextResponse.json({ error: 'Organization required' }, { status: 400 });
-  }
+  const orgId = requireOrgId(session);
+  if (isOrgError(orgId)) return orgId;
+
   const metrics = await prisma.diversityMetric.findMany({
-    where: { organizationId: session.organizationId },
+    where: { organizationId: orgId },
     orderBy: { createdAt: 'desc' },
     take: 200,
   });

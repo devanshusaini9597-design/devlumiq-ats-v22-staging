@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withPermission } from '@/lib/with-permission';
 import { validateCsrf } from '@/lib/csrf';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 /** POST — set talentPoolConsent on a candidate (GDPR retention opt-in) */
 export const POST = withPermission('EDIT_CANDIDATE', async (req: NextRequest, _ctx, session) => {
@@ -9,6 +10,9 @@ export const POST = withPermission('EDIT_CANDIDATE', async (req: NextRequest, _c
   if (csrfError) return csrfError;
 
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const body = await req.json();
     const candidateId = typeof body.candidateId === 'string' ? body.candidateId : '';
     const consent = body.consent !== false;
@@ -20,7 +24,7 @@ export const POST = withPermission('EDIT_CANDIDATE', async (req: NextRequest, _c
     const candidate = await prisma.candidate.findFirst({
       where: {
         id: candidateId,
-        ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+        organizationId: orgId,
       },
     });
     if (!candidate) {

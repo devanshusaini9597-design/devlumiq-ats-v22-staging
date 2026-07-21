@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth, withPermission } from '@/lib/with-permission';
+import { requireOrgId, requireOrgFilter, isOrgError } from '@/lib/require-org';
 
 // GET /api/referrals/programs - Get all referral programs
 export const GET = withAuth(async (_req, _ctx, session) => {
   try {
-    const orgFilter = session.organizationId ? { organizationId: session.organizationId } : {};
+    const orgFilter = requireOrgFilter(session);
+    if (isOrgError(orgFilter)) return orgFilter;
     const programs = await prisma.referralProgram.findMany({
       where: orgFilter,
       orderBy: { createdAt: 'desc' },
@@ -26,6 +28,9 @@ export const GET = withAuth(async (_req, _ctx, session) => {
 // POST /api/referrals/programs - Create a new referral program
 export const POST = withPermission('MANAGE_REFERRALS', async (request: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const {
       name,
       description,
@@ -52,7 +57,7 @@ export const POST = withPermission('MANAGE_REFERRALS', async (request: NextReque
         eligibleJobIds: eligibleJobIds || [],
         excludedJobIds: excludedJobIds || [],
         isActive: true,
-        organizationId: session.organizationId ?? undefined,
+        organizationId: orgId,
       },
     });
 

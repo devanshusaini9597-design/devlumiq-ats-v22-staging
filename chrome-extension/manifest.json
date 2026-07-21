@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ATS LinkedIn Import",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Import LinkedIn profiles directly to your ATS with one click",
   "permissions": [
     "activeTab",

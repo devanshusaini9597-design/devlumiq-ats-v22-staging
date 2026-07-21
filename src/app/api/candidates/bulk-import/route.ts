@@ -12,6 +12,7 @@ import {
   type RowValidationError,
 } from '@/lib/csv-import';
 import { notifyNewApplication } from '@/lib/push';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 const MAX_ROWS = 2000;
 const MAX_FILE_CHARS = 5_000_000; // ~5MB text
@@ -64,8 +65,10 @@ export const POST = withPermission('CREATE_CANDIDATE', async (request: NextReque
 
     const { valid, errors } = validateAndMapRows(rows, mapping);
 
-    const orgId = session.organizationId;
-    const orgFilter = orgId ? { organizationId: orgId } : {};
+    const orgIdOrErr = requireOrgId(session);
+    if (isOrgError(orgIdOrErr)) return orgIdOrErr;
+    const orgId = orgIdOrErr;
+    const orgFilter = { organizationId: orgId };
 
     // Dedup against existing candidates in this org
     const emails = valid.map((r) => r.email);
@@ -103,7 +106,7 @@ export const POST = withPermission('CREATE_CANDIDATE', async (request: NextReque
       const found = await prisma.job.findFirst({
         where: {
           id: body.jobId,
-          ...(orgId ? { companyId: orgId } : {}),
+          companyId: orgId,
         },
         select: { id: true, title: true },
       });
@@ -233,7 +236,7 @@ export const POST = withPermission('CREATE_CANDIDATE', async (request: NextReque
                 linkedInUrl: row.linkedInUrl ?? null,
                 githubUrl: row.githubUrl ?? null,
                 portfolioUrl: row.portfolioUrl ?? null,
-                ...(orgId ? { organizationId: orgId } : {}),
+                organizationId: orgId,
                 ...(applyJobId
                   ? { applications: { create: { jobId: applyJobId, stage: 'APPLIED' } } }
                   : {}),

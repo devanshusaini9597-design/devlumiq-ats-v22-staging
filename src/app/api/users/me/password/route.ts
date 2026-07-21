@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
-import { getSession, invalidateAllSessions } from '@/lib/auth';
+import { withAuth } from '@/lib/with-permission';
+import { invalidateAllSessions } from '@/lib/auth';
 
 /**
  * PATCH /api/users/me/password
  * Body: { currentPassword: string; newPassword: string }
  */
-export async function PATCH(request: NextRequest) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export const PATCH = withAuth(async (request: NextRequest, _ctx, session) => {
   let body: { currentPassword?: string; newPassword?: string };
   try {
     body = await request.json();
@@ -38,7 +34,7 @@ export async function PATCH(request: NextRequest) {
   if (user.password) {
     const valid = await bcrypt.compare(currentPassword, user.password);
     if (!valid) {
-      return NextResponse.json({ error: 'Current password is incorrect' }, { status: 401 });
+      return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 });
     }
   }
 
@@ -48,8 +44,7 @@ export async function PATCH(request: NextRequest) {
     data: { password: hashed },
   });
 
-  // Invalidate all sessions — forces re-login on all devices
-  await invalidateAllSessions(session.id);
+  await invalidateAllSessions(session.id).catch(() => {});
 
-  return NextResponse.json({ success: true, message: 'Password changed. Please log in again.' });
-}
+  return NextResponse.json({ success: true });
+});

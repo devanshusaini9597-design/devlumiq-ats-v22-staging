@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSession, signSession, sessionCookieOptions, SESSION_COOKIE } from '@/lib/auth';
+import { withAuth } from '@/lib/with-permission';
+import { signSession, sessionCookieOptions, SESSION_COOKIE } from '@/lib/auth';
 
 /** GET /api/users/me — return the current user's profile */
-export async function GET() {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+export const GET = withAuth(async (_req, _ctx, session) => {
   const user = await prisma.user.findUnique({
     where: { id: session.id },
     select: { id: true, name: true, email: true, role: true },
@@ -16,15 +13,10 @@ export async function GET() {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
   return NextResponse.json({ user });
-}
+});
 
 /** PATCH /api/users/me — update name and/or email for the current user */
-export async function PATCH(request: NextRequest) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export const PATCH = withAuth(async (request: NextRequest, _ctx, session) => {
   let body: { name?: string; email?: string };
   try {
     body = await request.json();
@@ -43,7 +35,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Valid email is required' }, { status: 400 });
   }
 
-  // Check email uniqueness if it changed
   if (email !== session.email) {
     const conflict = await prisma.user.findUnique({ where: { email } });
     if (conflict) {
@@ -57,7 +48,6 @@ export async function PATCH(request: NextRequest) {
     select: { id: true, name: true, email: true, role: true, tokenVersion: true },
   });
 
-  // Refresh session cookie preserving organizationId and tokenVersion
   const newToken = signSession({
     userId: updated.id,
     email: updated.email,
@@ -69,4 +59,4 @@ export async function PATCH(request: NextRequest) {
   const response = NextResponse.json({ user: updated });
   response.cookies.set(SESSION_COOKIE, newToken, sessionCookieOptions());
   return response;
-}
+});

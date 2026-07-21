@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth, withPermission } from '@/lib/with-permission';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 export const GET = withAuth(async (
   _request: NextRequest,
@@ -8,11 +9,14 @@ export const GET = withAuth(async (
   session
 ) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await params;
     const job = await prisma.job.findFirst({
       where: {
         id,
-        ...(session.organizationId ? { companyId: session.organizationId } : {}),
+        companyId: orgId,
       },
       include: { applications: { include: { candidate: true } } },
     });
@@ -55,6 +59,9 @@ export const PATCH = withPermission('EDIT_JOB', async (
   session
 ) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await params;
     const body = await request.json();
     const { title, department, location, type, status, description, requirements, salaryMin, salaryMax, currency } = body;
@@ -63,7 +70,7 @@ export const PATCH = withPermission('EDIT_JOB', async (
     const existing = await prisma.job.findFirst({
       where: {
         id,
-        ...(session.organizationId ? { companyId: session.organizationId } : {}),
+        companyId: orgId,
       },
       select: { id: true },
     });
@@ -109,13 +116,16 @@ export const DELETE = withPermission('DELETE_JOB', async (
   session
 ) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await params;
 
     // Verify ownership before deleting
     const existing = await prisma.job.findFirst({
       where: {
         id,
-        ...(session.organizationId ? { companyId: session.organizationId } : {}),
+        companyId: orgId,
       },
       select: { id: true },
     });

@@ -9,6 +9,7 @@ import {
   maskCandidateForList,
   shouldBlindScreen,
 } from '@/lib/blind-screening';
+import { requireOrgId, requireOrgFilter, requireCompanyFilter, isOrgError } from '@/lib/require-org';
 
 export const GET = withAuth(async (req: NextRequest, _ctx, session) => {
   try {
@@ -23,7 +24,8 @@ export const GET = withAuth(async (req: NextRequest, _ctx, session) => {
       ? Number(minAssessmentScore)
       : null;
 
-    const orgFilter = session.organizationId ? { organizationId: session.organizationId } : {};
+    const orgFilter = requireOrgFilter(session);
+    if (isOrgError(orgFilter)) return orgFilter;
     const blindEnabled = shouldBlindScreen(
       session.role,
       await isOrgBlindScreeningEnabled(session.organizationId),
@@ -137,6 +139,9 @@ export const GET = withAuth(async (req: NextRequest, _ctx, session) => {
 
 export const POST = withPermission('CREATE_CANDIDATE', async (request: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const body = await request.json();
     const {
       name, email, phone, source, position, experience, jobId,
@@ -164,17 +169,16 @@ export const POST = withPermission('CREATE_CANDIDATE', async (request: NextReque
     }
 
     // Enforce plan candidate limit
-    if (session.organizationId) {
-      const limitCheck = await checkOrgLimit(session.organizationId, 'candidates');
-      if (!limitCheck.allowed) {
-        return NextResponse.json(
-          { error: `Candidate limit reached (${limitCheck.current}/${limitCheck.limit}). Upgrade your plan to add more candidates.`, code: 'PLAN_LIMIT_REACHED' },
-          { status: 403 }
-        );
-      }
+    const limitCheck = await checkOrgLimit(orgId, 'candidates');
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        { error: `Candidate limit reached (${limitCheck.current}/${limitCheck.limit}). Upgrade your plan to add more candidates.`, code: 'PLAN_LIMIT_REACHED' },
+        { status: 403 }
+      );
     }
 
-    const orgFilter = session.organizationId ? { companyId: session.organizationId } : {};
+    const orgFilter = requireCompanyFilter(session);
+    if (isOrgError(orgFilter)) return orgFilter;
     const job = jobId
       ? await prisma.job.findUnique({ where: { id: jobId, ...orgFilter } })
       : await prisma.job.findFirst({ where: orgFilter });
@@ -193,11 +197,11 @@ export const POST = withPermission('CREATE_CANDIDATE', async (request: NextReque
       githubUrl: githubUrl ?? null,
       portfolioUrl: portfolioUrl ?? null,
       resumeText: summary ?? null,
+      organizationId: orgId,
       applications: job
         ? { create: { jobId: job.id, stage: 'APPLIED' } }
         : undefined,
     };
-    if (session.organizationId) candidateData.organizationId = session.organizationId;
 
     const candidate = await prisma.candidate.create({
       data: candidateData,
@@ -217,9 +221,9 @@ export const POST = withPermission('CREATE_CANDIDATE', async (request: NextReque
       data: { userId: session.id, action: 'candidate_created', entityType: 'candidate', entityId: candidate.id, metadata: { name: candidate.name, email: candidate.email, position: positionTitle } },
     }).catch(() => {});
 
-    if (app?.job && session.organizationId) {
+    if (app?.job) {
       await notifyNewApplication({
-        organizationId: session.organizationId,
+        organizationId: orgId,
         candidateName: candidate.name,
         jobTitle: app.job.title,
         candidateId: candidate.id,

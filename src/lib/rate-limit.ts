@@ -10,7 +10,7 @@
  *   2. npm install ioredis  (only needed if using Redis)
  *
  * Usage:
- *   const result = await rateLimit(`login:${ip}`, 10, 15 * 60 * 1000);
+ *   const result = await rateLimitAsync(`login:${ip}`, 10, 15 * 60 * 1000);
  *   if (!result.success) return 429;
  */
 
@@ -125,6 +125,7 @@ function rateLimitMemory(key: string, limit: number, windowMs: number): RateLimi
  * @param key       Unique bucket key, e.g. `login:127.0.0.1`
  * @param limit     Max requests allowed in the window
  * @param windowMs  Window size in milliseconds
+ * @deprecated Prefer rateLimitAsync for auth / multi-instance deployments
  */
 export function rateLimit(key: string, limit: number, windowMs: number): RateLimitResult {
   // Synchronous path — always available
@@ -133,7 +134,7 @@ export function rateLimit(key: string, limit: number, windowMs: number): RateLim
 
 /**
  * Async version that uses Redis when available, falling back to in-memory.
- * Use this in API routes where async is acceptable.
+ * Use this in API routes where async is acceptable — especially auth endpoints.
  */
 export async function rateLimitAsync(key: string, limit: number, windowMs: number): Promise<RateLimitResult> {
   try {
@@ -145,12 +146,24 @@ export async function rateLimitAsync(key: string, limit: number, windowMs: numbe
   return rateLimitMemory(key, limit, windowMs);
 }
 
-/** Convenience: get real client IP from Next.js request headers */
+/**
+ * Client IP for rate limiting.
+ *
+ * X-Forwarded-For / X-Real-IP are only trusted when TRUSTED_PROXY=true
+ * (or TRUST_PROXY=true). Without that flag, forged headers can reset buckets.
+ */
 export function getClientIp(request: Request): string {
   const headers = new Headers((request as Request).headers);
-  return (
-    headers.get('x-forwarded-for')?.split(',')[0].trim() ??
-    headers.get('x-real-ip') ??
-    'unknown'
-  );
+  const trustProxy =
+    process.env.TRUSTED_PROXY === 'true' ||
+    process.env.TRUST_PROXY === 'true';
+
+  if (trustProxy) {
+    const forwarded = headers.get('x-forwarded-for')?.split(',')[0].trim();
+    if (forwarded) return forwarded;
+    const realIp = headers.get('x-real-ip')?.trim();
+    if (realIp) return realIp;
+  }
+
+  return 'unknown';
 }

@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withPermission } from '@/lib/with-permission';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 /**
  * GET /api/admin/gdpr/export?userId=
  * ADMIN only — export all personal data for a given user (GDPR Article 20 — Data Portability).
  */
 export const GET = withPermission('MANAGE_USERS', async (request: NextRequest, _ctx, session) => {
+  const orgId = requireOrgId(session);
+  if (isOrgError(orgId)) return orgId;
+
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('userId');
   if (!userId) {
@@ -25,17 +29,12 @@ export const GET = withPermission('MANAGE_USERS', async (request: NextRequest, _
     },
   });
 
-  if (!user) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 });
-  }
-
-  // Org-scope guard
-  if (session.organizationId && user.organizationId !== session.organizationId) {
+  if (!user || user.organizationId !== orgId) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
 
   const candidates = await prisma.candidate.findMany({
-    where: { organizationId: user.organizationId ?? undefined },
+    where: { organizationId: orgId },
     select: {
       id: true, name: true, email: true, phone: true, createdAt: true, source: true,
       applications: { select: { stage: true, appliedAt: true, job: { select: { title: true } } } },

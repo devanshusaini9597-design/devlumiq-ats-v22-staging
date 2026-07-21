@@ -12,6 +12,7 @@ import {
   sendTwilioSms,
   twilioConfigured,
 } from '@/lib/messaging';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -30,13 +31,13 @@ export const POST = withPermission('USE_EMAIL_TEMPLATES', async (req: NextReques
   if (csrfError) return csrfError;
 
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id: poolId } = await ctx.params;
-    if (!session.organizationId) {
-      return NextResponse.json({ error: 'Organization required' }, { status: 400 });
-    }
 
     const pool = await prisma.talentPool.findFirst({
-      where: { id: poolId, organizationId: session.organizationId },
+      where: { id: poolId, organizationId: orgId },
     });
     if (!pool) return NextResponse.json({ error: 'Pool not found' }, { status: 404 });
 
@@ -100,7 +101,7 @@ export const POST = withPermission('USE_EMAIL_TEMPLATES', async (req: NextReques
           }
           const thread = await findOrCreateCandidateThread({
             candidateId: c.id,
-            organizationId: session.organizationId,
+            organizationId: orgId,
             subject: `Pool campaign · ${pool.name}`,
           });
           await appendOutboundMessage({
@@ -129,7 +130,7 @@ export const POST = withPermission('USE_EMAIL_TEMPLATES', async (req: NextReques
           const { sid } = await sendTwilioSms(to, text.slice(0, 1600));
           const thread = await findOrCreateCandidateThread({
             candidateId: c.id,
-            organizationId: session.organizationId,
+            organizationId: orgId,
             subject: `Pool SMS · ${pool.name}`,
           });
           await appendOutboundMessage({
@@ -154,7 +155,7 @@ export const POST = withPermission('USE_EMAIL_TEMPLATES', async (req: NextReques
           const sequence = await prisma.emailSequence.findFirst({
             where: {
               id: sequenceId,
-              ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+              organizationId: orgId,
             },
             include: {
               steps: {

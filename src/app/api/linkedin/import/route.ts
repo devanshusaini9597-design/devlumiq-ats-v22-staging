@@ -1,60 +1,160 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { withPermission, withAuth } from '@/lib/with-permission';
+import { withSessionOrApiKey } from '@/lib/with-api-key';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
-// POST /api/linkedin/import - Import LinkedIn profile
-export const POST = withPermission('CREATE_CANDIDATE', async (request: NextRequest, _ctx, session) => {
+function normalizeLinkedInUrl(url: string): string {
   try {
-    const { linkedInUrl, linkedInData } = await request.json();
-    const importedById = session.id;
+    const u = new URL(url);
+    // Keep /in/<slug> only — strip query/hash and trailing slash
+    const match = u.pathname.match(/\/in\/([^/]+)/i);
+    if (!match) return url.split('?')[0].replace(/\/$/, '');
+    return `https://www.linkedin.com/in/${match[1].toLowerCase()}`;
+  } catch {
+    return url.split('?')[0].replace(/\/$/, '');
+  }
+}
 
-    // Create import record
+function placeholderEmail(name: string, linkedInUrl: string): string {
+  const slug =
+    linkedInUrl.match(/\/in\/([^/]+)/i)?.[1]?.toLowerCase().replace(/[^a-z0-9-]/g, '') ||
+    'unknown';
+  const safeName = (name || 'candidate')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '.')
+    .replace(/^\.|\.$/g, '')
+    .slice(0, 40);
+  return `${safeName || 'candidate'}.${slug}@linkedin.import.local`;
+}
+
+function parseLinkedInData(data: Record<string, unknown>) {
+  const skills = Array.isArray(data.skills)
+    ? data.skills.map(String).filter(Boolean).slice(0, 50)
+    : [];
+
+  let years = 0;
+  if (typeof data.yearsOfExperience === 'number') years = data.yearsOfExperience;
+  else if (Array.isArray(data.experience)) years = Math.min(40, data.experience.length * 2);
+
+  const firstExp = Array.isArray(data.experience) ? (data.experience[0] as Record<string, unknown>) : null;
+
+  return {
+    name: String(data.name || data.fullName || '').trim() || 'LinkedIn Candidate',
+    email: String(data.email || '').trim(),
+    phone: String(data.phone || '').trim(),
+    skills,
+    experience: years,
+    currentTitle: String(data.currentTitle || data.headline || firstExp?.title || '').trim(),
+    currentCompany: String(data.currentCompany || firstExp?.company || '').trim(),
+    location: String(data.location || '').trim(),
+    about: String(data.about || '').trim(),
+  };
+}
+
+// POST /api/linkedin/import - Import LinkedIn profile (cookie session OR Bearer API key)
+export const POST = withSessionOrApiKey('CREATE_CANDIDATE', ['write'], async (request: NextRequest, _ctx, session) => {
+  try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
+    const body = await request.json();
+    const rawUrl = String(body.linkedInUrl || '').trim();
+    if (!rawUrl || !/linkedin\.com\/in\//i.test(rawUrl)) {
+      return NextResponse.json({ error: 'Valid linkedInUrl (/in/...) is required' }, { status: 400 });
+    }
+
+    const linkedInUrl = normalizeLinkedInUrl(rawUrl);
+    const linkedInData = (body.linkedInData || {}) as Record<string, unknown>;
+    const importedById = session.id;
+    const candidateData = parseLinkedInData(linkedInData);
+
+    // Dedupe: update existing candidate with same LinkedIn URL in this org
+    const existing = await prisma.candidate.findFirst({
+      where: {
+        organizationId: orgId,
+        OR: [
+          { linkedInUrl },
+          { linkedInUrl: { contains: linkedInUrl.split('/in/')[1] || linkedInUrl } },
+        ],
+      },
+    });
+
+    const email =
+      candidateData.email ||
+      existing?.email ||
+      placeholderEmail(candidateData.name, linkedInUrl);
+
     const importRecord = await prisma.linkedInImport.create({
       data: {
         linkedInUrl,
         importedById,
-        rawData: linkedInData,
+        rawData: linkedInData as object,
         importStatus: 'processing',
       },
     });
 
-    // Parse LinkedIn data and create candidate
-    const candidateData = parseLinkedInData(linkedInData);
-    
-    const candidateDataAny: any = {
-      name: candidateData.name,
-      email: candidateData.email,
-      phone: candidateData.phone,
-      source: 'linkedin',
-      sourceDetail: linkedInUrl,
-      skills: candidateData.skills || [],
-      experience: candidateData.experience,
-      currentTitle: candidateData.currentTitle,
-      currentCompany: candidateData.currentCompany,
-      linkedInUrl,
-      location: candidateData.location,
-    };
-    if (session.organizationId) candidateDataAny.organizationId = session.organizationId;
+    let candidate;
+    let created = false;
 
-    const candidate = await prisma.candidate.create({
-      data: candidateDataAny,
-    });
+    if (existing) {
+      candidate = await prisma.candidate.update({
+        where: { id: existing.id },
+        data: {
+          name: candidateData.name || existing.name,
+          email: existing.email || email,
+          phone: candidateData.phone || existing.phone,
+          skills: candidateData.skills.length ? candidateData.skills : (existing.skills as string[]),
+          experience: candidateData.experience || existing.experience,
+          currentTitle: candidateData.currentTitle || existing.currentTitle,
+          currentCompany: candidateData.currentCompany || existing.currentCompany,
+          location: candidateData.location || existing.location,
+          linkedInUrl,
+          source: existing.source || 'linkedin',
+          sourceDetail: linkedInUrl,
+          resumeText: candidateData.about || existing.resumeText || undefined,
+        },
+      });
+    } else {
+      candidate = await prisma.candidate.create({
+        data: {
+          name: candidateData.name,
+          email,
+          phone: candidateData.phone || null,
+          source: 'linkedin',
+          sourceDetail: linkedInUrl,
+          skills: candidateData.skills,
+          experience: candidateData.experience,
+          currentTitle: candidateData.currentTitle || null,
+          currentCompany: candidateData.currentCompany || null,
+          linkedInUrl,
+          location: candidateData.location || null,
+          resumeText: candidateData.about || null,
+          organizationId: orgId,
+        },
+      });
+      created = true;
+    }
 
-    // Update import record
     await prisma.linkedInImport.update({
       where: { id: importRecord.id },
       data: {
         candidateId: candidate.id,
         importStatus: 'completed',
-        parsedData: candidateData,
+        parsedData: candidateData as object,
         processedAt: new Date(),
       },
     });
 
     return NextResponse.json({
       success: true,
+      created,
+      updated: !created,
       candidate,
+      candidateId: candidate.id,
       importId: importRecord.id,
+      message: created
+        ? 'Candidate imported from LinkedIn'
+        : 'Existing candidate updated from LinkedIn',
     });
   } catch (error) {
     console.error('Error importing LinkedIn profile:', error);
@@ -62,37 +162,30 @@ export const POST = withPermission('CREATE_CANDIDATE', async (request: NextReque
   }
 });
 
-// ── LinkedIn Data Parser ────────────────────────────────────────────────────
-// Accepts structured profile data sent by the Chrome extension.
-// The extension scrapes LinkedIn profile fields and sends them here.
-// This is a passthrough mapper — no AI/ML processing is applied.
-function parseLinkedInData(data: any) {
-  return {
-    name: data.name || data.fullName || '',
-    email: data.email || '',
-    phone: data.phone || '',
-    skills: data.skills || [],
-    experience: data.yearsOfExperience || 0,
-    currentTitle: data.currentTitle || data.headline || '',
-    currentCompany: data.currentCompany || '',
-    location: data.location || '',
-  };
-}
-
-// GET /api/linkedin/import - Get import history
-export const GET = withAuth(async (request: NextRequest, _ctx, session) => {
+// GET /api/linkedin/import - Get import history (org-scoped via candidates)
+export const GET = withSessionOrApiKey(null, ['read'], async (request: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
     const imports = await prisma.linkedInImport.findMany({
-      where: userId ? { importedById: userId } : { importedById: session.id },
+      where: {
+        ...(userId ? { importedById: userId } : { importedById: session.id }),
+        OR: [
+          { candidate: { organizationId: orgId } },
+          { candidateId: null },
+        ],
+      },
       include: {
         candidate: {
           select: {
             id: true,
             name: true,
             email: true,
+            organizationId: true,
           },
         },
       },
@@ -100,7 +193,12 @@ export const GET = withAuth(async (request: NextRequest, _ctx, session) => {
       take: 50,
     });
 
-    return NextResponse.json(imports);
+    // Extra filter: only return rows for this org (or incomplete imports by this user)
+    const scoped = imports.filter(
+      (i) => !i.candidate || i.candidate.organizationId === orgId
+    );
+
+    return NextResponse.json(scoped);
   } catch (error) {
     console.error('Error fetching imports:', error);
     return NextResponse.json({ error: 'Failed to fetch imports' }, { status: 500 });

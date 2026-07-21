@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { withAuth, withPermission } from '@/lib/with-permission';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 import {
   buildTakeUrl,
   sendAssessmentInvite,
@@ -11,13 +12,14 @@ import {
 // POST /api/assessments/assign - Assign assessment to candidate
 export const POST = withPermission('VIEW_ASSESSMENTS', async (request: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { templateId, candidateId, applicationId, assignedById, expiresInDays = 7 } = await request.json();
 
     if (!templateId || !candidateId) {
       return NextResponse.json({ error: 'templateId and candidateId are required' }, { status: 400 });
     }
-
-    const orgId = session.organizationId ?? null;
 
     const [template, candidate] = await Promise.all([
       prisma.assessmentTemplate.findUnique({ where: { id: templateId } }),
@@ -34,14 +36,11 @@ export const POST = withPermission('VIEW_ASSESSMENTS', async (request: NextReque
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
     }
 
-    // Multi-tenant: template must be global or same org; candidate must be same org
-    if (orgId) {
-      if (template.organizationId && template.organizationId !== orgId) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      }
-      if (candidate.organizationId && candidate.organizationId !== orgId) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      }
+    if (template.organizationId && template.organizationId !== orgId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    if (candidate.organizationId && candidate.organizationId !== orgId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     if (applicationId) {
@@ -52,7 +51,7 @@ export const POST = withPermission('VIEW_ASSESSMENTS', async (request: NextReque
       if (!app || app.candidateId !== candidateId) {
         return NextResponse.json({ error: 'Invalid application' }, { status: 400 });
       }
-      if (orgId && app.candidate.organizationId && app.candidate.organizationId !== orgId) {
+      if (app.candidate.organizationId && app.candidate.organizationId !== orgId) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
     }
@@ -105,17 +104,14 @@ export const POST = withPermission('VIEW_ASSESSMENTS', async (request: NextReque
 export const GET = withAuth(async (request: NextRequest, _ctx, session) => {
   try {
     const { searchParams } = new URL(request.url);
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const candidateId = searchParams.get('candidateId');
     const applicationId = searchParams.get('applicationId');
     const status = searchParams.get('status');
-    const orgId = session.organizationId ?? null;
 
-    // Require at least one filter OR org scope — never dump all tenants
-    if (!candidateId && !applicationId && !orgId) {
-      return NextResponse.json({ error: 'candidateId or organization context required' }, { status: 400 });
-    }
-
-    if (candidateId && orgId) {
+    if (candidateId) {
       const cand = await prisma.candidate.findUnique({
         where: { id: candidateId },
         select: { organizationId: true },
@@ -131,11 +127,7 @@ export const GET = withAuth(async (request: NextRequest, _ctx, session) => {
         ...(candidateId ? { candidateId } : {}),
         ...(applicationId ? { applicationId } : {}),
         ...(status && status !== 'all' ? { status } : {}),
-        ...(orgId
-          ? {
-              candidate: { organizationId: orgId },
-            }
-          : {}),
+        candidate: { organizationId: orgId },
       },
       include: {
         template: {

@@ -7,9 +7,13 @@ import {
   maskCandidateForList,
   shouldBlindScreen,
 } from '@/lib/blind-screening';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 export const GET = withPermission('VIEW_CANDIDATES', async (req: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { searchParams } = new URL(req.url);
     const blindEnabled = shouldBlindScreen(
       session.role,
@@ -24,7 +28,7 @@ export const GET = withPermission('VIEW_CANDIDATES', async (req: NextRequest, _c
     const stage = searchParams.get('stage');
 
     const where: any = {
-      ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+      organizationId: orgId,
     };
 
     // Taxonomy filter (AND — candidate must have all listed skill IDs)

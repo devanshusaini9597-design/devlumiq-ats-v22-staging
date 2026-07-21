@@ -71,8 +71,9 @@ export async function createCheckoutSession(opts: {
   orgId: string;
   successUrl: string;
   cancelUrl: string;
+  addOn?: string;
 }): Promise<{ url: string }> {
-  const session = await stripePost('/checkout/sessions', {
+  const body: Record<string, string> = {
     customer: opts.customerId,
     'line_items[0][price]': opts.priceId,
     'line_items[0][quantity]': '1',
@@ -81,7 +82,12 @@ export async function createCheckoutSession(opts: {
     cancel_url: opts.cancelUrl,
     'metadata[orgId]': opts.orgId,
     'subscription_data[metadata][orgId]': opts.orgId,
-  });
+  };
+  if (opts.addOn) {
+    body['metadata[addOn]'] = opts.addOn;
+    body['subscription_data[metadata][addOn]'] = opts.addOn;
+  }
+  const session = await stripePost('/checkout/sessions', body);
   return { url: session.url };
 }
 

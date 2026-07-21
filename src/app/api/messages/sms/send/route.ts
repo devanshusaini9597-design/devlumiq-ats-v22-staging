@@ -10,6 +10,7 @@ import {
   sendTwilioSms,
   twilioConfigured,
 } from '@/lib/messaging';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 /**
  * POST /api/messages/sms/send
@@ -21,6 +22,9 @@ export const POST = withPermission('USE_EMAIL_TEMPLATES', async (req: NextReques
   if (csrfError) return csrfError;
 
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     if (!twilioConfigured()) {
       return NextResponse.json(
         {
@@ -45,7 +49,7 @@ export const POST = withPermission('USE_EMAIL_TEMPLATES', async (req: NextReques
     const candidate = await prisma.candidate.findFirst({
       where: {
         id: candidateId,
-        ...(session.organizationId ? { organizationId: session.organizationId } : {}),
+        organizationId: orgId,
       },
     });
     if (!candidate) {
@@ -76,7 +80,7 @@ export const POST = withPermission('USE_EMAIL_TEMPLATES', async (req: NextReques
 
     const thread = await findOrCreateCandidateThread({
       candidateId: candidate.id,
-      organizationId: session.organizationId,
+      organizationId: orgId,
       subject: `SMS · ${candidate.name}`,
     });
 

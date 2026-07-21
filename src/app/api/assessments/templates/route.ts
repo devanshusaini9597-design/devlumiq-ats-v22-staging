@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth, withPermission } from '@/lib/with-permission';
-
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 // GET /api/assessments/templates - Get assessment templates
 export const GET = withAuth(async (_req, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const templates = await prisma.assessmentTemplate.findMany({
       where: {
         isActive: true,
-        ...(session.organizationId
-          ? { OR: [{ organizationId: session.organizationId }, { organizationId: null }] }
-          : {}),
+        OR: [{ organizationId: orgId }, { organizationId: null }],
       },
       include: {
         questions: {
@@ -34,6 +35,9 @@ export const GET = withAuth(async (_req, _ctx, session) => {
 // POST /api/assessments/templates - Create assessment template
 export const POST = withPermission('MANAGE_SETTINGS', async (request: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const {
       name, description, category, type, duration, difficulty, passingScore, questions,
       proctoringEnabled, proctoringStrictness, requireFullscreen, snapshotIntervalSec,
@@ -52,7 +56,7 @@ export const POST = withPermission('MANAGE_SETTINGS', async (request: NextReques
         proctoringStrictness: proctoringStrictness || 'standard',
         requireFullscreen: !!requireFullscreen,
         snapshotIntervalSec: Number(snapshotIntervalSec) || 30,
-        organizationId: session.organizationId ?? undefined,
+        organizationId: orgId,
         questions: {
           create: questions.map((q: any, index: number) => ({
             type: q.type,

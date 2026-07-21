@@ -19,6 +19,11 @@ export interface PlanLimits {
   byok: boolean;
 }
 
+/** Purchasable add-ons stored on Subscription.addOns */
+export type AddOnId = 'whiteLabelKit' | 'analyticsPlus' | 'sso';
+
+export type SubscriptionAddOns = Partial<Record<AddOnId, boolean>>;
+
 export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
   FREE: {
     seats: 3,
@@ -77,6 +82,13 @@ export const PLAN_DISPLAY: Record<PlanId, { name: string; priceMonthly: number; 
   ENTERPRISE: { name: 'Enterprise', priceMonthly: 199, priceAnnual: 159 },
 };
 
+/** Map add-on IDs to the plan feature they unlock */
+const ADDON_TO_FEATURE: Record<AddOnId, keyof PlanLimits> = {
+  whiteLabelKit: 'whiteLabel',
+  analyticsPlus: 'advancedAnalytics',
+  sso: 'sso',
+};
+
 /**
  * Check if a feature is available on a given plan
  */
@@ -85,6 +97,51 @@ export function hasFeature(plan: PlanId, feature: keyof PlanLimits): boolean {
   const value = limits[feature];
   if (typeof value === 'boolean') return value;
   return true; // numeric limits are checked separately
+}
+
+export function parseAddOns(raw: unknown): SubscriptionAddOns {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out: SubscriptionAddOns = {};
+  const obj = raw as Record<string, unknown>;
+  for (const key of ['whiteLabelKit', 'analyticsPlus', 'sso'] as AddOnId[]) {
+    if (obj[key] === true) out[key] = true;
+  }
+  return out;
+}
+
+/**
+ * Entitlement = plan feature OR purchased add-on.
+ * Existing buyers without addOns keep plan-only behavior.
+ */
+export async function hasEntitlement(
+  orgId: string,
+  feature: 'advancedAnalytics' | 'whiteLabel' | 'sso' | 'ai' | 'api' | 'customPipeline' | 'byok'
+): Promise<{ allowed: boolean; plan: PlanId; addOns: SubscriptionAddOns }> {
+  let sub = await prisma.subscription.findUnique({ where: { organizationId: orgId } });
+  if (!sub) {
+    sub = await prisma.subscription.create({
+      data: { organizationId: orgId, plan: 'FREE', status: 'ACTIVE', seats: 3, addOns: {} },
+    });
+  }
+  const plan = sub.plan as PlanId;
+  const addOns = parseAddOns(sub.addOns);
+
+  if (hasFeature(plan, feature)) {
+    return { allowed: true, plan, addOns };
+  }
+
+  // Add-on unlocks
+  if (feature === 'whiteLabel' && addOns.whiteLabelKit) {
+    return { allowed: true, plan, addOns };
+  }
+  if (feature === 'advancedAnalytics' && addOns.analyticsPlus) {
+    return { allowed: true, plan, addOns };
+  }
+  if (feature === 'sso' && addOns.sso) {
+    return { allowed: true, plan, addOns };
+  }
+
+  return { allowed: false, plan, addOns };
 }
 
 /**
@@ -115,7 +172,7 @@ export async function checkOrgLimit(
   let sub = await prisma.subscription.findUnique({ where: { organizationId: orgId } });
   if (!sub) {
     sub = await prisma.subscription.create({
-      data: { organizationId: orgId, plan: 'FREE', status: 'ACTIVE', seats: 3 },
+      data: { organizationId: orgId, plan: 'FREE', status: 'ACTIVE', seats: 3, addOns: {} },
     });
   }
   const plan = sub.plan as PlanId;
@@ -133,3 +190,5 @@ export async function checkOrgLimit(
   const allowed = limit === -1 || current < limit;
   return { allowed, limit, current, plan };
 }
+
+export { ADDON_TO_FEATURE };

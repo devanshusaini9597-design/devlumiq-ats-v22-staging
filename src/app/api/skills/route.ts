@@ -1,23 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth, withPermission } from '@/lib/with-permission';
-import { validateCsrf } from '@/lib/csrf';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 import { orgSkillSlug, slugifySkill, seedSystemSkills } from '@/lib/skills';
 
 /** List system + org skills (searchable) */
 export const GET = withAuth(async (req: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { searchParams } = new URL(req.url);
     const q = (searchParams.get('q') || '').trim();
     const category = searchParams.get('category') || '';
     const limit = Math.min(200, Math.max(1, parseInt(searchParams.get('limit') ?? '100')));
 
-    const orgId = session.organizationId;
-
     const where: Record<string, unknown> = {
       OR: [
         { isSystem: true },
-        ...(orgId ? [{ organizationId: orgId }] : []),
+        { organizationId: orgId },
       ],
     };
 
@@ -55,7 +56,7 @@ export const GET = withAuth(async (req: NextRequest, _ctx, session) => {
 
     const categories = await prisma.skill.findMany({
       where: {
-        OR: [{ isSystem: true }, ...(orgId ? [{ organizationId: orgId }] : [])],
+        OR: [{ isSystem: true }, { organizationId: orgId }],
       },
       distinct: ['category'],
       select: { category: true },
@@ -75,10 +76,10 @@ export const GET = withAuth(async (req: NextRequest, _ctx, session) => {
 
 /** Create org-custom skill */
 export const POST = withPermission('MANAGE_SETTINGS', async (req: NextRequest, _ctx, session) => {
-  const csrfError = validateCsrf(req);
-  if (csrfError) return csrfError;
-
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const body = await req.json();
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     const category = typeof body.category === 'string' ? body.category.trim() || 'Custom' : 'Custom';
@@ -87,16 +88,13 @@ export const POST = withPermission('MANAGE_SETTINGS', async (req: NextRequest, _
     if (!name || name.length < 1 || name.length > 80) {
       return NextResponse.json({ error: 'Skill name is required (1–80 chars)' }, { status: 400 });
     }
-    if (!session.organizationId) {
-      return NextResponse.json({ error: 'Organization required to create custom skills' }, { status: 400 });
-    }
 
-    const slug = orgSkillSlug(session.organizationId, name);
+    const slug = orgSkillSlug(orgId, name);
     const existing = await prisma.skill.findFirst({
       where: {
         OR: [
           { slug },
-          { organizationId: session.organizationId, name: { equals: name, mode: 'insensitive' } },
+          { organizationId: orgId, name: { equals: name, mode: 'insensitive' } },
           { isSystem: true, name: { equals: name, mode: 'insensitive' } },
         ],
       },
@@ -112,7 +110,7 @@ export const POST = withPermission('MANAGE_SETTINGS', async (req: NextRequest, _
         category,
         description,
         isSystem: false,
-        organizationId: session.organizationId,
+        organizationId: orgId,
       },
     });
 
@@ -124,10 +122,7 @@ export const POST = withPermission('MANAGE_SETTINGS', async (req: NextRequest, _
 });
 
 /** Seed system skills from bundled catalog (idempotent) — ADMIN only */
-export const PUT = withPermission('MANAGE_SETTINGS', async (req: NextRequest) => {
-  const csrfError = validateCsrf(req);
-  if (csrfError) return csrfError;
-
+export const PUT = withPermission('MANAGE_SETTINGS', async (_req: NextRequest) => {
   try {
     const result = await seedSystemSkills();
     return NextResponse.json({

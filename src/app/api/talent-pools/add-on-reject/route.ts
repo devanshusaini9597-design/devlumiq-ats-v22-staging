@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withPermission } from '@/lib/with-permission';
-import { validateCsrf } from '@/lib/csrf';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 /**
  * POST — tag candidate into a keep-warm / silver-medalist pool at rejection.
@@ -9,13 +9,10 @@ import { validateCsrf } from '@/lib/csrf';
  * Creates a default "Silver medalists" pool if none provided.
  */
 export const POST = withPermission('MOVE_APPLICATION', async (req: NextRequest, _ctx, session) => {
-  const csrfError = validateCsrf(req);
-  if (csrfError) return csrfError;
-
   try {
-    if (!session.organizationId) {
-      return NextResponse.json({ error: 'Organization required' }, { status: 400 });
-    }
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const body = await req.json();
     const candidateId = typeof body.candidateId === 'string' ? body.candidateId : '';
     if (!candidateId) {
@@ -23,7 +20,7 @@ export const POST = withPermission('MOVE_APPLICATION', async (req: NextRequest, 
     }
 
     const candidate = await prisma.candidate.findFirst({
-      where: { id: candidateId, organizationId: session.organizationId },
+      where: { id: candidateId, organizationId: orgId },
     });
     if (!candidate) return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
 
@@ -45,7 +42,7 @@ export const POST = withPermission('MOVE_APPLICATION', async (req: NextRequest, 
       const poolType = typeof body.poolType === 'string' ? body.poolType : 'silver_medalist';
       let pool = await prisma.talentPool.findFirst({
         where: {
-          organizationId: session.organizationId,
+          organizationId: orgId,
           poolType,
           isActive: true,
         },
@@ -53,7 +50,7 @@ export const POST = withPermission('MOVE_APPLICATION', async (req: NextRequest, 
       if (!pool) {
         pool = await prisma.talentPool.create({
           data: {
-            organizationId: session.organizationId,
+            organizationId: orgId,
             name: poolType === 'keep_warm' ? 'Keep warm' : 'Silver medalists',
             poolType,
             description: 'Auto-created from rejection flow',

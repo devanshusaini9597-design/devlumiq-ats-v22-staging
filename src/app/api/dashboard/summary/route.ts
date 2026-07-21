@@ -3,11 +3,16 @@ import { prisma } from '@/lib/prisma';
 import { stageToDisplay } from '@/lib/api-helpers';
 import { withAuth } from '@/lib/with-permission';
 import type { SessionUser } from '@/lib/auth';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 const STAGES = ['APPLIED', 'SCREENING', 'INTERVIEW', 'OFFER', 'HIRED', 'JOINED', 'REJECTED', 'DROPPED'];
 
 export const GET = withAuth(async (_req: NextRequest, _ctx, session: SessionUser) => {
   try {
+    const orgIdOrErr = requireOrgId(session);
+    if (isOrgError(orgIdOrErr)) return orgIdOrErr;
+    const orgId = orgIdOrErr;
+
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -17,21 +22,18 @@ export const GET = withAuth(async (_req: NextRequest, _ctx, session: SessionUser
     startOfWeek.setDate(now.getDate() - now.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
 
-    const orgId = session.organizationId;
     const isInterviewer = session.role === 'INTERVIEWER';
 
     // Resolve org-scoped job IDs first (more reliable than nested relation filters in production)
-    const orgJobIds = orgId
-      ? (await prisma.job.findMany({ where: { companyId: orgId }, select: { id: true } })).map(j => j.id)
-      : [];
+    const orgJobIds = (await prisma.job.findMany({ where: { companyId: orgId }, select: { id: true } })).map(j => j.id);
 
-    // Org-scoped filters
-    const candidateWhere = orgId ? { organizationId: orgId } : {};
-    const jobWhere = orgId ? { companyId: orgId } : {};
-    const appWhere = orgJobIds.length > 0 ? { jobId: { in: orgJobIds } } : {};
+    // Org-scoped filters (fail-closed)
+    const candidateWhere = { organizationId: orgId };
+    const jobWhere = { companyId: orgId };
+    const appWhere = { jobId: { in: orgJobIds } };
     const interviewWhere = {
       start: { gte: now, lte: in7Days },
-      ...(orgJobIds.length > 0 ? { jobId: { in: orgJobIds } } : {}),
+      jobId: { in: orgJobIds },
       ...(isInterviewer ? { assignedToId: session.id } : {}),
     };
 
@@ -75,7 +77,7 @@ export const GET = withAuth(async (_req: NextRequest, _ctx, session: SessionUser
         take: 10,
       }),
       prisma.activityLog.findMany({
-        where: orgId && orgJobIds.length > 0 ? { jobId: { in: orgJobIds } } : {},
+        where: { jobId: { in: orgJobIds } },
         orderBy: { createdAt: 'desc' },
         take: 15,
       }),
@@ -93,7 +95,10 @@ export const GET = withAuth(async (_req: NextRequest, _ctx, session: SessionUser
         orderBy: { createdAt: 'asc' },
       }),
       prisma.timeToHireMetric.findMany({
-        where: { totalTimeToHire: { not: null } },
+        where: {
+          totalTimeToHire: { not: null },
+          jobId: { in: orgJobIds },
+        },
         select: { totalTimeToHire: true },
       }),
       prisma.application.count({ where: { ...appWhere, stage: { in: ['HIRED', 'JOINED'] } } }),

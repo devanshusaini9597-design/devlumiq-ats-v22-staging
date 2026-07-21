@@ -4,17 +4,19 @@ import { withPermission } from '@/lib/with-permission';
 import { isAIEnabled, screenCandidateWithAI } from '@/lib/ai';
 import { hasFeature } from '@/lib/plan-limits';
 import { getPlanContext } from '@/lib/with-plan';
+import { requireOrgId, requireOrgFilter, requireCompanyFilter, isOrgError } from '@/lib/require-org';
 
 // POST /api/ai/screen — Screen a candidate against a job using AI
 // Falls back to simple skill-matching if AI is not configured
 export const POST = withPermission('VIEW_CANDIDATES', async (request: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     // Plan feature gate: AI screening requires AI-enabled plan
-    if (session.organizationId) {
-      const { plan } = await getPlanContext(session.organizationId);
-      if (!hasFeature(plan, 'ai')) {
-        return NextResponse.json({ error: 'AI features require a STARTER or higher plan.', code: 'PLAN_UPGRADE_REQUIRED' }, { status: 403 });
-      }
+    const { plan } = await getPlanContext(orgId);
+    if (!hasFeature(plan, 'ai')) {
+      return NextResponse.json({ error: 'AI features require a STARTER or higher plan.', code: 'PLAN_UPGRADE_REQUIRED' }, { status: 403 });
     }
 
     const { candidateId, jobId } = await request.json();
@@ -23,8 +25,10 @@ export const POST = withPermission('VIEW_CANDIDATES', async (request: NextReques
       return NextResponse.json({ error: 'candidateId and jobId are required' }, { status: 400 });
     }
 
-    const candidateOrgFilter = session.organizationId ? { organizationId: session.organizationId } : {};
-    const jobOrgFilter = session.organizationId ? { companyId: session.organizationId } : {};
+    const candidateOrgFilter = requireOrgFilter(session);
+    if (isOrgError(candidateOrgFilter)) return candidateOrgFilter;
+    const jobOrgFilter = requireCompanyFilter(session);
+    if (isOrgError(jobOrgFilter)) return jobOrgFilter;
 
     const [candidate, job] = await Promise.all([
       prisma.candidate.findUnique({ where: { id: candidateId, ...candidateOrgFilter } }),

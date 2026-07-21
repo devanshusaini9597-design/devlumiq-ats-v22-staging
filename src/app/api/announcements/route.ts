@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth } from '@/lib/with-permission';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 export const GET = withAuth(async (_req, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const items = await prisma.announcement.findMany({
-      where: session.organizationId
-        ? { OR: [{ organizationId: session.organizationId }, { organizationId: null }] }
-        : { organizationId: null },
+      where: {
+        OR: [{ organizationId: orgId }, { organizationId: null }],
+      },
       orderBy: { createdAt: 'desc' },
       take: 50,
     });

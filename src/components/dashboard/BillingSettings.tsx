@@ -12,6 +12,11 @@ interface SubscriptionData {
     cancelAtPeriodEnd: boolean;
     seats: number;
     stripeCustomerId: boolean;
+    addOns?: {
+      whiteLabelKit?: boolean;
+      analyticsPlus?: boolean;
+      sso?: boolean;
+    };
   };
   limits: {
     seats: number;
@@ -24,6 +29,11 @@ interface SubscriptionData {
     sso: boolean;
     whiteLabel: boolean;
     byok: boolean;
+  };
+  entitlements?: {
+    advancedAnalytics: boolean;
+    whiteLabel: boolean;
+    sso: boolean;
   };
   display: {
     name: string;
@@ -57,13 +67,13 @@ export default function BillingSettings() {
     fetchSub();
   }, []);
 
-  const handleUpgrade = async (priceId: string) => {
-    setActionLoading('upgrade');
+  const handleUpgrade = async (priceId: string, addOn?: string) => {
+    setActionLoading(addOn || 'upgrade');
     const res = await fetch('/api/billing/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ priceId }),
+      body: JSON.stringify({ priceId, addOn }),
     });
     const json = await res.json();
     if (json.url) window.location.href = json.url;
@@ -93,6 +103,8 @@ export default function BillingSettings() {
 
   const sub = data.subscription;
   const limits = data.limits;
+  const entitlements = data.entitlements;
+  const addOns = sub.addOns || {};
 
   const isFree = sub.plan === 'FREE';
   const isTrialing = sub.status === 'TRIALING';
@@ -104,9 +116,9 @@ export default function BillingSettings() {
     { label: 'AI features', value: limits.ai },
     { label: 'API access', value: limits.api },
     { label: 'Custom pipeline', value: limits.customPipeline },
-    { label: 'Advanced analytics', value: limits.advancedAnalytics },
-    { label: 'SSO / SAML', value: limits.sso },
-    { label: 'White-label', value: limits.whiteLabel },
+    { label: 'Advanced analytics', value: entitlements?.advancedAnalytics ?? limits.advancedAnalytics },
+    { label: 'SSO / SAML', value: entitlements?.sso ?? limits.sso },
+    { label: 'White-label kit', value: entitlements?.whiteLabel ?? limits.whiteLabel },
     { label: 'BYOK key vault', value: limits.byok },
   ];
 
@@ -116,9 +128,32 @@ export default function BillingSettings() {
     ENTERPRISE: process.env.NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE,
   };
 
+  const addOnPrices = [
+    {
+      id: 'whiteLabelKit' as const,
+      label: 'White-Label Kit',
+      desc: 'Custom domain, CSS, hide product marks',
+      priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_WHITELABEL_KIT,
+      active: !!addOns.whiteLabelKit || !!entitlements?.whiteLabel,
+    },
+    {
+      id: 'analyticsPlus' as const,
+      label: 'Analytics Plus',
+      desc: 'Time-to-hire, sources, diversity funnel',
+      priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ANALYTICS_PLUS,
+      active: !!addOns.analyticsPlus || !!entitlements?.advancedAnalytics,
+    },
+    {
+      id: 'sso' as const,
+      label: 'SSO / SAML',
+      desc: 'Enterprise IdP login',
+      priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_SSO,
+      active: !!addOns.sso || !!entitlements?.sso,
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Current Plan Card */}
       <div className="rounded-2xl border border-stone-200 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -148,7 +183,6 @@ export default function BillingSettings() {
             )}
           </div>
 
-          {/* Feature grid */}
           <div className="grid grid-cols-2 gap-3">
             {featureList.map((f) => (
               <div key={f.label} className="flex items-center justify-between p-2 rounded-lg bg-stone-50 text-sm">
@@ -166,7 +200,44 @@ export default function BillingSettings() {
         </div>
       </div>
 
-      {/* Actions */}
+      {/* Add-ons — purchasable without forcing plan change */}
+      <div className="rounded-2xl border border-stone-200 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
+        <h2 className="text-base font-bold text-stone-900 mb-1">Add-ons</h2>
+        <p className="text-xs text-stone-500 mb-4">
+          Optional SKUs. Existing tenants keep their current plan; add-ons unlock extras only when purchased or included in Enterprise.
+        </p>
+        <div className="space-y-3">
+          {addOnPrices.map((a) => (
+            <div
+              key={a.id}
+              className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-xl border border-stone-100 bg-stone-50/50"
+            >
+              <div>
+                <p className="text-sm font-semibold text-stone-900">{a.label}</p>
+                <p className="text-xs text-stone-500">{a.desc}</p>
+              </div>
+              {a.active ? (
+                <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Active
+                </span>
+              ) : a.priceId ? (
+                <button
+                  type="button"
+                  onClick={() => handleUpgrade(a.priceId!, a.id)}
+                  disabled={!!actionLoading}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white border border-stone-200 hover:bg-stone-50 disabled:opacity-60"
+                >
+                  {actionLoading === a.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
+                  Add
+                </button>
+              ) : (
+                <span className="text-[11px] text-stone-400">Set Stripe price env to enable checkout</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="rounded-2xl border border-stone-200 bg-white p-6 sm:p-8 shadow-[var(--shadow-card)]">
         <h2 className="text-base font-bold text-stone-900 mb-4">Billing Actions</h2>
         <div className="flex flex-wrap gap-3">

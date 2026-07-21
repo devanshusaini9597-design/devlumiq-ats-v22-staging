@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { useLocale } from '@/components/providers/LocaleProvider';
+import JobBoardCredentialsForm from '@/components/dashboard/JobBoardCredentialsForm';
 
 interface Job {
   id: string;
@@ -50,9 +51,9 @@ const INITIAL_BOARDS: JobBoard[] = [
     bgLight: 'bg-blue-50',
     borderColor: 'border-blue-200',
     textColor: 'text-blue-600',
-    connected: true,
-    clicks: 245,
-    applications: 12,
+    connected: false,
+    clicks: 0,
+    applications: 0,
     postUrl: 'https://linkedin.com/jobs',
     description: 'Reach 900M+ professionals worldwide',
     tag: 'Most Popular',
@@ -65,9 +66,9 @@ const INITIAL_BOARDS: JobBoard[] = [
     bgLight: 'bg-orange-50',
     borderColor: 'border-orange-200',
     textColor: 'text-orange-600',
-    connected: true,
-    clicks: 189,
-    applications: 8,
+    connected: false,
+    clicks: 0,
+    applications: 0,
     postUrl: 'https://indeed.com',
     description: '#1 job site with 250M+ unique visitors',
     tag: 'High Volume',
@@ -95,8 +96,8 @@ const INITIAL_BOARDS: JobBoard[] = [
     borderColor: 'border-brand-200',
     textColor: 'text-brand-600',
     connected: true,
-    clicks: 67,
-    applications: 5,
+    clicks: 0,
+    applications: 0,
     postUrl: 'https://careers.yourcompany.com',
     description: 'Your own careers page — always free',
     tag: 'Direct',
@@ -378,7 +379,7 @@ function JobBoardsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-stone-900">Job Board Integrations</h1>
-            <p className="text-stone-500 text-sm">Post to multiple platforms and track performance</p>
+            <p className="text-stone-500 text-sm">Connect credentials for live posts — drafts still work without them</p>
           </div>
         </div>
         <motion.button
@@ -394,6 +395,11 @@ function JobBoardsPage() {
           <Zap className="w-4 h-4" />
           Quick Post
         </motion.button>
+      </div>
+
+      <div className="rounded-2xl border border-stone-200 bg-white p-6">
+        <h2 className="text-sm font-bold text-stone-900 mb-4">Board credentials</h2>
+        <JobBoardCredentialsForm />
       </div>
 
       {/* ── Stats Row ───────────────────────────────────────────────────── */}

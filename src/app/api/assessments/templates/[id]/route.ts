@@ -1,20 +1,31 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth, withPermission } from '@/lib/with-permission';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
-// GET /api/assessments/templates/[id] - Get single template with questions
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+type Ctx = { params: Promise<{ id: string }> };
+
+async function findOrgTemplate(id: string, orgId: string) {
+  return prisma.assessmentTemplate.findFirst({
+    where: {
+      id,
+      OR: [{ organizationId: orgId }, { organizationId: null }],
+    },
+    include: {
+      questions: { orderBy: { sortOrder: 'asc' } },
+      _count: { select: { assignments: true, questions: true } },
+    },
+  });
+}
+
+// GET /api/assessments/templates/[id]
+export const GET = withAuth(async (_request: NextRequest, ctx: Ctx, session) => {
   try {
-    const { id } = await params;
-    const template = await prisma.assessmentTemplate.findUnique({
-      where: { id },
-      include: {
-        questions: { orderBy: { sortOrder: 'asc' } },
-        _count: { select: { assignments: true, questions: true } },
-      },
-    });
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
+    const { id } = await ctx.params;
+    const template = await findOrgTemplate(id, orgId);
 
     if (!template) {
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });
@@ -25,15 +36,25 @@ export async function GET(
     console.error('Error fetching assessment template:', error);
     return NextResponse.json({ error: 'Failed to fetch template' }, { status: 500 });
   }
-}
+});
 
-// PATCH /api/assessments/templates/[id] - Update template
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// PATCH /api/assessments/templates/[id]
+export const PATCH = withPermission('MANAGE_SETTINGS', async (request: NextRequest, ctx: Ctx, session) => {
   try {
-    const { id } = await params;
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
+    const { id } = await ctx.params;
+    const existing = await prisma.assessmentTemplate.findFirst({
+      where: { id, organizationId: orgId },
+    });
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'Template not found or system templates are read-only' },
+        { status: 404 },
+      );
+    }
+
     const body = await request.json();
     const {
       name, description, category, type, duration, difficulty, passingScore, isActive,
@@ -67,27 +88,32 @@ export async function PATCH(
     console.error('Error updating assessment template:', error);
     return NextResponse.json({ error: 'Failed to update template' }, { status: 500 });
   }
-}
+});
 
-// DELETE /api/assessments/templates/[id] - Delete template with all related data
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// DELETE /api/assessments/templates/[id]
+export const DELETE = withPermission('MANAGE_SETTINGS', async (_request: NextRequest, ctx: Ctx, session) => {
   try {
-    const { id } = await params;
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
 
-    // Must delete in order: responses → assignments → template (questions cascade from template)
+    const { id } = await ctx.params;
+    const existing = await prisma.assessmentTemplate.findFirst({
+      where: { id, organizationId: orgId },
+    });
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'Template not found or system templates cannot be deleted' },
+        { status: 404 },
+      );
+    }
+
     await prisma.$transaction(async (tx) => {
-      // 1. Delete all assessment responses for any assignment of this template
       await tx.assessmentResponse.deleteMany({
         where: { assignment: { templateId: id } },
       });
-      // 2. Delete all assignments for this template
       await tx.assessmentAssignment.deleteMany({
         where: { templateId: id },
       });
-      // 3. Delete the template (questions cascade via onDelete: Cascade)
       await tx.assessmentTemplate.delete({
         where: { id },
       });
@@ -98,4 +124,4 @@ export async function DELETE(
     console.error('Error deleting assessment template:', error);
     return NextResponse.json({ error: 'Failed to delete template' }, { status: 500 });
   }
-}
+});
