@@ -45,7 +45,7 @@ All licenses are respected and acknowledged below.
 |---------|---------|------|
 | [jspdf](https://www.npmjs.com/package/jspdf) | MIT | https://github.com/parallax/jsPDF |
 | [jspdf-autotable](https://www.npmjs.com/package/jspdf-autotable) | MIT | https://github.com/simonbengtsson/jsPDF-AutoTable |
-| [xlsx](https://www.npmjs.com/package/xlsx) | Apache-2.0 | https://github.com/SheetJS/sheetjs |
+| [exceljs](https://www.npmjs.com/package/exceljs) | MIT | https://github.com/exceljs/exceljs |
 | [nodemailer](https://nodemailer.com) | MIT | https://github.com/nodemailer/nodemailer |
 | [pdf-parse](https://www.npmjs.com/package/pdf-parse) | MIT | https://gitlab.com/autokent/pdf-parse |
 | [mammoth](https://www.npmjs.com/package/mammoth) | BSD-2-Clause | https://github.com/mwilliamson/mammoth.js |

@@ -11,7 +11,7 @@ Landing and docs were updated so public claims match what the product actually s
 
 ### Landing website
 - Hero, CTA, pricing teasers, and FAQ copy aligned with a **self-hosted source-code** product (not SaaS trial language)
-- Removed/replaced inflated claims: fake “14-day trial”, “500+ companies”, “Beta User” labels, and ROI percentages that were not measured
+- Removed/replaced inflated claims: fake “14-day trial”, “500+ companies”, “Beta User” labels, and ROI percentages that were not measured (pricing SEO metadata and Arabic enterprise testimonial labels were also corrected in a follow-up pass)
 - Integration status on the home page matches the product docs (e.g. Zapier/Checkr available with config; Slack/Outlook planned; Google Calendar local unless OAuth is set)
 - Stack badges updated to **Next.js 15**
 - Testimonials, blog teaser, comparison, and social-proof UI **kept**; only wording/labels edited
@@ -198,8 +198,8 @@ node scripts/upgrade-v1-to-v2.js
 
 This script does everything automatically:
 1. Generates the Prisma client with new v2 models
-2. Runs `prisma migrate deploy` to safely create missing tables
-3. Runs `prisma db push` to sync remaining schema changes
+2. Runs `db push` to safely create all missing tables and columns
+3. Runs `migrate deploy` to record migration history
 4. Creates a default Company
 5. Backfills `organizationId` on all existing Users, Candidates, and Jobs
 6. Creates a FREE subscription for your company
@@ -241,7 +241,7 @@ This script does everything automatically:
 
 **Upgrade Helper Script**
 - Added `scripts/upgrade-v1-to-v2.js` — one-command safe upgrade
-- Runs `generate` → `migrate deploy` → `db push` → backfills all `organizationId` fields
+- Runs `generate` → `db push` → `migrate deploy` → backfills all `organizationId` fields
 - Auto-creates default Company + FREE subscription
 - Marks all existing users as email-verified
 - **Never deletes data**

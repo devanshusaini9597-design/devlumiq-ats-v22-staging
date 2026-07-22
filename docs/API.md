@@ -1,5 +1,7 @@
 # Devlumiq ATS — API Reference
 
+> **Partial reference** — documents the main v2.2 routes. The codebase has **~146** handlers under `src/app/api/`; see that folder and `prisma/schema.prisma` for the complete surface.
+
 All endpoints require authentication (JWT cookie `ats_session`) unless noted as **Public**.
 
 Base URL: `{NEXT_PUBLIC_APP_URL}/api`
@@ -13,11 +15,13 @@ Base URL: `{NEXT_PUBLIC_APP_URL}/api`
 | POST | `/auth/login` | ✅ | Email + password login → sets session cookie |
 | POST | `/auth/register` | ✅ | Create new user account |
 | POST | `/auth/logout` | ✅ | Clear session cookie |
-| POST | `/auth/demo` | ✅ | Quick demo login |
+| POST | `/auth/demo` | ✅ | Quick demo login (disabled in production unless `ENABLE_DEMO_LOGIN=true` or staging host) |
 | POST | `/auth/forgot-password` | ✅ | Send password reset email |
 | POST | `/auth/reset-password` | ✅ | Reset password with token |
 | POST | `/auth/verify-email` | ✅ | Verify email address |
 | GET | `/auth/session` | ❌ | Get current session info |
+| GET | `/auth/sso/login` | ✅ | SAML SSO redirect (Enterprise add-on) |
+| POST | `/auth/sso/acs` | ✅ | SAML assertion consumer |
 
 ---
 
@@ -52,11 +56,12 @@ Base URL: `{NEXT_PUBLIC_APP_URL}/api`
 | POST | `/messages/sms/bulk` | USE_EMAIL_TEMPLATES | Bulk SMS reminders/nudges |
 | POST | `/messages/whatsapp/send` | USE_EMAIL_TEMPLATES | WhatsApp + thread persist (opt-in) |
 | GET/PATCH | `/candidates/[id]/messaging-consent` | VIEW/EDIT | SMS/WhatsApp TCPA consent |
-| POST | `/webhooks/twilio` | public | Inbound SMS → MessageThread |
-| GET/POST | `/webhooks/whatsapp` | public | WhatsApp verify + inbound |
+| POST | `/webhooks/twilio` | Public | Inbound SMS → MessageThread |
+| GET/POST | `/webhooks/whatsapp` | Public | WhatsApp verify + inbound |
 | GET | `/candidates/[id]/comments` | VIEW_CANDIDATES | Get candidate comments |
 | POST | `/candidates/[id]/comments` | ADD_COMMENT | Add comment to candidate |
 | POST | `/candidates/[id]/resume/parse` | USE_RESUME_PARSER | Parse uploaded resume |
+| GET/POST/DELETE | `/candidates/[id]/scores` | SCORE_INTERVIEW | Interview scores (org-scoped) |
 
 ---
 
@@ -69,7 +74,8 @@ Base URL: `{NEXT_PUBLIC_APP_URL}/api`
 | GET | `/jobs/[id]` | VIEW_JOBS | Get job details |
 | PUT | `/jobs/[id]` | EDIT_JOB | Update job |
 | DELETE | `/jobs/[id]` | DELETE_JOB | Delete job |
-| GET | `/jobs/[id]/integrations` | MANAGE_INTEGRATIONS | Get job board postings |
+| GET/POST/PATCH | `/jobs/[id]/integrations` | MANAGE_INTEGRATIONS | Job board postings (org-scoped) |
+| GET/POST | `/forms/[jobId]` | VIEW_JOBS / EDIT_JOB | Custom application form (org-scoped) |
 
 ---
 
@@ -102,18 +108,43 @@ Base URL: `{NEXT_PUBLIC_APP_URL}/api`
 |--------|------|-----------|-------------|
 | GET | `/messages/threads` | Any authenticated | List message threads |
 | POST | `/messages/threads` | Any authenticated | Create thread |
-| GET | `/messages/threads/[id]` | Any authenticated | Get thread messages |
+| GET/DELETE | `/messages/threads/[id]` | Any authenticated | Get or delete thread (org-scoped) |
 | POST | `/messages/threads/[id]` | Any authenticated | Send message in thread |
 
 ---
 
-## Email
+## Email & Sequences
 
 | Method | Path | Permission | Description |
 |--------|------|-----------|-------------|
 | GET | `/email-templates` | USE_EMAIL_TEMPLATES | List email templates |
 | POST | `/email-templates` | USE_EMAIL_TEMPLATES | Create template |
 | POST | `/email/send` | USE_EMAIL_TEMPLATES | Send email (requires SMTP config) |
+| GET/POST/PATCH | `/email/sequences` | MANAGE_EMAIL_SEQUENCES | List, create, or enroll in sequences (org-scoped) |
+
+---
+
+## Assessments
+
+| Method | Path | Permission | Description |
+|--------|------|-----------|-------------|
+| GET/POST | `/assessments/templates` | VIEW_ASSESSMENTS / MANAGE_SETTINGS | Assessment templates |
+| POST | `/assessments/assign` | VIEW_ASSESSMENTS | Assign assessment to candidate |
+| GET/PATCH | `/assessments/assignments/[id]` | VIEW_ASSESSMENTS | Assignment status / integrity |
+| GET/POST | `/assessments/take/[id]` | Public (token) | Candidate take flow |
+| POST | `/assessments/[id]/submit` | Public (token) | Submit answers |
+| POST | `/assessments/[id]/run` | Public (token) | Run coding test (Judge0 or opt-in local runner) |
+
+---
+
+## Talent Pools
+
+| Method | Path | Permission | Description |
+|--------|------|-----------|-------------|
+| GET/POST | `/talent-pools` | VIEW_CANDIDATES / CREATE_CANDIDATE | List or create pools (org-scoped) |
+| GET/PATCH/DELETE | `/talent-pools/[id]` | org-scoped | Pool CRUD |
+| POST | `/talent-pools/[id]/members` | CREATE_CANDIDATE | Add candidate to pool (consent required) |
+| GET | `/talent-pools/suggest` | Suggest candidates for a job |
 
 ---
 
@@ -143,29 +174,51 @@ All AI endpoints work **with or without** an OpenAI API key. Without a key, rule
 | DELETE | `/jobboards/credentials` | MANAGE_INTEGRATIONS | Remove board credentials |
 | POST | `/linkedin/import` | CREATE_CANDIDATE | Import LinkedIn profile (via Chrome extension) |
 | POST | `/esignature/send` | USE_ESIGNATURE | Send e-signature request (DocuSign stub) |
-| GET | `/esignature/send?candidateId=` | Any authenticated | Get signature requests |
-| POST | `/checkr` | RUN_BACKGROUND_CHECKS | Initiate background check |
-| PATCH | `/checkr` | RUN_BACKGROUND_CHECKS | Update check status |
+| GET | `/esignature/send?candidateId=` | USE_ESIGNATURE | Get signature requests (org-scoped) |
+| POST | `/checkr` | VIEW_BACKGROUND_CHECKS | Initiate background check (org-scoped) |
+| PATCH | `/checkr` | RUN_BACKGROUND_CHECKS | Update check status (org-scoped) |
+| GET/POST/DELETE | `/background-checks/request/[id]` | auth / RUN_BACKGROUND_CHECKS | Background check records (org-scoped) |
 | POST | `/zapier/webhook` | Public | Zapier incoming webhook |
-| POST | `/webhooks` | Public | Generic webhook endpoint |
+| GET/POST/DELETE | `/webhooks` | MANAGE_INTEGRATIONS | Org webhook subscriptions (org-scoped) |
+| POST | `/webhooks/checkr` | Public (signed) | Checkr status webhook |
+| POST | `/webhooks/twilio` | Public (signed) | Twilio inbound SMS |
+| GET/POST | `/referrals` | VIEW/MANAGE_REFERRALS | Employee referrals (org-scoped) |
+| GET/POST | `/scorecards/submit` | SCORE_INTERVIEW | Submit or fetch interview scores (org-scoped) |
 
 ---
 
-## Admin
+## Admin & GDPR
 
 | Method | Path | Permission | Description |
 |--------|------|-----------|-------------|
-| GET | `/admin/gdpr?userId=` | ADMIN only | Export user data (GDPR) |
-| DELETE | `/admin/gdpr?userId=` | ADMIN only | Delete user data (right to erasure) |
+| GET | `/admin/gdpr?userId=` | ADMIN only | Export staff user data (GDPR) |
+| DELETE | `/admin/gdpr?userId=` | ADMIN only | Delete staff user data (right to erasure) |
+| GET | `/admin/gdpr/candidates/export` | ADMIN only | Export candidate data |
+| DELETE | `/admin/gdpr/candidates/erase` | ADMIN only | Erase candidate data |
 | GET | `/audit-logs` | ADMIN only | View audit log entries |
+| GET/POST | `/portal/gdpr/export` | Portal auth | Candidate self-service export |
+| POST | `/portal/gdpr/erase` | Portal auth | Candidate self-service erase |
 
 ---
 
-## Analytics
+## Analytics & DEI
 
 | Method | Path | Permission | Description |
 |--------|------|-----------|-------------|
 | GET | `/analytics/dashboard` | VIEW_ANALYTICS | Pipeline funnel, source breakdown, hire rate |
+| GET | `/dei/metrics` | VIEW_ANALYTICS (add-on) | Aggregate DEI funnel metrics |
+| POST | `/dei/self-id` | Public | Voluntary candidate self-ID (careers apply) |
+
+---
+
+## Billing (Stripe)
+
+| Method | Path | Permission | Description |
+|--------|------|-----------|-------------|
+| POST | `/billing/checkout` | ADMIN | Start checkout session |
+| POST | `/billing/portal` | ADMIN | Customer portal |
+| GET | `/billing/subscription` | ADMIN | Current plan + add-ons |
+| POST | `/billing/webhook` | Public (signed) | Stripe webhook |
 
 ---
 
@@ -176,7 +229,9 @@ All AI endpoints work **with or without** an OpenAI API key. Without a key, rule
 | GET | `/careers` | Public careers page data |
 | GET | `/careers/jobs` | Public job listings |
 | POST | `/careers/apply` | Submit job application |
+| POST | `/careers/chatbot` | Careers site FAQ chatbot |
 | GET | `/health` | Health check |
+| GET/POST | `/assessments/take/[token]` | Token-gated candidate assessment |
 
 ---
 
@@ -207,7 +262,7 @@ All errors follow this format:
 
 - Login: 10 attempts per 15 minutes per IP
 - Resume parse: 10 per 10 minutes per IP
-- General API: In-memory rate limiter (per-instance)
+- General API: In-memory rate limiter by default (per-instance); optional Redis when `REDIS_URL` is set and `ioredis` is installed
 
 Rate-limited responses include a `Retry-After` header (seconds).
 
@@ -222,3 +277,5 @@ Rate-limited responses include a `Retry-After` header (seconds).
 | HIRING_MANAGER | View candidates, schedule interviews, scoring |
 | INTERVIEWER | View assigned candidates, submit scores |
 | VIEWER | Read-only access to candidates and analytics |
+
+See `src/lib/roles.ts` for the full permission matrix (**34** permissions).

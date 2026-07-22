@@ -106,6 +106,8 @@ npm run seed
 
 This creates sample user accounts (all roles), jobs, candidates, applications, and messages so you can explore the app immediately.
 
+> **Note:** The seed script **refuses to run** if it detects real (non-demo) data. Use `npm run db:reset` only when you intentionally want to wipe and re-seed a dev database.
+
 ### Step 8: Start the development server
 
 ```bash
@@ -301,6 +303,7 @@ The file storage utility is at `src/lib/file-storage.ts`.
 | Integration | Status | Configuration |
 |-------------|--------|---------------|
 | Email/SMTP | ✅ Working | Set SMTP_* vars in .env |
+| Twilio SMS | ✅ Working | Set TWILIO_* vars in .env |
 | Checkr (background checks) | ✅ Working | Set CHECKR_API_KEY in .env |
 | Zapier | ✅ Working | Set ZAPIER_WEBHOOK_URL in .env |
 | Chrome Extension (LinkedIn) | ✅ Working | Settings → Chrome Extension (domain + token); load unpacked `chrome-extension/` |
@@ -321,7 +324,7 @@ The file storage utility is at `src/lib/file-storage.ts`.
 - **Authentication:** JWT stored in httpOnly cookie (`ats_session`); optional SAML SSO (Enterprise) without removing password login
 - **Passwords:** bcrypt hashed (12 rounds)
 - **RBAC:** 5 roles (Admin, Recruiter, Hiring Manager, Interviewer, Viewer) with 30+ granular permissions
-- **Rate Limiting:** Per-IP rate limiting on auth and upload endpoints
+- **Rate Limiting:** Per-IP rate limiting on auth and upload endpoints (in-memory by default; optional Redis when `REDIS_URL` is set and `ioredis` is installed)
 - **CSRF:** Origin-based validation on mutating requests (production)
 - **Headers:** X-Frame-Options, CSP, HSTS, X-Content-Type-Options, Permissions-Policy
 - **Webhooks:** HMAC signature verification (Checkr, DocuSign)
@@ -393,7 +396,7 @@ If you incorporate your own images, fonts, or third-party assets, ensure you hol
 - Confirm `.env` exists and `DATABASE_URL` is set.
 - Run `npx prisma generate` then `npx prisma db push` followed by `npx prisma migrate deploy`.
 - If the database is corrupted, reset it with `npx prisma migrate reset` followed by `npm run seed`.
-- **Warning:** `npm run seed` deletes all real candidates, jobs, and applications. Only run it on a fresh install or after a full reset.
+- **Warning:** `npm run db:reset` / `migrate reset` deletes all data. The seed script itself **refuses** to run when real (non-demo) data is detected — only use reset on a dev database you intend to wipe.
 
 **3. Port 3000 already in use**
 

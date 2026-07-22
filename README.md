@@ -54,7 +54,7 @@ All features work **without AI** using rule-based fallbacks. When you add an Ope
 
 | Feature | Without API Key | With API Key |
 |---------|----------------|---------------|
-| **Resume Parsing** | Regex keyword extraction + confidence scoring | GPT-powered semantic extraction with 95%+ accuracy |
+| **Resume Parsing** | Regex keyword extraction + confidence scoring | GPT-powered semantic extraction with richer field detection |
 | **Candidate Ranking** | Simple skill-match scoring (0–100) | AI scores with reasoning, strengths, and gap analysis |
 | **Candidate Screening** | Rule-based verdict from skill overlap | AI assessment with hiring recommendation |
 | **Job Description** | Structured template output | AI-written inclusive, compelling JD |
@@ -109,8 +109,8 @@ node scripts/upgrade-v1-to-v2.js
 
 This script:
 1. Generates the Prisma client with new v2 models
-2. Runs `migrate deploy` to safely create missing tables and record migration history
-3. Runs `db push` to sync any remaining schema changes
+2. Runs `db push` to safely create all missing tables and columns
+3. Runs `migrate deploy` to record migration history
 4. Creates a default Company and backfills `organizationId` on all users, candidates, and jobs
 5. Creates a FREE subscription for the company
 6. Marks all existing users as email-verified
@@ -143,7 +143,7 @@ npx prisma db push
 # 4. Record migration history for future upgrades
 npx prisma migrate deploy
 
-# 5. Seed sample data (fresh installs only — wipes existing data)
+# 5. Seed sample data (fresh installs only — refuses if real data is detected)
 npm run seed
 
 # 6. Start the development server
@@ -199,9 +199,9 @@ npm run seed
 
 ## Database & API
 
-**Database models:** User, Job, Candidate, Application, InterviewEvent, MessageThread, Message, Notification, ActivityLog, Announcement, CandidateNote, EmailTemplate, InterviewScore, OfferLetter, Comment, Resume, JobBoardIntegration
+**Database:** **80+ Prisma models** covering candidates, jobs, applications, assessments, talent pools, messaging, billing, DEI, and more — see `prisma/schema.prisma` for the full schema.
 
-**Core API routes:**
+**Core API routes** (~146 handlers under `src/app/api/`):
 - `/api/auth/*` — Authentication
 - `/api/dashboard/summary` — Dashboard statistics
 - `/api/candidates` — Candidate management
@@ -275,7 +275,7 @@ src/
 - **Performance** — `font-display: swap`, responsive images, code splitting via App Router
 - **Type Safety** — Strict TypeScript throughout the entire codebase
 - **Full-stack** — Every major feature (candidates, jobs, kanban, analytics, reports, settings) reads from and writes to the database
-- **Security** — JWT + httpOnly cookies, bcrypt password hashing, rate limiting, HMAC webhook verification (Checkr/Twilio fail-closed in production), API key hashing, CSP headers, origin-based CSRF protection, org-scoped nested API routes. Demo one-click login is **off in production** unless `ENABLE_DEMO_LOGIN=true`. Assessment coding runner is **off by default**; use Judge0 for production sandboxes (`ASSESSMENT_CODE_RUNNER=true` enables local `node:vm` for JS only — not a security boundary; sync timeout does not catch infinite microtask recursion).
+- **Security** — JWT + httpOnly cookies, bcrypt password hashing, rate limiting (in-memory by default; optional Redis via `REDIS_URL` + `ioredis`), HMAC webhook verification (Checkr/Twilio fail-closed in production), API key hashing, CSP headers, origin-based CSRF protection, org-scoped nested API routes. Demo one-click login is **off in production** unless `ENABLE_DEMO_LOGIN=true`. Assessment coding runner is **off by default**; use Judge0 for production sandboxes (`ASSESSMENT_CODE_RUNNER=true` enables local `node:vm` for JS only — not a security boundary; sync timeout does not catch infinite microtask recursion).
 - **File Storage** — Configurable: local (default), AWS S3, or Cloudflare R2
 
 ---
@@ -285,6 +285,7 @@ src/
 | Integration | Status | Notes |
 |-------------|--------|-------|
 | **Email/SMTP** | ✅ Real | Nodemailer — configure SMTP in .env |
+| **Twilio SMS** | ✅ Real | Outbound/inbound SMS when `TWILIO_*` vars are set |
 | **Checkr** | ✅ Real | Background checks via Checkr API |
 | **Zapier** | ✅ Real | Webhook-based integration |
 | **Chrome Extension** | ✅ Real | LinkedIn one-click import — configure domain + token in Settings → Chrome Extension |
