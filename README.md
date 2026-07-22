@@ -95,6 +95,14 @@ All features work **without AI** using rule-based fallbacks. When you add an Ope
 
 ---
 
+## Existing buyers — updates & data safety
+
+Updates are designed **not** to wipe hiring data. Always **back up PostgreSQL** before updating. Do **not** run `npm run seed` or `npm run db:reset` on a live database. Full checklist and recovery notes: **Documentation.md → §8b / §8c**.
+
+If data was deleted: restore from your host’s database backup (`pg_dump` / Neon / Supabase / Railway / Vercel Postgres). The app does not include automatic full-database undelete.
+
+---
+
 ## Upgrading from v1
 
 If you already have real candidate, job, or application data from v1:

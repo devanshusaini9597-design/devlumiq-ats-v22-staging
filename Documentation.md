@@ -14,6 +14,8 @@ This document will help you install, configure, and customize Devlumiq ATS. Foll
 6. [Project Structure](#6-project-structure)
 7. [Database & Production](#7-database--production)
 8. [Upgrading from v1](#8-upgrading-from-v1)
+8b. [Updating to a newer release (existing buyers)](#8b-updating-to-a-newer-release-existing-buyers)
+8c. [Data backup & recovery](#8c-data-backup--recovery)
 9. [AI Features](#9-ai-features)
 10. [File Storage](#10-file-storage)
 11. [Integrations](#11-integrations)
@@ -246,6 +248,114 @@ This script:
 3. **Do NOT run `npm run seed`** after upgrading. The seed script will refuse to run if real data is detected. If you want to wipe everything and start fresh, use `npm run db:reset`.
 4. After the upgrade, existing v1 users must use **Forgot Password** to set a new password.
 5. Log in as an admin and review company settings at **Settings → Organization**.
+
+---
+
+## 8b. Updating to a newer release (existing buyers)
+
+You already run Devlumiq ATS with **real hiring data**. New releases are designed to be **safe for existing installations** when you follow this checklist.
+
+### Will an update break my data?
+
+| Situation | Result |
+|-----------|--------|
+| Replace source code + run DB migrate / upgrade script | **Safe** — new tables/columns only; candidates, jobs, applications stay |
+| Skip migrate and only drop new files in | App may error on new features; data is usually still in Postgres |
+| Run `npm run seed` on a live DB | Seed **refuses** if real (non-demo) data is detected |
+| Run `npm run db:reset` / `prisma migrate reset` | **Destroys all data** — never do this on production |
+| New optional features (SMS, SSO, Judge0, white-label) | **Off until configured** — previous workflow stays the same |
+
+**Bottom line:** A normal update does **not** wipe hiring data. Issues come from skipping backups or running reset/seed on production.
+
+### Recommended update steps
+
+1. **Back up the database** (see [§8c](#8c-data-backup--recovery)).
+2. Optional: export candidates (Excel/PDF) and take a GDPR export for critical records.
+3. Deploy / merge the new source code (keep your `.env`; do not overwrite secrets).
+4. Install dependencies:
+   ```bash
+   npm install
+   ```
+5. Sync the schema (pick one path):
+   - **From v1 → v2:** `node scripts/upgrade-v1-to-v2.js` (never deletes data)
+   - **Already on v2, smaller update:**
+     ```bash
+     npx prisma generate
+     npx prisma db push
+     npx prisma migrate deploy
+     ```
+6. Build and restart:
+   ```bash
+   npm run build
+   npm start
+   ```
+   (Or redeploy on Vercel after push.)
+7. **Do not** run `npm run seed` or `npm run db:reset` on a live database.
+8. Smoke-test: login, open Candidates / Jobs / Kanban, confirm counts look right.
+
+### If you customized the code
+
+Merging a new zip over a heavily edited fork can overwrite your changes. Prefer git merge / cherry-pick, or re-apply customizations after update. Database data is separate from source files — code overwrite ≠ data wipe.
+
+---
+
+## 8c. Data backup & recovery
+
+Devlumiq ATS is **self-hosted**. The app stores hiring data in **your PostgreSQL database**. Recovery depends on **your host’s backups** — the product does not ship a built-in “undelete everything” button.
+
+### Before every update (required)
+
+Take a database snapshot or dump:
+
+**Neon / Supabase / Railway / Vercel Postgres**
+
+- Use the provider’s **Backup / Point-in-time restore / Branch** UI (recommended).
+
+**Any Postgres (including local)**
+
+```bash
+pg_dump "$DATABASE_URL" -Fc -f backup-$(date +%Y%m%d).dump
+```
+
+Restore later with:
+
+```bash
+pg_restore -d "$DATABASE_URL" --clean --if-exists backup-YYYYMMDD.dump
+```
+
+(Exact flags vary by host; follow your provider’s restore docs.)
+
+### What the product can export (partial recovery aids)
+
+These help you keep copies, but they are **not** a full database restore:
+
+| Export | Where | Use |
+|--------|-------|-----|
+| Candidates Excel / PDF | Dashboard → Candidates | Spreadsheet / printable copy |
+| Reports PDF / CSV | Dashboard → Reports / Analytics | Pipeline metrics |
+| Staff GDPR export | Admin GDPR API / settings | User-related data package |
+| Candidate GDPR export | Admin or `/portal/privacy` | Per-candidate package |
+
+### Soft delete vs hard delete
+
+- Some rows (e.g. inbox messages) use soft-delete flags (`isDeleted`) and can be recovered in code/DB if you know SQL.
+- Most deletes (candidates, jobs, `db:reset`) are **hard deletes**. Without a DB backup, they are **not recoverable** from the app alone.
+
+### If data was deleted by mistake
+
+1. **Stop writing** to the database (pause the app if possible).
+2. Restore from the **latest Postgres backup / PITR** on your host.
+3. If you have no DB backup: rebuild from exports (Excel/CSV/GDPR) where possible — expect incomplete recovery (notes, scores, threads may be missing).
+4. Contact your hosting provider’s support for snapshot restore windows.
+
+### Honest summary for buyers
+
+| Question | Answer |
+|----------|--------|
+| Can the upgrade script recover deleted data? | **No** — it only adds schema; it never undeletes |
+| Can Devlumiq restore data without a DB backup? | **No** — host backups / `pg_dump` are the recovery path |
+| Is there automatic cloud backup inside the app? | **No** — you control hosting and backups |
+| Best practice? | Backup before every update; enable provider backups; optional periodic Excel/GDPR exports |
 
 ---
 

@@ -3,6 +3,17 @@
 Product updates for DevLumiq ATS — written for customers and hiring teams.
 (Technical install notes for your IT team are at the bottom of each release.)
 
+### Existing buyers — updates & data safety
+
+New releases are **additive**. Your candidates, jobs, and applications stay in PostgreSQL when you update source code correctly.
+
+1. **Back up the database first** (host snapshot or `pg_dump`).
+2. Install / merge the new files; keep your `.env`.
+3. Run `npm install`, then schema sync (`upgrade-v1-to-v2.js` for v1→v2, or `prisma generate` + `db push` + `migrate deploy`).
+4. **Never** run `npm run seed` or `db:reset` on a live database.
+
+The upgrade helper **never deletes data**. If data is already deleted, recovery is via **your Postgres backup** — the app has no built-in full undelete. See **Documentation.md → §8b / §8c**.
+
 ---
 
 ## Marketing accuracy pass — July 21, 2026
