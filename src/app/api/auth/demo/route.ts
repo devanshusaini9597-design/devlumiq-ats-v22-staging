@@ -515,7 +515,7 @@ async function ensureDemoNotifications(userId: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isDemoLoginEnabled()) {
+    if (!isDemoLoginEnabled(request.headers.get('host') || request.nextUrl.host)) {
       return NextResponse.json(
         { error: 'Demo login is disabled', code: 'DEMO_LOGIN_DISABLED' },
         { status: 403 },

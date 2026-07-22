@@ -12,6 +12,7 @@ import { useLocale } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/components/ui/Toast';
 import { email as validateEmail } from '@/lib/validation';
 import { ROLE_UI } from '@/lib/roleUi';
+import { isDemoHost } from '@/lib/demo-login';
 
 const DEMO_ROLES = [
   {
@@ -109,16 +110,19 @@ function LoginForm() {
   const [rememberMe, setRememberMe] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
-  // Demo logins: shown in development, or when explicitly enabled for staging demos.
-  // Production customer deployments must leave NEXT_PUBLIC_ENABLE_DEMO_LOGIN unset/false.
-  const showDemoLogins =
+  // Show demo panel in local/dev, when env-enabled, or on known staging hosts (no Vercel env needed).
+  const [showDemoLogins, setShowDemoLogins] = useState(
     process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN === 'true' ||
-    process.env.NODE_ENV !== 'production';
+    process.env.NODE_ENV !== 'production',
+  );
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const remembered = localStorage.getItem('loginRememberEmail');
       if (remembered) setEmail(remembered);
+      if (isDemoHost(window.location.hostname)) {
+        setShowDemoLogins(true);
+      }
     }
   }, []);
 
