@@ -29,8 +29,11 @@ async function checkrApi(endpoint: string, options: RequestInit = {}) {
 }
 
 // POST /api/checkr - Create a background check
-export const POST = withPermission('VIEW_BACKGROUND_CHECKS', async (request: NextRequest) => {
+export const POST = withPermission('VIEW_BACKGROUND_CHECKS', async (request: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     if (!CHECKR_API_KEY) {
       return NextResponse.json(
         { error: 'Checkr API not configured. Missing CHECKR_API_KEY.' },
@@ -49,15 +52,31 @@ export const POST = withPermission('VIEW_BACKGROUND_CHECKS', async (request: Nex
       workflowId,
     } = body;
 
+    if (!candidateId) {
+      return NextResponse.json({ error: 'candidateId is required' }, { status: 400 });
+    }
+
+    const ownedCandidate = await prisma.candidate.findFirst({
+      where: { id: candidateId, organizationId: orgId },
+      select: { id: true, name: true, email: true, phone: true },
+    });
+    if (!ownedCandidate) {
+      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
+    }
+
+    const resolvedName = candidateName || ownedCandidate.name || '';
+    const resolvedEmail = candidateEmail || ownedCandidate.email;
+    const resolvedPhone = candidatePhone || ownedCandidate.phone;
+
     // Create Checkr candidate first
-    const nameParts = candidateName?.split(' ') || ['', ''];
+    const nameParts = resolvedName.split(' ') || ['', ''];
     const candidateData = await checkrApi('/candidates', {
       method: 'POST',
       body: JSON.stringify({
         first_name: nameParts[0],
         last_name: nameParts.slice(1).join(' ') || 'Unknown',
-        email: candidateEmail,
-        phone: candidatePhone,
+        email: resolvedEmail,
+        phone: resolvedPhone,
         // Add any additional metadata
         metadata: {
           ats_candidate_id: candidateId,
@@ -74,7 +93,7 @@ export const POST = withPermission('VIEW_BACKGROUND_CHECKS', async (request: Nex
         ...(customPackages && { package_ids: customPackages }),
         ...(workflowId && { workflow_id: workflowId }),
         // Options for candidate experience
-        email: candidateEmail,
+        email: resolvedEmail,
         custom_message: {
           subject: 'Background Check Required',
           body: 'Please complete the background check process by clicking the link below.',
@@ -195,11 +214,35 @@ export const GET = withAuth(async (request: NextRequest, _ctx, session) => {
 });
 
 // PATCH /api/checkr - Update background check status
-export const PATCH = withPermission('RUN_BACKGROUND_CHECKS', async (request: NextRequest) => {
+export const PATCH = withPermission('RUN_BACKGROUND_CHECKS', async (request: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { checkId, status, reportUrl, notes } = await request.json();
 
-    const updateData: any = {
+    if (!checkId) {
+      return NextResponse.json({ error: 'checkId is required' }, { status: 400 });
+    }
+
+    const existing = await prisma.backgroundCheck.findFirst({
+      where: {
+        id: checkId,
+        candidate: { organizationId: orgId },
+      },
+      select: { id: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Background check not found' }, { status: 404 });
+    }
+
+    const updateData: {
+      status: string;
+      updatedAt: Date;
+      reportUrl?: string;
+      notes?: string;
+      completedAt?: Date;
+    } = {
       status,
       updatedAt: new Date(),
     };

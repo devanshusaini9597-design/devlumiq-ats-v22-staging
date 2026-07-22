@@ -6,8 +6,16 @@ import { GET as getThread, DELETE as deleteThread } from '@/app/api/messages/thr
 import { GET as getIntegrations, POST as postIntegrations, PATCH as patchIntegrations } from '@/app/api/jobs/[id]/integrations/route';
 import { GET as getBgCheck, DELETE as deleteBgCheck } from '@/app/api/background-checks/request/[id]/route';
 import { POST as demoLogin } from '@/app/api/auth/demo/route';
+import { GET as getScorecard, POST as postScorecard } from '@/app/api/scorecards/submit/route';
+import { POST as postCheckr, PATCH as patchCheckr } from '@/app/api/checkr/route';
+import { GET as getEsign, POST as postEsign, PATCH as patchEsign } from '@/app/api/esignature/send/route';
+import { GET as getForm, POST as postForm } from '@/app/api/forms/[jobId]/route';
+import { GET as getWebhooks, POST as postWebhooks, DELETE as deleteWebhooks } from '@/app/api/webhooks/route';
+import { POST as postReferral, PATCH as patchReferral } from '@/app/api/referrals/route';
+import { PATCH as enrollSequence } from '@/app/api/email/sequences/route';
 
 const params = Promise.resolve({ id: 'foreign-tenant-id' });
+const jobParams = Promise.resolve({ jobId: 'foreign-job-id' });
 
 function makeReq(method = 'GET', body?: unknown, path = '/api/test', host = 'localhost') {
   const url = `http://${host}${path}`;
@@ -57,6 +65,42 @@ describe('Critical IDOR / auth gates — unauthenticated callers', () => {
   it('rejects unauthenticated background-check by id (was fully open)', async () => {
     expect((await getBgCheck(makeReq(), { params })).status).toBe(401);
     expect((await deleteBgCheck(makeReq('DELETE'), { params })).status).toBe(401);
+  });
+
+  it('rejects unauthenticated scorecard submit', async () => {
+    expect((await getScorecard(makeReq('GET', undefined, '/api/scorecards/submit?interviewId=x'), {})).status).toBe(401);
+    expect((await postScorecard(makeReq('POST', { interviewId: 'x', scores: [] }), {})).status).toBe(401);
+  });
+
+  it('rejects unauthenticated checkr create/update', async () => {
+    expect((await postCheckr(makeReq('POST', { candidateId: 'x' }), {})).status).toBe(401);
+    expect((await patchCheckr(makeReq('PATCH', { checkId: 'x', status: 'clear' }), {})).status).toBe(401);
+  });
+
+  it('rejects unauthenticated esignature routes', async () => {
+    expect((await getEsign(makeReq(), {})).status).toBe(401);
+    expect((await postEsign(makeReq('POST', { candidateId: 'x' }), {})).status).toBe(401);
+    expect((await patchEsign(makeReq('PATCH', { event: 'resend', data: { id: 'x' } }), {})).status).toBe(401);
+  });
+
+  it('rejects unauthenticated job form access', async () => {
+    expect((await getForm(makeReq(), { params: jobParams })).status).toBe(401);
+    expect((await postForm(makeReq('POST', { title: 'Form', fields: [] }), { params: jobParams })).status).toBe(401);
+  });
+
+  it('rejects unauthenticated org webhook CRUD', async () => {
+    expect((await getWebhooks(makeReq(), {})).status).toBe(401);
+    expect((await postWebhooks(makeReq('POST', { name: 'x', url: 'https://x', secret: 's', events: [] }), {})).status).toBe(401);
+    expect((await deleteWebhooks(makeReq('DELETE', undefined, '/api/webhooks?id=x'), {})).status).toBe(401);
+  });
+
+  it('rejects unauthenticated referral mutate', async () => {
+    expect((await postReferral(makeReq('POST', { programId: 'x', candidateName: 'a', candidateEmail: 'a@b.com' }), {})).status).toBe(401);
+    expect((await patchReferral(makeReq('PATCH', { id: 'x', status: 'hired' }), {})).status).toBe(401);
+  });
+
+  it('rejects unauthenticated sequence enroll', async () => {
+    expect((await enrollSequence(makeReq('PATCH', { sequenceId: 'x', candidateId: 'y' }), {})).status).toBe(401);
   });
 });
 

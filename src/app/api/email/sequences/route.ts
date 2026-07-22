@@ -88,10 +88,20 @@ export const POST = withPermission('MANAGE_EMAIL_SEQUENCES', async (request: Nex
 
 export const PATCH = withPermission('MANAGE_EMAIL_SEQUENCES', async (request: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { sequenceId, candidateId, applicationId } = await request.json();
 
-    const candidate = await prisma.candidate.findUnique({
-      where: { id: candidateId },
+    if (!sequenceId || !candidateId) {
+      return NextResponse.json(
+        { error: 'sequenceId and candidateId are required' },
+        { status: 400 },
+      );
+    }
+
+    const candidate = await prisma.candidate.findFirst({
+      where: { id: candidateId, organizationId: orgId },
       select: {
         id: true,
         name: true,
@@ -105,6 +115,35 @@ export const PATCH = withPermission('MANAGE_EMAIL_SEQUENCES', async (request: Ne
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
     }
 
+    const sequence = await prisma.emailSequence.findFirst({
+      where: { id: sequenceId, organizationId: orgId },
+      include: {
+        steps: {
+          include: { template: true },
+          orderBy: { stepNumber: 'asc' },
+        },
+      },
+    });
+    if (!sequence) {
+      return NextResponse.json({ error: 'Sequence not found' }, { status: 404 });
+    }
+
+    if (applicationId) {
+      const application = await prisma.application.findFirst({
+        where: {
+          id: applicationId,
+          OR: [
+            { candidate: { organizationId: orgId } },
+            { job: { companyId: orgId } },
+          ],
+        },
+        select: { id: true },
+      });
+      if (!application) {
+        return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+      }
+    }
+
     const enrollment = await prisma.emailSequenceEnrollment.create({
       data: {
         sequenceId,
@@ -115,17 +154,7 @@ export const PATCH = withPermission('MANAGE_EMAIL_SEQUENCES', async (request: Ne
       },
     });
 
-    const sequence = await prisma.emailSequence.findUnique({
-      where: { id: sequenceId },
-      include: {
-        steps: {
-          include: { template: true },
-          orderBy: { stepNumber: 'asc' },
-        },
-      },
-    });
-
-    if (sequence && sequence.steps.length > 0) {
+    if (sequence.steps.length > 0) {
       const firstStep = sequence.steps[0];
       const scheduledAt = new Date();
       scheduledAt.setHours(scheduledAt.getHours() + firstStep.delayHours);
@@ -172,9 +201,6 @@ export const PATCH = withPermission('MANAGE_EMAIL_SEQUENCES', async (request: Ne
             .replace(/\{\{name\}\}/gi, candidate.name)
             .slice(0, 1600);
           const { sid } = await sendTwilioSms(to, text);
-          const orgIdOrErr = requireOrgId(session);
-          if (isOrgError(orgIdOrErr)) return orgIdOrErr;
-          const orgId = orgIdOrErr;
           const thread = await findOrCreateCandidateThread({
             candidateId: candidate.id,
             organizationId: orgId,

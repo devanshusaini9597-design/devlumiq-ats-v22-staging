@@ -70,11 +70,13 @@ vi.mock('@/lib/prisma', () => ({
       findMany: vi.fn(),
       findFirst: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
     },
     interviewScore: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
       create: vi.fn(),
+      createMany: vi.fn(),
       update: vi.fn(),
       deleteMany: vi.fn(),
     },
@@ -108,6 +110,44 @@ vi.mock('@/lib/prisma', () => ({
       create: vi.fn(),
     },
     webhookEvent: {
+      create: vi.fn(),
+    },
+    webhook: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      delete: vi.fn(),
+    },
+    jobApplicationForm: {
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
+    },
+    referral: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
+    referralProgram: {
+      findFirst: vi.fn(),
+    },
+    emailSequence: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+    },
+    emailSequenceEnrollment: {
+      create: vi.fn(),
+      update: vi.fn(),
+    },
+    offerLetter: {
+      findFirst: vi.fn(),
+    },
+    application: {
+      findFirst: vi.fn(),
+    },
+    scheduledEmail: {
       create: vi.fn(),
     },
   },

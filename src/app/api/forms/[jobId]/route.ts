@@ -1,13 +1,30 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth, withPermission } from '@/lib/with-permission';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
-// GET /api/forms/[jobId] - Get custom form for a job
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ jobId: string }> }
-) {
+async function assertJobInOrg(jobId: string, orgId: string) {
+  return prisma.job.findFirst({
+    where: { id: jobId, companyId: orgId },
+    select: { id: true },
+  });
+}
+
+// GET /api/forms/[jobId] - Get custom form for a job (org-scoped)
+export const GET = withAuth(async (
+  _request: NextRequest,
+  { params }: { params: Promise<{ jobId: string }> },
+  session,
+) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { jobId } = await params;
+    const job = await assertJobInOrg(jobId, orgId);
+    if (!job) {
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    }
 
     const form = await prisma.jobApplicationForm.findUnique({
       where: { jobId },
@@ -28,18 +45,27 @@ export async function GET(
     console.error('Error fetching form:', error);
     return NextResponse.json({ error: 'Failed to fetch form' }, { status: 500 });
   }
-}
+});
 
 // POST /api/forms/[jobId] - Create/update custom form
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ jobId: string }> }
-) {
+export const POST = withPermission('EDIT_JOB', async (
+  request: NextRequest,
+  { params }: { params: Promise<{ jobId: string }> },
+  session,
+) => {
   try {
-    const { jobId } = await params;
-    const { title, description, fields } = await request.json();
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
 
-    // Upsert form
+    const { jobId } = await params;
+    const job = await assertJobInOrg(jobId, orgId);
+    if (!job) {
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    }
+
+    const { title, description, fields } = await request.json();
+    const fieldList = Array.isArray(fields) ? fields : [];
+
     const form = await prisma.jobApplicationForm.upsert({
       where: { jobId },
       create: {
@@ -47,7 +73,14 @@ export async function POST(
         title: title || 'Application Form',
         description,
         fields: {
-          create: fields.map((f: any, index: number) => ({
+          create: fieldList.map((f: {
+            type: string;
+            label: string;
+            placeholder?: string;
+            helpText?: string;
+            isRequired?: boolean;
+            options?: { label: string; value: string }[];
+          }, index: number) => ({
             type: f.type,
             label: f.label,
             placeholder: f.placeholder,
@@ -55,7 +88,7 @@ export async function POST(
             isRequired: f.isRequired ?? false,
             sortOrder: index,
             options: f.options ? {
-              create: f.options.map((o: any, i: number) => ({
+              create: f.options.map((o, i) => ({
                 label: o.label,
                 value: o.value,
                 sortOrder: i,
@@ -69,7 +102,14 @@ export async function POST(
         description,
         fields: {
           deleteMany: {},
-          create: fields.map((f: any, index: number) => ({
+          create: fieldList.map((f: {
+            type: string;
+            label: string;
+            placeholder?: string;
+            helpText?: string;
+            isRequired?: boolean;
+            options?: { label: string; value: string }[];
+          }, index: number) => ({
             type: f.type,
             label: f.label,
             placeholder: f.placeholder,
@@ -77,7 +117,7 @@ export async function POST(
             isRequired: f.isRequired ?? false,
             sortOrder: index,
             options: f.options ? {
-              create: f.options.map((o: any, i: number) => ({
+              create: f.options.map((o, i) => ({
                 label: o.label,
                 value: o.value,
                 sortOrder: i,
@@ -99,4 +139,4 @@ export async function POST(
     console.error('Error saving form:', error);
     return NextResponse.json({ error: 'Failed to save form' }, { status: 500 });
   }
-}
+});

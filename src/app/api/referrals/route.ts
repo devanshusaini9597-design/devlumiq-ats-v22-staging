@@ -36,14 +36,32 @@ export const GET = withAuth(async (request: NextRequest, _ctx, session) => {
 });
 
 // POST /api/referrals - Submit new referral
-export const POST = withAuth(async (request: NextRequest) => {
+export const POST = withAuth(async (request: NextRequest, _ctx, session) => {
   try {
-    const { programId, referrerId, candidateName, candidateEmail, candidatePhone, relationship, notes } = await request.json();
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
+    const { programId, candidateName, candidateEmail, candidatePhone, relationship, notes } = await request.json();
+
+    if (!programId || !candidateName || !candidateEmail) {
+      return NextResponse.json(
+        { error: 'programId, candidateName, and candidateEmail are required' },
+        { status: 400 },
+      );
+    }
+
+    const program = await prisma.referralProgram.findFirst({
+      where: { id: programId, organizationId: orgId, isActive: true },
+      select: { id: true },
+    });
+    if (!program) {
+      return NextResponse.json({ error: 'Referral program not found' }, { status: 404 });
+    }
 
     const referral = await prisma.referral.create({
       data: {
         programId,
-        referrerId,
+        referrerId: session.id,
         candidateName,
         candidateEmail,
         candidatePhone,
@@ -62,13 +80,34 @@ export const POST = withAuth(async (request: NextRequest) => {
 });
 
 // PATCH /api/referrals - Update referral status
-export const PATCH = withPermission('MANAGE_REFERRALS', async (request: NextRequest) => {
+export const PATCH = withPermission('MANAGE_REFERRALS', async (request: NextRequest, _ctx, session) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id, status, rewardStatus, rewardAmount } = await request.json();
 
-    const updateData: any = { status };
+    if (!id) {
+      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    }
+
+    const existing = await prisma.referral.findFirst({
+      where: { id, program: { organizationId: orgId } },
+      select: { id: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Referral not found' }, { status: 404 });
+    }
+
+    const updateData: {
+      status?: string;
+      rewardStatus?: string;
+      rewardAmount?: number;
+      rewardPaidAt?: Date;
+    } = {};
+    if (status) updateData.status = status;
     if (rewardStatus) updateData.rewardStatus = rewardStatus;
-    if (rewardAmount) updateData.rewardAmount = rewardAmount;
+    if (rewardAmount !== undefined) updateData.rewardAmount = rewardAmount;
     if (status === 'paid') updateData.rewardPaidAt = new Date();
 
     const referral = await prisma.referral.update({
