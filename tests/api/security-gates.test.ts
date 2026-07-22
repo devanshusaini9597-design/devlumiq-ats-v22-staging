@@ -9,13 +9,14 @@ import { POST as demoLogin } from '@/app/api/auth/demo/route';
 
 const params = Promise.resolve({ id: 'foreign-tenant-id' });
 
-function makeReq(method = 'GET', body?: unknown, path = '/api/test') {
-  const url = `http://localhost${path}`;
+function makeReq(method = 'GET', body?: unknown, path = '/api/test', host = 'localhost') {
+  const url = `http://${host}${path}`;
   const req = new Request(url, {
     method,
     headers: {
       'Content-Type': 'application/json',
-      Origin: 'http://localhost',
+      Origin: `http://${host}`,
+      Host: host,
       // Skip CSRF path for unit tests; auth still required via session
       Authorization: 'Bearer test-token',
     },
@@ -72,7 +73,8 @@ describe('Demo login production gate', () => {
   it('returns 403 in production when ENABLE_DEMO_LOGIN is unset', async () => {
     process.env.NODE_ENV = 'production';
     delete process.env.ENABLE_DEMO_LOGIN;
-    const res = await demoLogin(makeReq('POST', { role: 'ADMIN' }));
+    // Non-staging host — must not unlock demo login
+    const res = await demoLogin(makeReq('POST', { role: 'ADMIN' }, '/api/auth/demo', 'app.customer.com'));
     expect(res.status).toBe(403);
     const data = await res.json();
     expect(data.code).toBe('DEMO_LOGIN_DISABLED');
