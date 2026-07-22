@@ -4,6 +4,10 @@ import bcrypt from 'bcryptjs';
 import { signSession, sessionCookieOptions, SESSION_COOKIE, createUserSession } from '@/lib/auth';
 import { rateLimitAsync, getClientIp } from '@/lib/rate-limit';
 
+/** Dummy bcrypt hash used so "user not found" still pays the compare cost (anti-enumeration). */
+const DUMMY_PASSWORD_HASH =
+  '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.G2oQ.YqKxqKxqK';
+
 export async function POST(request: NextRequest) {
   try {
     const ip = getClientIp(request);
@@ -26,7 +30,14 @@ export async function POST(request: NextRequest) {
       id: true, name: true, email: true, password: true, role: true, isActive: true, organizationId: true,
       isEmailVerified: true, inviteToken: true, tokenVersion: true,
     }});
-    if (!user) return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
+
+    // Always run bcrypt.compare to avoid timing leaks that reveal whether an email is registered
+    const hashToCompare = user?.password || DUMMY_PASSWORD_HASH;
+    const valid = await bcrypt.compare(password, hashToCompare);
+
+    if (!user || !user.password || !valid) {
+      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
+    }
 
     if (!user.isActive) {
       return NextResponse.json({ error: 'Your account has been deactivated. Contact your administrator.' }, { status: 403 });
@@ -44,12 +55,6 @@ export async function POST(request: NextRequest) {
         { status: 403 },
       );
     }
-
-    if (!user.password) {
-      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
-    }
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
 
     // Update last login timestamp
     await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } }).catch(() => {});

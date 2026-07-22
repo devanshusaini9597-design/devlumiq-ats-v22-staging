@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { signSession, sessionCookieOptions, SESSION_COOKIE } from '@/lib/auth';
+import { isDemoLoginEnabled } from '@/lib/demo-login';
 import bcrypt from 'bcryptjs';
 
 const DEMO_USERS = {
@@ -514,6 +515,13 @@ async function ensureDemoNotifications(userId: string) {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isDemoLoginEnabled()) {
+      return NextResponse.json(
+        { error: 'Demo login is disabled', code: 'DEMO_LOGIN_DISABLED' },
+        { status: 403 },
+      );
+    }
+
     const body = await request.json().catch(() => ({}));
     const role = ((body?.role ?? '') as string).toUpperCase() as DemoRole;
 

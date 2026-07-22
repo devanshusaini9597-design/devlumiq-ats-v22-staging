@@ -7,6 +7,11 @@
  * SECURITY: node:vm is NOT a true security boundary. Prefer Judge0 / containers
  * for untrusted production workloads. Do not enable the local runner on internet-facing
  * deployments unless you accept the RCE risk of executing candidate-submitted code in-process.
+ *
+ * LIMITATION: `script.runInContext(..., { timeout })` only bounds synchronous CPU time.
+ * Candidate code that schedules infinite microtask recursion (e.g. `Promise.resolve().then(loop)`)
+ * is NOT caught by the timeout and can hang the Node process — another reason the local
+ * runner must never be treated as a production sandbox.
  */
 
 import { createContext, Script } from 'node:vm';

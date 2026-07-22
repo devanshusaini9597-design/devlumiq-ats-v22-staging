@@ -380,7 +380,7 @@ export default function DashboardLayout({
           width: sidebarCollapsed ? 80 : 280,
         }}
         transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col overflow-hidden bg-gradient-to-b from-stone-900 via-stone-950 to-stone-950 border-r border-stone-800/50 shadow-2xl ${
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col overflow-x-hidden overflow-y-hidden bg-gradient-to-b from-stone-900 via-stone-950 to-stone-950 border-r border-stone-800/50 shadow-2xl ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
@@ -651,20 +651,18 @@ export default function DashboardLayout({
         <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-stone-950/70 to-transparent" />
         </div>
 
-        <div className="relative border-t border-stone-800/40 p-3 flex-shrink-0 space-y-1">
-          <div className={`flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-stone-800/40 transition-colors ${sidebarCollapsed ? 'justify-center' : ''}`}>
+        <div className="relative border-t border-stone-800/40 p-3 pb-4 flex-shrink-0 z-10 bg-stone-950">
+          <div className={`flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-stone-800/40 transition-colors min-w-0 ${sidebarCollapsed ? 'justify-center' : ''}`}>
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-500 to-teal-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-lg shadow-brand-500/20 select-none">
               {initials}
             </div>
             {!sidebarCollapsed && (
               <>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 overflow-hidden">
                   <p className="text-sm font-semibold text-stone-200 truncate leading-tight">{displayName}</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <p className="text-[11px] text-stone-500 truncate leading-tight">{userEmail}</p>
-                  </div>
+                  <p className="text-[11px] text-stone-500 truncate leading-tight mt-0.5">{userEmail}</p>
                   {userRole && (
-                    <span className={`inline-flex items-center mt-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide border ${roleBadgeClass(userRole)}`}>
+                    <span className={`inline-flex items-center mt-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide border max-w-full truncate ${roleBadgeClass(userRole)}`}>
                       {userRole.replace('_', ' ')}
                     </span>
                   )}

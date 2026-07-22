@@ -275,7 +275,7 @@ src/
 - **Performance** — `font-display: swap`, responsive images, code splitting via App Router
 - **Type Safety** — Strict TypeScript throughout the entire codebase
 - **Full-stack** — Every major feature (candidates, jobs, kanban, analytics, reports, settings) reads from and writes to the database
-- **Security** — JWT + httpOnly cookies, bcrypt password hashing, rate limiting, HMAC webhook verification, API key hashing, CSP headers, origin-based CSRF protection. Assessment coding runner is **off by default**; use Judge0 for production sandboxes (`ASSESSMENT_CODE_RUNNER=true` enables local `node:vm` for JS only — not a security boundary).
+- **Security** — JWT + httpOnly cookies, bcrypt password hashing, rate limiting, HMAC webhook verification (Checkr/Twilio fail-closed in production), API key hashing, CSP headers, origin-based CSRF protection, org-scoped nested API routes. Demo one-click login is **off in production** unless `ENABLE_DEMO_LOGIN=true`. Assessment coding runner is **off by default**; use Judge0 for production sandboxes (`ASSESSMENT_CODE_RUNNER=true` enables local `node:vm` for JS only — not a security boundary; sync timeout does not catch infinite microtask recursion).
 - **File Storage** — Configurable: local (default), AWS S3, or Cloudflare R2
 
 ---

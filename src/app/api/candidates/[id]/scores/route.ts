@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth, withPermission } from '@/lib/with-permission';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
+
+async function assertCandidateInOrg(candidateId: string, orgId: string) {
+  return prisma.candidate.findFirst({
+    where: { id: candidateId, organizationId: orgId },
+    select: { id: true },
+  });
+}
 
 async function getOrCreateInterview(candidateId: string, userId: string) {
   let interview = await prisma.interviewEvent.findFirst({
@@ -24,9 +32,20 @@ async function getOrCreateInterview(candidateId: string, userId: string) {
   return interview;
 }
 
-export const GET = withAuth(async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+export const GET = withAuth(async (
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+  session,
+) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await params;
+    const candidate = await assertCandidateInOrg(id, orgId);
+    if (!candidate) {
+      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
+    }
 
     const interviews = await prisma.interviewEvent.findMany({
       where: { candidateId: id },
@@ -37,7 +56,7 @@ export const GET = withAuth(async (req: NextRequest, { params }: { params: Promi
       return NextResponse.json({ scores: [] });
     }
 
-    const interviewIds = interviews.map(i => i.id);
+    const interviewIds = interviews.map((i) => i.id);
 
     const scores = await prisma.interviewScore.findMany({
       where: { interviewId: { in: interviewIds } },
@@ -46,7 +65,7 @@ export const GET = withAuth(async (req: NextRequest, { params }: { params: Promi
     });
 
     return NextResponse.json({
-      scores: scores.map(s => ({
+      scores: scores.map((s) => ({
         id: s.id,
         criteria: s.criteriaName,
         score: s.score,
@@ -62,9 +81,21 @@ export const GET = withAuth(async (req: NextRequest, { params }: { params: Promi
   }
 });
 
-export const POST = withPermission('SCORE_INTERVIEW', async (req: NextRequest, { params }: { params: Promise<{ id: string }> }, session) => {
+export const POST = withPermission('SCORE_INTERVIEW', async (
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+  session,
+) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await params;
+    const candidate = await assertCandidateInOrg(id, orgId);
+    if (!candidate) {
+      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
+    }
+
     const data = await req.json();
 
     const interview = await getOrCreateInterview(id, session.id);
@@ -117,9 +148,20 @@ export const POST = withPermission('SCORE_INTERVIEW', async (req: NextRequest, {
   }
 });
 
-export const DELETE = withPermission('SCORE_INTERVIEW', async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+export const DELETE = withPermission('SCORE_INTERVIEW', async (
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+  session,
+) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await params;
+    const candidate = await assertCandidateInOrg(id, orgId);
+    if (!candidate) {
+      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
+    }
 
     // Delete all scores for this candidate's interviews
     const interviews = await prisma.interviewEvent.findMany({
@@ -129,7 +171,7 @@ export const DELETE = withPermission('SCORE_INTERVIEW', async (req: NextRequest,
 
     if (interviews.length > 0) {
       await prisma.interviewScore.deleteMany({
-        where: { interviewId: { in: interviews.map(i => i.id) } },
+        where: { interviewId: { in: interviews.map((i) => i.id) } },
       });
     }
 

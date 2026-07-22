@@ -38,13 +38,56 @@ vi.mock('@/lib/prisma', () => ({
     candidate: {
       findMany: vi.fn(),
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
+    comment: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      delete: vi.fn(),
+    },
+    job: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+    },
+    jobBoardIntegration: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
+    messageThread: {
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      delete: vi.fn(),
+    },
+    message: {
+      updateMany: vi.fn(),
+    },
+    interviewEvent: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+    },
+    interviewScore: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      deleteMany: vi.fn(),
+    },
+    resume: {
       create: vi.fn(),
     },
     backgroundCheck: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
+      findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      delete: vi.fn(),
     },
     eSignatureRequest: {
       findMany: vi.fn(),

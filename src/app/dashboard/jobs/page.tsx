@@ -543,16 +543,16 @@ export default function JobsPage() {
         </div>
 
         {/* ── DESKTOP: Table (hidden on mobile) ── */}
-        <div className="hidden md:block overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <table className="w-full border-collapse" style={{ minWidth: '700px' }}>
+        <div className="hidden md:block w-full max-w-full min-w-0 overflow-x-auto rounded-xl border border-stone-200/80 bg-white" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <table className="w-full border-collapse table-fixed md:table-auto" style={{ minWidth: '640px' }}>
             <colgroup>
-              <col style={{ width: '32%', minWidth: '200px' }} />
-              <col style={{ width: '14%', minWidth: '110px' }} />
-              <col style={{ width: '14%', minWidth: '110px' }} />
-              <col style={{ width: '10%', minWidth: '90px' }} />
-              <col style={{ width: '12%', minWidth: '100px' }} />
-              <col style={{ width: '10%', minWidth: '90px' }} />
-              <col style={{ width: '8%', minWidth: '120px' }} />
+              <col style={{ width: '28%', minWidth: '160px' }} />
+              <col style={{ width: '14%', minWidth: '100px' }} />
+              <col style={{ width: '14%', minWidth: '100px' }} />
+              <col style={{ width: '12%', minWidth: '80px' }} />
+              <col style={{ width: '12%', minWidth: '90px' }} />
+              <col style={{ width: '10%', minWidth: '80px' }} />
+              <col style={{ width: '10%', minWidth: '100px' }} />
             </colgroup>
             <thead>
                 <tr className="bg-stone-50 border-b-2 border-stone-200">

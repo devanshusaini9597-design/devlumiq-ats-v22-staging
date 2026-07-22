@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await requireAuth();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const orgId = requireOrgId(user);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await params;
-    const thread = await prisma.messageThread.findUnique({
-      where: { id },
+    const thread = await prisma.messageThread.findFirst({
+      where: { id, organizationId: orgId },
       include: {
         messages: {
           where: { isDeleted: false },
@@ -38,8 +42,8 @@ export async function GET(
 
     // Mark unread inbound messages as read
     const unreadMessageIds = thread.messages
-      .filter(m => !m.isRead && m.direction === 'INBOUND')
-      .map(m => m.id);
+      .filter((m) => !m.isRead && m.direction === 'INBOUND')
+      .map((m) => m.id);
 
     if (unreadMessageIds.length > 0) {
       await prisma.message.updateMany({
@@ -80,13 +84,24 @@ export async function GET(
 // DELETE /api/messages/threads/[id] - Hard delete thread (cascades to messages)
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await requireAuth();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const orgId = requireOrgId(user);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await params;
+
+    const thread = await prisma.messageThread.findFirst({
+      where: { id, organizationId: orgId },
+      select: { id: true },
+    });
+    if (!thread) {
+      return NextResponse.json({ error: 'Thread not found' }, { status: 404 });
+    }
 
     // Hard delete the thread; Message.onDelete: Cascade removes all messages automatically
     await prisma.messageThread.delete({ where: { id } });

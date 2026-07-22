@@ -107,7 +107,13 @@ function LoginForm() {
   const [errorCode, setErrorCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({}); 
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+
+  // Demo logins: shown in development, or when explicitly enabled for staging demos.
+  // Production customer deployments must leave NEXT_PUBLIC_ENABLE_DEMO_LOGIN unset/false.
+  const showDemoLogins =
+    process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN === 'true' ||
+    process.env.NODE_ENV !== 'production';
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -456,28 +462,29 @@ function LoginForm() {
               </motion.button>
             </form>
 
-            {/* Live Demo Access Panel */}
+            {/* Live Demo Access Panel — gated; must also enable ENABLE_DEMO_LOGIN server-side in production */}
+            {showDemoLogins && (
             <div className="mt-6 pt-6 border-t border-stone-100">
-              <div className="rounded-2xl bg-gradient-to-br from-amber-50 via-orange-50/50 to-yellow-50 border border-amber-200/60 shadow-sm p-5 sm:p-6">
+              <div className="rounded-2xl bg-gradient-to-br from-amber-50 via-orange-50/50 to-yellow-50 border border-amber-200/60 shadow-sm p-4 sm:p-5 overflow-hidden">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-gradient-to-br from-amber-100 to-orange-100 rounded-xl shadow-sm flex-shrink-0">
-                      <Sparkles className="w-5 h-5 text-amber-600" />
+                <div className="flex flex-col gap-3 mb-4">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="p-2 sm:p-2.5 bg-gradient-to-br from-amber-100 to-orange-100 rounded-xl shadow-sm flex-shrink-0">
+                      <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <h4 className="font-bold text-stone-900 text-sm">Live Demo Access</h4>
-                      <p className="text-xs text-stone-500 mt-0.5">No sign-up required — pick a role to preview</p>
+                      <p className="text-xs text-stone-500 mt-0.5 leading-snug">No sign-up required — pick a role to preview</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-amber-100 font-mono text-xs w-fit">
-                    <span className="text-stone-400">pw:</span>
-                    <span className="font-semibold text-amber-700">Demo@1234</span>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white border border-amber-100 font-mono text-[11px] sm:text-xs w-fit max-w-full">
+                    <span className="text-stone-400 flex-shrink-0">pw:</span>
+                    <span className="font-semibold text-amber-700 truncate">Demo@1234</span>
                   </div>
                 </div>
 
-                {/* Role grid */}
-                <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-5 gap-2.5 sm:gap-3">
+                {/* Role grid — 2 cols on phones, 3 on xs+, wraps cleanly for 5 roles */}
+                <div className="grid grid-cols-2 xs:grid-cols-3 gap-2 sm:gap-2.5">
                   {DEMO_ROLES.map((dr) => {
                     const DRIcon = dr.icon;
                     const isLoadingThis = demoLoadingRole === dr.role;
@@ -488,22 +495,22 @@ function LoginForm() {
                         onClick={() => handleDemoRoleLogin(dr.email, dr.role)}
                         disabled={isSubmitting}
                         whileTap={{ scale: isSubmitting ? 1 : 0.95 }}
-                        whileHover={{ scale: isSubmitting ? 1 : 1.03 }}
+                        whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
                         title={`Sign in as ${dr.label}\n${dr.email}`}
-                        className={`flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition-all duration-200 ${
+                        className={`flex flex-col items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-1.5 sm:px-2 rounded-xl border-2 transition-all duration-200 min-w-0 ${
                           isSubmitting && !isLoadingThis
                             ? 'opacity-40 cursor-not-allowed border-transparent'
                             : `cursor-pointer border-transparent hover:border-white/60 hover:shadow-md hover:ring-2 ${dr.ringColor}`
                         }`}
                       >
-                        <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl ${dr.bg} flex items-center justify-center shadow-sm flex-shrink-0`}>
+                        <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl ${dr.bg} flex items-center justify-center shadow-sm flex-shrink-0`}>
                           {isLoadingThis ? (
-                            <Loader2 className="w-5 h-5 text-white animate-spin" />
+                            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 text-white animate-spin" />
                           ) : (
-                            <DRIcon className="w-5 h-5 text-white" />
+                            <DRIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                           )}
                         </div>
-                        <span className={`text-[11px] sm:text-xs font-semibold text-center leading-tight ${dr.labelText}`}>
+                        <span className={`text-[10px] sm:text-[11px] font-semibold text-center leading-tight truncate w-full px-0.5 ${dr.labelText}`}>
                           {dr.label}
                         </span>
                       </motion.button>
@@ -512,6 +519,7 @@ function LoginForm() {
                 </div>
               </div>
             </div>
+            )}
 
             <p className="text-center mt-6 text-sm text-stone-500">
               Don&apos;t have an account?{' '}

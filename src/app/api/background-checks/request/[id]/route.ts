@@ -1,27 +1,34 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth, withPermission } from '@/lib/with-permission';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
 // DELETE /api/background-checks/request/:id - Delete a background check
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withPermission('RUN_BACKGROUND_CHECKS', async (
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+  session,
+) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await params;
 
-    // Check if background check exists
-    const existingCheck = await prisma.backgroundCheck.findUnique({
-      where: { id },
+    const existingCheck = await prisma.backgroundCheck.findFirst({
+      where: {
+        id,
+        candidate: { organizationId: orgId },
+      },
     });
 
     if (!existingCheck) {
       return NextResponse.json(
         { error: 'Background check not found' },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    // Delete the background check
     await prisma.backgroundCheck.delete({
       where: { id },
     });
@@ -34,21 +41,28 @@ export async function DELETE(
     console.error('Error deleting background check:', error);
     return NextResponse.json(
       { error: 'Failed to delete background check' },
-      { status: 500 }
+      { status: 500 },
     );
   }
-}
+});
 
 // GET /api/background-checks/request/:id - Get single background check
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAuth(async (
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+  session,
+) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await params;
 
-    const check = await prisma.backgroundCheck.findUnique({
-      where: { id },
+    const check = await prisma.backgroundCheck.findFirst({
+      where: {
+        id,
+        candidate: { organizationId: orgId },
+      },
       include: {
         candidate: {
           select: { id: true, name: true, email: true },
@@ -66,7 +80,7 @@ export async function GET(
     if (!check) {
       return NextResponse.json(
         { error: 'Background check not found' },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -75,7 +89,7 @@ export async function GET(
     console.error('Error fetching background check:', error);
     return NextResponse.json(
       { error: 'Failed to fetch background check' },
-      { status: 500 }
+      { status: 500 },
     );
   }
-}
+});

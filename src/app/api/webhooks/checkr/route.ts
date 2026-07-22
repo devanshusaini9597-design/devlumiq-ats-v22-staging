@@ -1,17 +1,42 @@
-import { createHmac, timingSafeEqual } from 'crypto';
+import { createHmac } from 'crypto';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isProduction, safeEqual } from '@/lib/webhook-auth';
 
 function verifyCheckrSignature(rawBody: string, signature: string, secret: string): boolean {
   try {
     const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
-    const expectedBuf = Buffer.from(expected);
-    const signatureBuf = Buffer.from(signature);
-    if (expectedBuf.length !== signatureBuf.length) return false;
-    return timingSafeEqual(expectedBuf, signatureBuf);
+    return safeEqual(expected, signature);
   } catch {
     return false;
   }
+}
+
+/**
+ * Fail-closed Checkr webhook auth (same pattern as Twilio/WhatsApp helpers):
+ * - Production: CHECKR_WEBHOOK_SECRET must be set AND signature must match
+ * - Development: if secret unset, allow; if set, must match
+ */
+function requireCheckrSignature(
+  rawBody: string,
+  signature: string | null,
+): NextResponse | null {
+  const webhookSecret = process.env.CHECKR_WEBHOOK_SECRET || '';
+
+  if (!webhookSecret) {
+    if (isProduction()) {
+      return NextResponse.json(
+        { error: 'CHECKR_WEBHOOK_SECRET is required in production', code: 'SECRET_NOT_CONFIGURED' },
+        { status: 503 },
+      );
+    }
+    return null; // local/dev: open when unset
+  }
+
+  if (!signature || !verifyCheckrSignature(rawBody, signature, webhookSecret)) {
+    return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+  }
+  return null;
 }
 
 // POST /api/webhooks/checkr - Handle Checkr webhook events
@@ -19,16 +44,11 @@ function verifyCheckrSignature(rawBody: string, signature: string, secret: strin
 
 export async function POST(request: Request) {
   try {
-    const webhookSecret = process.env.CHECKR_WEBHOOK_SECRET;
     const signature = request.headers.get('X-Checkr-Signature');
-
     const rawBody = await request.text();
 
-    if (webhookSecret) {
-      if (!signature || !verifyCheckrSignature(rawBody, signature, webhookSecret)) {
-        return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
-      }
-    }
+    const authError = requireCheckrSignature(rawBody, signature);
+    if (authError) return authError;
 
     const payload = JSON.parse(rawBody);
     const { type, data } = payload;

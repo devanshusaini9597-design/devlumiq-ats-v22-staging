@@ -40,7 +40,7 @@ function GitHubIcon({ className }: { className?: string }) {
 }
 
 const PASSWORD_RULES = [
-  { label: 'At least 6 characters', test: (p: string) => p.length >= 6 },
+  { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
   { label: 'Contains a number', test: (p: string) => /\d/.test(p) },
   { label: 'Contains uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
 ];
@@ -69,7 +69,7 @@ export default function SignupPage() {
     const emailErr = validateEmail(email);
     if (emailErr) errors.email = emailErr;
     if (!password.trim()) errors.password = 'Password is required';
-    else if (password.length < 6) errors.password = 'Password must be at least 6 characters';
+    else if (password.length < 8) errors.password = 'Password must be at least 8 characters';
     if (password !== confirmPassword) errors.confirmPassword = 'Passwords do not match';
     if (!agreeTerms) errors.terms = 'You must agree to the terms';
 

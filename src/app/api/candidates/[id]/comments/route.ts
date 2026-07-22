@@ -1,15 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth, withPermission } from '@/lib/with-permission';
+import { requireOrgId, isOrgError } from '@/lib/require-org';
 
-export const GET = withAuth(async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+async function assertCandidateInOrg(candidateId: string, orgId: string) {
+  return prisma.candidate.findFirst({
+    where: { id: candidateId, organizationId: orgId },
+    select: { id: true },
+  });
+}
+
+export const GET = withAuth(async (
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+  session,
+) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await params;
+    const candidate = await assertCandidateInOrg(id, orgId);
+    if (!candidate) {
+      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
+    }
+
     const raw = await prisma.comment.findMany({
       where: { candidateId: id },
       orderBy: { createdAt: 'desc' },
     });
-    const comments = raw.map(c => ({
+    const comments = raw.map((c) => ({
       id: c.id,
       candidateId: c.candidateId,
       authorName: c.authorName,
@@ -23,16 +43,28 @@ export const GET = withAuth(async (req: NextRequest, { params }: { params: Promi
   }
 });
 
-export const POST = withAuth(async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+export const POST = withAuth(async (
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+  session,
+) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
     const { id } = await params;
+    const candidate = await assertCandidateInOrg(id, orgId);
+    if (!candidate) {
+      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
+    }
+
     const data = await req.json();
     const comment = await prisma.comment.create({
       data: {
         candidateId: id,
         body: data.body,
-        authorName: data.authorName || 'HR Manager',
-        authorEmail: data.authorEmail || 'hr@company.com',
+        authorName: data.authorName || session.name || 'HR Manager',
+        authorEmail: data.authorEmail || session.email || 'hr@company.com',
         mentions: Array.isArray(data.mentions) ? data.mentions : [],
       },
     });
@@ -50,13 +82,35 @@ export const POST = withAuth(async (req: NextRequest, { params }: { params: Prom
   }
 });
 
-export const DELETE = withPermission('USE_TEAM_COMMENTS', async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+export const DELETE = withPermission('USE_TEAM_COMMENTS', async (
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+  session,
+) => {
   try {
+    const orgId = requireOrgId(session);
+    if (isOrgError(orgId)) return orgId;
+
+    const { id } = await params;
+    const candidate = await assertCandidateInOrg(id, orgId);
+    if (!candidate) {
+      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
+    }
+
     const { searchParams } = new URL(req.url);
     const commentId = searchParams.get('commentId');
     if (!commentId) {
       return NextResponse.json({ error: 'commentId required' }, { status: 400 });
     }
+
+    // Only delete comments belonging to this org-scoped candidate
+    const comment = await prisma.comment.findFirst({
+      where: { id: commentId, candidateId: id },
+    });
+    if (!comment) {
+      return NextResponse.json({ error: 'Comment not found' }, { status: 404 });
+    }
+
     await prisma.comment.delete({ where: { id: commentId } });
     return NextResponse.json({ ok: true });
   } catch (error) {

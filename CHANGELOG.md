@@ -95,7 +95,7 @@ Add keys in **Settings → API keys**, or ask IT to configure them on your serve
 #### For IT (2.2)
 After upgrade, run database migrations (`npx prisma migrate deploy`). Optional keys are listed in `.env.example`. New integrations stay off until configured.
 
-**Assessment code runner:** disabled by default. Set `JUDGE0_API_URL` (+ key) for sandboxed multi-language grading. The local `node:vm` fallback only runs when `ASSESSMENT_CODE_RUNNER=true` — it is **not** a security boundary and must not be enabled on internet-facing production hosts.
+**Assessment code runner:** disabled by default. Set `JUDGE0_API_URL` (+ key) for sandboxed multi-language grading. The local `node:vm` fallback only runs when `ASSESSMENT_CODE_RUNNER=true` — it is **not** a security boundary and must not be enabled on internet-facing production hosts. The `timeout` option only bounds synchronous execution; infinite Promise microtask recursion can still hang the Node process.
 
 ---
 

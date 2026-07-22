@@ -4,6 +4,10 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { rateLimitAsync, getClientIp } from '@/lib/rate-limit';
 
+/** Dummy bcrypt hash so "user not found" still pays the compare cost (anti-enumeration). */
+const DUMMY_PASSWORD_HASH =
+  '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.G2oQ.YqKxqKxqK';
+
 // POST /api/portal/auth/login - Login candidate portal
 export async function POST(request: NextRequest) {
   try {
@@ -18,19 +22,14 @@ export async function POST(request: NextRequest) {
 
     const { email, password } = await request.json();
 
-    // Find user
     const user = await prisma.candidatePortalUser.findUnique({
       where: { email },
     });
 
-    if (!user) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
-    }
+    // Always compare to avoid timing leaks that reveal whether an email is registered
+    const isValid = await bcrypt.compare(password, user?.password || DUMMY_PASSWORD_HASH);
 
-    // Verify password
-    const isValid = await bcrypt.compare(password, user.password);
-
-    if (!isValid) {
+    if (!user || !isValid) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 

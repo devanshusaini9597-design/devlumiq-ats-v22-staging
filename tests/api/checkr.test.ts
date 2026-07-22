@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { POST as createCheckHandler, GET as getChecksHandler } from '@/app/api/checkr/route';
 import { POST as webhookHandler } from '@/app/api/webhooks/checkr/route';
 
@@ -6,9 +6,13 @@ describe('Checkr API Integration — RBAC enforcement', () => {
   it('returns 401 for unauthenticated POST /api/checkr', async () => {
     const req = new Request('http://localhost/api/checkr', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
       body: JSON.stringify({ candidateId: 'test-123' }),
     }) as any;
+    req.nextUrl = new URL('http://localhost/api/checkr');
     const response = await createCheckHandler(req);
     expect(response.status).toBe(401);
   });
@@ -20,8 +24,18 @@ describe('Checkr API Integration — RBAC enforcement', () => {
   });
 });
 
-describe('Checkr Webhook Handler — signature verification', () => {
-  it('accepts webhook when no CHECKR_WEBHOOK_SECRET is configured', async () => {
+describe('Checkr Webhook Handler — fail-closed signature verification', () => {
+  const originalSecret = process.env.CHECKR_WEBHOOK_SECRET;
+  const originalNodeEnv = process.env.NODE_ENV;
+
+  afterEach(() => {
+    if (originalSecret === undefined) delete process.env.CHECKR_WEBHOOK_SECRET;
+    else process.env.CHECKR_WEBHOOK_SECRET = originalSecret;
+    process.env.NODE_ENV = originalNodeEnv;
+  });
+
+  it('allows unsigned webhook in development when secret is unset', async () => {
+    process.env.NODE_ENV = 'development';
     process.env.CHECKR_WEBHOOK_SECRET = '';
     const req = new Request('http://localhost/api/webhooks/checkr', {
       method: 'POST',
@@ -37,6 +51,20 @@ describe('Checkr Webhook Handler — signature verification', () => {
     expect(data.received).toBe(true);
   });
 
+  it('rejects unsigned webhook in production when secret is unset (fail-closed)', async () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.CHECKR_WEBHOOK_SECRET;
+    const req = new Request('http://localhost/api/webhooks/checkr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'report.clear', data: { candidate_id: 'x' } }),
+    });
+    const response = await webhookHandler(req);
+    expect(response.status).toBe(503);
+    const data = await response.json();
+    expect(data.code).toBe('SECRET_NOT_CONFIGURED');
+  });
+
   it('rejects webhook with wrong HMAC signature when secret is configured', async () => {
     process.env.CHECKR_WEBHOOK_SECRET = 'test-secret';
     const req = new Request('http://localhost/api/webhooks/checkr', {
@@ -49,7 +77,6 @@ describe('Checkr Webhook Handler — signature verification', () => {
     });
     const response = await webhookHandler(req);
     expect(response.status).toBe(401);
-    process.env.CHECKR_WEBHOOK_SECRET = '';
   });
 
   it('accepts webhook with valid HMAC signature', async () => {
@@ -65,6 +92,5 @@ describe('Checkr Webhook Handler — signature verification', () => {
     });
     const response = await webhookHandler(req);
     expect(response.status).toBe(200);
-    process.env.CHECKR_WEBHOOK_SECRET = '';
   });
 });

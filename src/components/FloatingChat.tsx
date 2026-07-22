@@ -128,8 +128,8 @@ export default function FloatingChat() {
             transition={{ type: 'spring', damping: 26, stiffness: 320 }}
             className={`fixed z-[100] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-white/20 ${
               minimized
-                ? 'w-72 sm:w-80 h-[52px] left-4 bottom-[4.5rem] sm:left-6 sm:bottom-6'
-                : 'w-[calc(100vw-2rem)] max-w-[380px] h-[68vh] max-h-[540px] left-4 bottom-[4.5rem] sm:left-6 sm:bottom-6'
+                ? 'w-72 sm:w-80 h-[52px] right-4 bottom-4 sm:right-6 sm:bottom-6'
+                : 'w-[calc(100vw-2rem)] max-w-[380px] h-[min(68vh,540px)] right-4 bottom-4 sm:right-6 sm:bottom-6'
             }`}
             style={{ boxShadow: '0 8px 40px rgba(13,148,136,0.18), 0 2px 12px rgba(0,0,0,0.12)' }}
           >
@@ -356,7 +356,7 @@ export default function FloatingChat() {
             exit={{ scale: 0, opacity: 0 }}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.93 }}
-            className="fixed left-4 sm:left-6 bottom-[4.5rem] sm:bottom-6 z-[99] w-13 h-13 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/35 hover:shadow-brand-500/50 transition-shadow"
+            className="fixed right-4 sm:right-6 bottom-4 sm:bottom-6 z-[99] w-13 h-13 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/35 hover:shadow-brand-500/50 transition-shadow"
             style={{ width: 52, height: 52, background: 'linear-gradient(135deg, #0d9488, #14b8a6)' }}
             aria-label={t('chat.open')}
           >
