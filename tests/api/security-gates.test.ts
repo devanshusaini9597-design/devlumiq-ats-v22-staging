@@ -107,16 +107,21 @@ describe('Critical IDOR / auth gates — unauthenticated callers', () => {
 describe('Demo login production gate', () => {
   const originalEnv = process.env.NODE_ENV;
   const originalFlag = process.env.ENABLE_DEMO_LOGIN;
+  const originalAppUrl = process.env.NEXT_PUBLIC_APP_URL;
 
   afterEach(() => {
     process.env.NODE_ENV = originalEnv;
     if (originalFlag === undefined) delete process.env.ENABLE_DEMO_LOGIN;
     else process.env.ENABLE_DEMO_LOGIN = originalFlag;
+    if (originalAppUrl === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+    else process.env.NEXT_PUBLIC_APP_URL = originalAppUrl;
   });
 
   it('returns 403 in production when ENABLE_DEMO_LOGIN is unset', async () => {
     process.env.NODE_ENV = 'production';
     delete process.env.ENABLE_DEMO_LOGIN;
+    // CI often sets APP_URL to the staging host — clear it so only the request host matters
+    delete process.env.NEXT_PUBLIC_APP_URL;
     // Non-staging host — must not unlock demo login
     const res = await demoLogin(makeReq('POST', { role: 'ADMIN' }, '/api/auth/demo', 'app.customer.com'));
     expect(res.status).toBe(403);

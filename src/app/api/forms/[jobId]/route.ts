@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { FormFieldType, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { withAuth, withPermission } from '@/lib/with-permission';
 import { requireOrgId, isOrgError } from '@/lib/require-org';
@@ -7,6 +8,43 @@ async function assertJobInOrg(jobId: string, orgId: string) {
   return prisma.job.findFirst({
     where: { id: jobId, companyId: orgId },
     select: { id: true },
+  });
+}
+
+const FORM_FIELD_TYPES = new Set<string>(Object.values(FormFieldType));
+
+function mapFormFields(
+  fieldList: {
+    type?: string;
+    label?: string;
+    placeholder?: string;
+    helpText?: string;
+    isRequired?: boolean;
+    options?: { label: string; value: string }[];
+  }[],
+): Prisma.FormFieldCreateWithoutFormInput[] {
+  return fieldList.map((f, index) => {
+    const rawType = (f.type || 'TEXT').toUpperCase();
+    const type = (FORM_FIELD_TYPES.has(rawType) ? rawType : 'TEXT') as FormFieldType;
+    const data: Prisma.FormFieldCreateWithoutFormInput = {
+      type,
+      label: f.label || 'Field',
+      placeholder: f.placeholder,
+      helpText: f.helpText,
+      isRequired: f.isRequired ?? false,
+      sortOrder: index,
+      allowedFileTypes: [],
+    };
+    if (f.options?.length) {
+      data.options = {
+        create: f.options.map((o, i) => ({
+          label: o.label,
+          value: o.value,
+          sortOrder: i,
+        })),
+      };
+    }
+    return data;
   });
 }
 
@@ -64,7 +102,7 @@ export const POST = withPermission('EDIT_JOB', async (
     }
 
     const { title, description, fields } = await request.json();
-    const fieldList = Array.isArray(fields) ? fields : [];
+    const fieldCreates = mapFormFields(Array.isArray(fields) ? fields : []);
 
     const form = await prisma.jobApplicationForm.upsert({
       where: { jobId },
@@ -73,28 +111,7 @@ export const POST = withPermission('EDIT_JOB', async (
         title: title || 'Application Form',
         description,
         fields: {
-          create: fieldList.map((f: {
-            type: string;
-            label: string;
-            placeholder?: string;
-            helpText?: string;
-            isRequired?: boolean;
-            options?: { label: string; value: string }[];
-          }, index: number) => ({
-            type: f.type,
-            label: f.label,
-            placeholder: f.placeholder,
-            helpText: f.helpText,
-            isRequired: f.isRequired ?? false,
-            sortOrder: index,
-            options: f.options ? {
-              create: f.options.map((o, i) => ({
-                label: o.label,
-                value: o.value,
-                sortOrder: i,
-              })),
-            } : undefined,
-          })),
+          create: fieldCreates,
         },
       },
       update: {
@@ -102,28 +119,7 @@ export const POST = withPermission('EDIT_JOB', async (
         description,
         fields: {
           deleteMany: {},
-          create: fieldList.map((f: {
-            type: string;
-            label: string;
-            placeholder?: string;
-            helpText?: string;
-            isRequired?: boolean;
-            options?: { label: string; value: string }[];
-          }, index: number) => ({
-            type: f.type,
-            label: f.label,
-            placeholder: f.placeholder,
-            helpText: f.helpText,
-            isRequired: f.isRequired ?? false,
-            sortOrder: index,
-            options: f.options ? {
-              create: f.options.map((o, i) => ({
-                label: o.label,
-                value: o.value,
-                sortOrder: i,
-              })),
-            } : undefined,
-          })),
+          create: fieldCreates,
         },
       },
       include: {
