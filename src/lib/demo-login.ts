@@ -11,6 +11,7 @@
 /** Official staging / preview hosts where one-click demo login is allowed. */
 const DEMO_HOSTS = new Set([
   'devlumiq-ats-v22-staging.vercel.app',
+  'devlumiq-ats-rbac.vercel.app',
   'localhost',
   '127.0.0.1',
 ]);
@@ -20,8 +21,11 @@ export function isDemoHost(host: string | null | undefined): boolean {
   const hostname = host.toLowerCase().split(':')[0].trim();
   if (!hostname) return false;
   if (DEMO_HOSTS.has(hostname)) return true;
-  // Vercel preview deployments for the staging project
-  if (hostname.endsWith('.vercel.app') && hostname.includes('devlumiq-ats-v22-staging')) {
+  // Vercel preview deployments for official demo projects
+  if (
+    hostname.endsWith('.vercel.app') &&
+    (hostname.includes('devlumiq-ats-v22-staging') || hostname.includes('devlumiq-ats-rbac'))
+  ) {
     return true;
   }
   return false;

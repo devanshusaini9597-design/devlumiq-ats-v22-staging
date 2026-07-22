@@ -112,7 +112,7 @@ function LoginForm() {
 
   // Show demo panel in local/dev, when env-enabled, or on known staging hosts (no Vercel env needed).
   const [showDemoLogins, setShowDemoLogins] = useState(
-    process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN === 'true' ||
+    (process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN || '').trim().toLowerCase() === 'true' ||
     process.env.NODE_ENV !== 'production',
   );
 

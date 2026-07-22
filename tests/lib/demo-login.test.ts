@@ -6,6 +6,10 @@ describe('isDemoHost', () => {
     expect(isDemoHost('devlumiq-ats-v22-staging.vercel.app')).toBe(true);
   });
 
+  it('matches the official rbac demo hostname', () => {
+    expect(isDemoHost('devlumiq-ats-rbac.vercel.app')).toBe(true);
+  });
+
   it('matches localhost', () => {
     expect(isDemoHost('localhost:3000')).toBe(true);
   });
