@@ -1,8 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { sanitizeHtml, sanitizeText } from '@/lib/sanitize';
 
 describe('sanitizeHtml', () => {
+  // First DOMPurify/jsdom init can be slow on cold start
+  beforeAll(() => {
+    sanitizeHtml('<p>warm</p>');
+  }, 30_000);
+
   it('allows safe formatting tags', () => {
     const clean = sanitizeHtml('<p>Hello <strong>world</strong></p>');
     expect(clean).toContain('<p>');

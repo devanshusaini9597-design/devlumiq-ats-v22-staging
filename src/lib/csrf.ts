@@ -56,7 +56,9 @@ export function validateCsrf(request: NextRequest): NextResponse | null {
   // Bearer API keys are not cookie CSRF vectors
   if (request.headers.get('authorization')?.startsWith('Bearer ')) return null;
 
-  const pathname = request.nextUrl.pathname;
+  const pathname = request.nextUrl?.pathname ?? (() => {
+    try { return new URL(request.url).pathname; } catch { return ''; }
+  })();
   if (isCsrfExemptPath(pathname)) return null;
 
   const origin = request.headers.get('origin');

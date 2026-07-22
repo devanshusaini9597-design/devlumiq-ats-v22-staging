@@ -4,17 +4,16 @@
  * Uses isomorphic-dompurify (DOMPurify + jsdom) so attribute values are properly
  * re-encoded — the previous regex-based sanitizer had a quote-breakout bypass.
  *
+ * DOMPurify is loaded lazily so Next.js "collect page data" does not initialize
+ * jsdom at import time (which breaks the build looking for default-stylesheet.css).
+ *
  * Usage:
  *   import { sanitizeHtml, sanitizeText } from '@/lib/sanitize';
- *
- *   // Before storing rich-text from Tiptap:
- *   const clean = sanitizeHtml(rawHtml);
- *
- *   // Strip all HTML tags (plain text):
- *   const plain = sanitizeText(rawHtml);
  */
 
-import DOMPurify from 'isomorphic-dompurify';
+type PurifyLike = {
+  sanitize: (dirty: string, config?: Record<string, unknown>) => string;
+};
 
 const ALLOWED_TAGS = [
   'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's', 'del', 'mark',
@@ -35,6 +34,19 @@ const ALLOWED_ATTR = [
 /** Only allow safe URL schemes in href (blocks javascript:/data:/vbscript:). */
 const SAFE_URI = /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i;
 
+let purifyInstance: PurifyLike | null = null;
+
+function getPurify(): PurifyLike {
+  if (purifyInstance) return purifyInstance;
+  // Lazy require — avoids jsdom init during Next.js build page-data collection
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const mod = require('isomorphic-dompurify') as PurifyLike & { default?: PurifyLike };
+  purifyInstance = (mod?.default && typeof mod.default.sanitize === 'function')
+    ? mod.default
+    : mod;
+  return purifyInstance;
+}
+
 /**
  * Sanitize an HTML string to a safe subset.
  * Strips disallowed tags and dangerous attributes; encodes attribute values.
@@ -42,6 +54,7 @@ const SAFE_URI = /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))
 export function sanitizeHtml(dirty: string): string {
   if (!dirty || typeof dirty !== 'string') return '';
 
+  const DOMPurify = getPurify();
   const clean = DOMPurify.sanitize(dirty, {
     ALLOWED_TAGS,
     ALLOWED_ATTR,
@@ -72,6 +85,7 @@ export function sanitizeHtml(dirty: string): string {
  */
 export function sanitizeText(html: string): string {
   if (!html || typeof html !== 'string') return '';
+  const DOMPurify = getPurify();
   const stripped = DOMPurify.sanitize(html, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
   return stripped
     .replace(/&amp;/g, '&')

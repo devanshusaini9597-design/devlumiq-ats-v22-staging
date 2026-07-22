@@ -28,6 +28,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Keep jsdom/DOMPurify out of the webpack bundle (avoids build-time stylesheet ENOENT)
+  serverExternalPackages: ['isomorphic-dompurify', 'jsdom', 'parse5'],
   // Ensure bundled skills catalog is available to API routes in serverless deploys
   outputFileTracingIncludes: {
     '/api/skills/**/*': ['./data/onet-skills.json'],

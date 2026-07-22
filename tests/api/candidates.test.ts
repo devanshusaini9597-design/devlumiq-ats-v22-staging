@@ -22,9 +22,13 @@ describe('Candidates API — RBAC enforcement', () => {
     it('returns 401 when unauthenticated', async () => {
       const req = new Request('http://localhost/api/candidates', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
         body: JSON.stringify({ name: 'John Doe', email: 'john@example.com' }),
       }) as any;
+      req.nextUrl = new URL('http://localhost/api/candidates');
       const response = await createCandidateHandler(req, {});
       expect(response.status).toBe(401);
     });
